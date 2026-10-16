@@ -1,7 +1,7 @@
 # Peak-traffic anti-patterns. Our own rules (MIT, same as this repo), so they can be
 # used in paid client work without a Semgrep registry license.
 #
-#   semgrep scan --config <skill-dir>/semgrep/ --json --output semgrep-peak.json <project>
+#   semgrep scan --metrics=off --disable-version-check --config <skill-dir>/semgrep/ --json --output semgrep-peak.json <project>
 #
 # These are leads, not verdicts: confirm every hit by reading the code around it.
 rules:

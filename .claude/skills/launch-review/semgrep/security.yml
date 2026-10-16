@@ -1,7 +1,7 @@
 # Pre-launch security leads. Our own rules (MIT, same as this repo), so they can be
 # used in paid client work without a Semgrep registry license.
 #
-#   semgrep scan --metrics=off --config <skill-dir>/semgrep/ --json -o semgrep-security.json <project>
+#   semgrep scan --metrics=off --disable-version-check --config <skill-dir>/semgrep/ --json -o semgrep-security.json <project>
 #
 # Every hit is a lead to verify by reading the code, not a finding by itself.
 rules:
@@ -17,6 +17,9 @@ rules:
       - metavariable-regex:
           metavariable: $M
           regex: ^(query|all|get|run|exec|execute|raw|prepare|unsafe|\$queryRawUnsafe|\$executeRawUnsafe|sql|whereRaw|orderByRaw|havingRaw)$
+      - metavariable-regex:
+          metavariable: $DB
+          regex: ^(?!(child_process|childProcess|cp)$)
     message: >-
       A SQL statement is built by inserting values into a string. If any of those values
       can come from a visitor (URL, form, header, cookie), they can rewrite the query and

@@ -34,7 +34,7 @@ node <skill-dir>/scripts/capacity.mjs launch-review/peak-traffic/brief.json laun
 Show the printed plan table to the user and get a "yes, those numbers are right" before testing. If they can't estimate, use the conservative defaults in the interview guide and label them as assumptions in the report.
 
 ### 2. Static review for peak-traffic anti-patterns
-- If `semgrep` is installed: `semgrep scan --metrics=off --config <skill-dir>/semgrep/ --json -o launch-review/peak-traffic/semgrep.json <src-dirs>`. These are our own rules (safe for commercial use). Treat hits as leads.
+- If `semgrep` is installed: `semgrep scan --metrics=off --disable-version-check --config <skill-dir>/semgrep/ --json -o launch-review/peak-traffic/semgrep.json <src-dirs>`. These are our own rules (safe for commercial use). Treat hits as leads.
 - Then review the hot path by reading code (every handler in the journey, plus what it calls) against `references/anti-patterns.md`. That catalogue covers what rules can't see: missing caching, connection-pool limits, serverless + database connection storms, hot rows/documents, third-party rate limits, in-memory state that breaks with more than one server, cache stampedes.
 - For every finding record: file:line, what happens at peak in one plain sentence, severity, and the fix. Confirm each by reading the surrounding code; drop anything you can't confirm.
 

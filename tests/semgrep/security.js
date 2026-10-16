@@ -14,7 +14,7 @@ async function handlers(db, req, res, prisma, q) {
   // ruleid: command-injection-js
   child_process.exec(`convert ${req.query.file} out.png`);
   // ok: command-injection-js
-  db.exec(`CREATE TABLE ${'t'} (id int)`);
+  db.exec('CREATE TABLE t (id int)');
 
   // ruleid: price-from-client
   const { productId, price } = req.body;
@@ -64,10 +64,10 @@ async function handlers(db, req, res, prisma, q) {
 }
 
 async function saveOrder(db) {
+  // ruleid: swallowed-error-fake-success
   try {
     await db.insert();
     return { success: true };
-  // ruleid: swallowed-error-fake-success
   } catch (e) {
     return { success: true };
   }
