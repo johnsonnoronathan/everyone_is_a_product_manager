@@ -1,0 +1,56 @@
+{
+  "url": "http://127.0.0.1:3000/",
+  "checkedAt": "2026-10-16T12:40:17.873Z",
+  "results": [
+    {
+      "status": "WARN",
+      "check": "Content-Security-Policy",
+      "detail": "missing: no second line of defence against injected scripts (XSS)"
+    },
+    {
+      "status": "WARN",
+      "check": "X-Content-Type-Options",
+      "detail": "missing (should be \"nosniff\")"
+    },
+    {
+      "status": "WARN",
+      "check": "Clickjacking protection",
+      "detail": "missing: other sites can embed this page in a frame (X-Frame-Options or CSP frame-ancestors)"
+    },
+    {
+      "status": "INFO",
+      "check": "Referrer-Policy",
+      "detail": "missing: full URLs (with any tokens in them) may leak to other sites"
+    },
+    {
+      "status": "PASS",
+      "check": "Page loads",
+      "detail": "200 http://127.0.0.1:3000/"
+    },
+    {
+      "status": "PASS",
+      "check": "CORS",
+      "detail": "no cross-origin access granted"
+    },
+    {
+      "status": "PASS",
+      "check": "Not exposed: /.env",
+      "detail": "404"
+    },
+    {
+      "status": "PASS",
+      "check": "Not exposed: /.env.production",
+      "detail": "404"
+    },
+    {
+      "status": "PASS",
+      "check": "Not exposed: /.git/HEAD",
+      "detail": "404"
+    },
+    {
+      "status": "PASS",
+      "check": "Not exposed: /.git/config",
+      "detail": "404"
+    }
+  ]
+}
