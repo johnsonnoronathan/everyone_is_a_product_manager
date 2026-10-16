@@ -1,0 +1,56 @@
+{
+  "url": "http://127.0.0.1:3100/",
+  "checkedAt": "2026-10-16T12:41:04.130Z",
+  "results": [
+    {
+      "status": "PASS",
+      "check": "Page loads",
+      "detail": "200 http://127.0.0.1:3100/"
+    },
+    {
+      "status": "PASS",
+      "check": "Content-Security-Policy",
+      "detail": "default-src 'self'; frame-ancestors 'none'"
+    },
+    {
+      "status": "PASS",
+      "check": "X-Content-Type-Options",
+      "detail": "nosniff"
+    },
+    {
+      "status": "PASS",
+      "check": "Clickjacking protection",
+      "detail": "CSP frame-ancestors"
+    },
+    {
+      "status": "PASS",
+      "check": "Referrer-Policy",
+      "detail": "no-referrer"
+    },
+    {
+      "status": "PASS",
+      "check": "CORS",
+      "detail": "no cross-origin access granted"
+    },
+    {
+      "status": "PASS",
+      "check": "Not exposed: /.env",
+      "detail": "404"
+    },
+    {
+      "status": "PASS",
+      "check": "Not exposed: /.env.production",
+      "detail": "404"
+    },
+    {
+      "status": "PASS",
+      "check": "Not exposed: /.git/HEAD",
+      "detail": "404"
+    },
+    {
+      "status": "PASS",
+      "check": "Not exposed: /.git/config",
+      "detail": "404"
+    }
+  ]
+}
