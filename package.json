@@ -1,0 +1,12 @@
+{
+  "name": "everyone-is-a-product-manager",
+  "private": true,
+  "description": "Claude Code skills for pre-launch review, peak-traffic testing and acceptance testing, plus a demo app to try them on.",
+  "scripts": {
+    "test": "node --test 'tests/*.test.mjs' && bash tests/semgrep/run.sh",
+    "demo:naive": "node demo/flash-sale/run.mjs naive",
+    "demo:fixed": "node demo/flash-sale/run.mjs fixed"
+  },
+  "engines": { "node": ">=22.13" },
+  "license": "MIT"
+}

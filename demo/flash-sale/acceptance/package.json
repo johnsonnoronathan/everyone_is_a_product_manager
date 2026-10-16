@@ -1,0 +1,13 @@
+{
+  "name": "flash-sale-acceptance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test --repeat-each=3",
+    "report": "node ../../../.claude/skills/acceptance-test/scripts/ac-report.mjs results/results.json criteria.md results/ACCEPTANCE.md"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@playwright/test": "1.56.1"
+  }
+}

@@ -8,7 +8,7 @@ import http from 'node:http';
 const PORT = Number(process.env.PAYMENT_PORT ?? 4100);
 const MIN_MS = Number(process.env.PAYMENT_MIN_MS ?? 80);
 const MAX_MS = Number(process.env.PAYMENT_MAX_MS ?? 200);
-const HANG_RATE = Number(process.env.PAYMENT_HANG_RATE ?? 0.02);
+let hangRate = Number(process.env.PAYMENT_HANG_RATE ?? 0.02);
 const HANG_MS = Number(process.env.PAYMENT_HANG_MS ?? 30_000);
 
 const byIdempotencyKey = new Map();
@@ -22,6 +22,20 @@ function send(res, status, body) {
 
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/stats') return send(res, 200, { charges, chargedCents });
+  // Test control: POST /config {"hangRate": 1} makes every charge hang (used by acceptance tests).
+  if (req.method === 'POST' && req.url === '/config') {
+    let raw = '';
+    req.on('data', (chunk) => (raw += chunk));
+    req.on('end', () => {
+      try {
+        hangRate = Number(JSON.parse(raw).hangRate);
+        send(res, 200, { hangRate });
+      } catch {
+        send(res, 400, { error: 'invalid json' });
+      }
+    });
+    return;
+  }
   if (req.method === 'POST' && req.url === '/reset') {
     charges = 0;
     chargedCents = 0;
@@ -42,7 +56,7 @@ const server = http.createServer((req, res) => {
     const key = req.headers['idempotency-key'];
     if (key && byIdempotencyKey.has(key)) return send(res, 200, byIdempotencyKey.get(key));
 
-    const hang = Math.random() < HANG_RATE;
+    const hang = Math.random() < hangRate;
     const delay = hang ? HANG_MS : MIN_MS + Math.random() * (MAX_MS - MIN_MS);
     setTimeout(() => {
       if (res.destroyed) return;
