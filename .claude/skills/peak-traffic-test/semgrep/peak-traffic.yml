@@ -1,0 +1,201 @@
+# Peak-traffic anti-patterns. Our own rules (MIT, same as this repo), so they can be
+# used in paid client work without a Semgrep registry license.
+#
+#   semgrep scan --config <skill-dir>/semgrep/ --json --output semgrep-peak.json <project>
+#
+# These are leads, not verdicts: confirm every hit by reading the code around it.
+rules:
+  - id: stock-lost-update-sql
+    languages: [generic]
+    paths:
+      include: ["*.js", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.py", "*.rb", "*.php", "*.go", "*.java", "*.sql"]
+    pattern-regex: (?i)\bSET\s+["`]?(stock|inventory|quantity|qty|remaining|available|seats_left|tickets_left|balance)["`]?\s*=\s*(\?|\$\d+|:\w+|@\w+|%s|\$\{)
+    message: >-
+      The new stock/balance value is calculated in application code and written back
+      ("SET stock = ?"). When two shoppers buy at the same moment, both read the same
+      number and one purchase overwrites the other (lost update), so you can sell more
+      than you have. Do the arithmetic in one atomic statement instead:
+      UPDATE ... SET stock = stock - 1 WHERE id = ? AND stock > 0, and check that one row changed.
+    severity: ERROR
+    metadata: { category: correctness-under-load, pm_impact: overselling }
+
+  - id: stock-lost-update-orm-js
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              { ..., $FIELD: $OBJ.$FIELD - $N, ... }
+          - pattern: $OBJ.$FIELD -= $N
+          - pattern: $OBJ.$FIELD = $OBJ.$FIELD - $N
+      - metavariable-regex:
+          metavariable: $FIELD
+          regex: (?i)^(stock|inventory|quantity|qty|remaining|available|seatsLeft|ticketsLeft|balance|credits)$
+    message: >-
+      "$FIELD" is decremented in application code and saved back. Under concurrent
+      requests two buyers read the same value and one decrement is lost, so items get
+      oversold. Use an atomic database update (Prisma: { $FIELD: { decrement: 1 } } with a
+      where-guard; SQL: SET $FIELD = $FIELD - 1 WHERE $FIELD > 0) or a row lock.
+    severity: ERROR
+    metadata: { category: correctness-under-load, pm_impact: overselling }
+
+  - id: stock-lost-update-orm-python
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $OBJ.$FIELD -= $N
+          - pattern: $OBJ.$FIELD = $OBJ.$FIELD - $N
+      - metavariable-regex:
+          metavariable: $FIELD
+          regex: (?i)^(stock|inventory|quantity|qty|remaining|available|seats_left|tickets_left|balance|credits)$
+    message: >-
+      "$FIELD" is decremented in Python and saved back. Concurrent buyers overwrite each
+      other's decrement, so items get oversold. Use an atomic update, e.g. Django
+      Model.objects.filter(pk=..., $FIELD__gt=0).update($FIELD=F("$FIELD") - 1), or
+      select_for_update() inside a transaction.
+    severity: ERROR
+    metadata: { category: correctness-under-load, pm_impact: overselling }
+
+  - id: db-query-in-loop-js
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern-inside: 'for (...) { ... }'
+          - pattern-inside: 'for (const $X of $Y) { ... }'
+          - pattern-inside: 'for (const $X in $Y) { ... }'
+          - pattern-inside: 'while (...) { ... }'
+          - pattern-inside: $ARR.forEach(...)
+          - pattern-inside: $ARR.map(...)
+      - pattern: await $DB.$METHOD(...)
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(query|get|all|run|execute|exec|findOne|findUnique|findFirst|findMany|findById|findByPk|findAll|select|count|aggregate|rpc)$
+    message: >-
+      A database call runs once per item in a loop (the "N+1 query" problem). A page
+      with 50 items makes 51 round-trips to the database. At normal traffic it's
+      unnoticeable; at flash-sale traffic it's often the first thing to melt. Fetch
+      everything in one query (JOIN / WHERE id IN (...) / ORM include/eager loading).
+    severity: WARNING
+    metadata: { category: performance, pm_impact: slow-pages-under-load }
+
+  - id: db-query-in-loop-python
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              for $X in $Y:
+                  ...
+          - pattern-inside: |
+              [... for $X in $Y]
+      - pattern-either:
+          - pattern: $MODEL.objects.$METHOD(...)
+          - pattern: $SESSION.execute(...)
+          - pattern: $CURSOR.execute(...)
+          - pattern: $SESSION.query(...)
+    message: >-
+      A database query runs inside a loop (N+1 queries). Use select_related /
+      prefetch_related (Django), joinedload/selectinload (SQLAlchemy), or one query with
+      WHERE id IN (...).
+    severity: WARNING
+    metadata: { category: performance, pm_impact: slow-pages-under-load }
+
+  - id: fetch-without-timeout
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: fetch($URL)
+          - pattern: fetch($URL, $OPTS)
+      - pattern-not: 'fetch($URL, { ..., signal: $S, ... })'
+      - pattern-not: 'fetch($URL, { ..., timeout: $T, ... })'
+    message: >-
+      This outgoing HTTP call has no timeout. If the other service (payment, email,
+      shipping API...) slows down during your peak, every request waits forever, and your
+      server runs out of capacity even though your own code is fine. Add
+      signal: AbortSignal.timeout(3000) (or similar) and handle the failure.
+    severity: WARNING
+    metadata: { category: resilience, pm_impact: outage-when-a-partner-is-slow }
+
+  - id: axios-without-timeout
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: axios.$METHOD($URL)
+          - pattern: axios.$METHOD($URL, $DATA)
+          - pattern: axios.create()
+          - pattern: 'axios.create({...})'
+      - pattern-not: 'axios.$METHOD($URL, { ..., timeout: $T, ... })'
+      - pattern-not: 'axios.$METHOD($URL, $DATA, { ..., timeout: $T, ... })'
+      - pattern-not: 'axios.create({ ..., timeout: $T, ... })'
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(get|post|put|patch|delete|request|create)$
+    message: >-
+      axios has no timeout by default. A slow partner API will make your requests hang
+      and pile up during peak traffic. Set timeout (e.g. axios.create({ timeout: 3000 })).
+    severity: WARNING
+    metadata: { category: resilience, pm_impact: outage-when-a-partner-is-slow }
+
+  - id: requests-without-timeout
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: requests.$METHOD(...)
+      - pattern-not: requests.$METHOD(..., timeout=$T, ...)
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(get|post|put|patch|delete|head|request)$
+    message: >-
+      Python requests waits forever by default. Add timeout=(3, 10) so a slow partner API
+      can't freeze your workers during peak traffic.
+    severity: WARNING
+    metadata: { category: resilience, pm_impact: outage-when-a-partner-is-slow }
+
+  - id: sync-io-in-request-handler
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              async ($REQ, $RES, ...) => { ... }
+          - pattern-inside: |
+              ($REQ, $RES, ...) => { ... }
+          - pattern-inside: |
+              async function $F($REQ, $RES, ...) { ... }
+          - pattern-inside: |
+              function $F($REQ, $RES, ...) { ... }
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: ^(req|request|ctx|c)$
+      - pattern-either:
+          - pattern: fs.readFileSync(...)
+          - pattern: fs.writeFileSync(...)
+          - pattern: fs.existsSync(...)
+          - pattern: fs.readdirSync(...)
+          - pattern: child_process.execSync(...)
+          - pattern: execSync(...)
+          - pattern: bcrypt.hashSync(...)
+          - pattern: bcrypt.compareSync(...)
+          - pattern: crypto.pbkdf2Sync(...)
+          - pattern: crypto.scryptSync(...)
+    message: >-
+      Blocking (synchronous) work inside a request handler. Node.js serves every visitor
+      on one thread, so while this runs nobody else gets served. Read static files once at
+      startup (or serve them from a CDN) and use the async versions of these calls.
+    severity: WARNING
+    metadata: { category: performance, pm_impact: slow-pages-under-load }
+
+  - id: email-in-request-path
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: await $T.sendMail(...)
+      - pattern: await $X.emails.send(...)
+      - pattern: await sgMail.send(...)
+      - patterns:
+          - pattern: await $F(...)
+          - metavariable-regex:
+              metavariable: $F
+              regex: (?i)^send\w*(email|mail|sms|notification)\w*$
+    message: >-
+      The visitor waits while an email/SMS is sent. That adds hundreds of milliseconds to
+      every order and fails the order if the email provider is slow. Put the message on a
+      background queue and respond immediately.
+    severity: INFO
+    metadata: { category: performance, pm_impact: slow-checkout }
