@@ -32,7 +32,7 @@ Good criteria are **observable** (someone can see whether it happened), **specif
 **Permissions & privacy**: user A can't see/change user B's data; normal user can't reach admin features; logged-out visitor can't see private pages.
 **Money**: price shown = price charged; discounts/coupons apply once; refund flow; receipt email content; currency and rounding.
 **Limits & stock**: last item; sold out; per-customer limit; coupon expired; sale not started yet / ended (time zones!).
-**Third parties failing**: payment declined; payment provider slow/down; email provider down. Agree what the user should see.
+**Third parties failing**: payment declined; payment provider slow/down; email provider down. Agree what the user should see. Check these criteria with an engineer: for money, "slow" is not "failed" (a timed-out payment may have gone through), so the right outcome is usually "we're confirming your payment", not "try again".
 **Lists & search**: empty state; one result; many results with pagination; special characters in search.
 **Uploads**: wrong file type; too large; slow upload.
 **Mobile & accessibility**: phone-sized screen; keyboard-only use of the core flow; no serious automated accessibility violations (axe, WCAG 2.1 AA).

@@ -6,10 +6,14 @@ The question here is: when something goes wrong after launch (and something will
 - **Backups are on** for every database and file store, with point-in-time recovery for the main database if the plan supports it.
 - **A restore has actually been tested** (into a scratch database). An untested backup counts as "unknown".
 - **Rollback**: the previous version can be redeployed in minutes (hosting "instant rollback", tagged releases). Database migrations in this release are backward-compatible or have a rollback script.
+- **Restarts are safe and automatic**: a supervisor/platform restarts a crashed process; start-up runs no destructive steps (no seeding or `DELETE` in production; schema changes only via versioned migrations).
+- **Graceful shutdown**: on SIGTERM (every deploy) the server stops taking new requests and finishes in-flight ones, especially payments.
 - **Kill switches**: a way to pause sign-ups, a promotion, payments, or an expensive feature without a deploy (feature flag, env var, maintenance page).
 
 ## Notice
 - **Error tracking** (Sentry, Rollbar, Bugsnag, hosting's built-in) on both server and browser, with source maps uploaded privately.
+- **Health check endpoint** that the load balancer/orchestrator uses, checks real dependencies (database), and doesn't expose internals publicly.
+- **Server timeouts** set deliberately (request/headers timeouts; keep-alive longer than the load balancer's idle timeout, or random 502s appear at peak).
 - **Uptime check** on the home page and one critical API/flow (Better Stack, UptimeRobot, Checkly, hosting monitors), alerting a person, not just an inbox nobody reads.
 - **Logs** are kept long enough (≥ 7 days), searchable, and include a request id to connect a user's report to the error.
 - **Dashboards** for the basics: request rate, error rate, latency, database CPU/connections, queue depth.

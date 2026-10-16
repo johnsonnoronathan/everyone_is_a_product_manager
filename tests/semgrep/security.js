@@ -63,6 +63,17 @@ async function handlers(db, req, res, prisma, q) {
   });
 }
 
+const server = http.createServer(async (req, res) => {
+  // ruleid: url-parse-outside-try
+  const url = new URL(req.url, 'http://localhost');
+  try {
+    // ok: url-parse-outside-try
+    const safe = new URL(req.url, `http://${req.headers.host}`);
+  } catch (e) {
+    res.statusCode = 400;
+  }
+});
+
 async function saveOrder(db) {
   // ruleid: swallowed-error-fake-success
   try {

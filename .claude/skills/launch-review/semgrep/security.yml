@@ -239,6 +239,26 @@ rules:
     severity: ERROR
     metadata: { owasp: "A10:2025 Mishandling of Exceptional Conditions", cwe: "CWE-248" }
 
+  - id: url-parse-outside-try
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: new URL($REQ.url, ...)
+          - pattern: new URL(<... $REQ.headers ...>, ...)
+          - pattern: new URL($X, <... $REQ.headers.host ...>)
+      - pattern-not-inside: |
+          try { ... } catch ($E) { ... }
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: ^(req|request)$
+    message: >-
+      The request's URL/Host is parsed without try/catch. A malformed request (e.g.
+      "GET //" or a bad Host header) makes new URL() throw; in an async handler that
+      becomes an unhandled rejection, which stops the whole Node.js process. One
+      request takes the site down. Parse inside try/catch and answer 400.
+    severity: ERROR
+    metadata: { owasp: "A10:2025 Mishandling of Exceptional Conditions", cwe: "CWE-248" }
+
   - id: swallowed-error-fake-success
     languages: [javascript, typescript]
     patterns:

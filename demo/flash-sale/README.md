@@ -3,7 +3,7 @@
 A one-page sneaker drop (100 pairs, one per customer) built twice:
 
 - **`naive/`**: what a quick AI-assisted build often looks like. It works when you click through it alone, but it has 20 planted problems across security, correctness under load, performance and operations. They aren't marked in the code; the review has to find them. Spoilers in [`ANSWER_KEY.md`](ANSWER_KEY.md).
-- **`fixed/`**: the same app after a launch review: atomic stock reservation, idempotent orders, server-side prices, signed sessions, caching, timeouts, rate limits, safe error handling.
+- **`fixed/`**: the same app after a first round of fixes: atomic stock reservation, idempotent orders, server-side prices, signed sessions, caching, timeouts, rate limits, safe error handling. It passes the load, oversell and acceptance tests, and its own launch review still says **NO-GO** (a one-request crash and a double-charge path when payments are slow). That's deliberate: it shows what each layer of checks can and can't see. See [`sample-reports/SCORECARD.md`](sample-reports/SCORECARD.md).
 
 Both share `shared/` (frontend, sample data, and simulated infrastructure: a database layer that behaves like a hosted Postgres with network latency and a 10-connection pool, and a fake payment provider that occasionally hangs, like real ones on Black Friday).
 

@@ -69,7 +69,7 @@ Work entry point by entry point from the system map. For each one ask: **who can
 - Someone gets alerted on spikes of errors/failed logins (see `operations.md`).
 
 ## A10 Mishandling of Exceptional Conditions
-- Malformed input returns 400; it doesn't crash the process. *(scan: json-parse-in-stream-callback)* Global handlers for unhandled rejections/exceptions log and keep serving (or restart cleanly).
+- Malformed input returns 400; it doesn't crash the process. *(scan: json-parse-in-stream-callback, url-parse-outside-try)* Try it on a local instance: invalid JSON, a `null` body, `GET //` (`curl --path-as-is`), a bad `Host` header. Then check the server still answers. Global handlers for unhandled rejections/exceptions log and keep serving (or restart cleanly).
 - **Fail closed**: if the auth check, payment verification or permission lookup errors, the answer is "no", not "yes".
 - No fake success: errors aren't swallowed and reported as success. *(scan: swallowed-error-fake-success)*
 - Resource limits: request body size, upload size, pagination limits, timeouts on outgoing calls.

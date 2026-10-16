@@ -13,7 +13,9 @@ Draws on the AWS Well-Architected Framework (reliability, security, performance,
 - **Constraints in the database**, not only in code: primary keys, foreign keys, `NOT NULL`, `UNIQUE` (email, one-order-per-customer, idempotency keys), `CHECK (stock >= 0)`.
 - **Money as integers (cents) or DECIMAL**, never floating point. Currency stored alongside amounts.
 - **Multi-step writes are transactional** (create order + reserve stock + record payment); partial failure leaves a consistent state or is compensated.
-- **Idempotency** for anything retried: payment calls, webhooks, form submissions, queue jobs.
+- **Idempotency** for anything retried: payment calls, webhooks, form submissions, queue jobs. The idempotency key belongs to the *purchase attempt*, reused on every retry, not regenerated per request.
+- **A timeout is "unknown", not "failed".** When a call that moves money (or sends something irreversible) times out, it may have succeeded. Don't release stock and tell the customer to retry; keep the order pending, confirm with the provider (lookup or webhook), and run a reconciliation job (provider charges vs paid orders) with alerts.
+- **Work after money moved must not be abandoned**: once a charge succeeded, the follow-up writes retry until they land (or go to an outbox); fail-fast load shedding applies only before the charge.
 - **Concurrency**: limited resources use atomic updates or locks (see `peak-traffic-test` → anti-patterns A1–A4).
 - **Time**: stored in UTC; time zones applied at display. Sale start/end times tested across time zones.
 - **Migrations are versioned and repeatable** (checked into the repo, applied by a tool, not by hand in a dashboard). Destructive migrations have a backup and rollback plan.

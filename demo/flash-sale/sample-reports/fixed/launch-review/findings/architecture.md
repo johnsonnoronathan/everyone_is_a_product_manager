@@ -81,6 +81,18 @@ Reproductions ran only against a local instance started by the reviewer on ports
 - **Fix:** Check `res.ok`; on failure show a message and retry with backoff (honour `Retry-After`). On 401, clear the stored token and show sign-in. Store a token only when one is returned. After a 410, re-check stock a few seconds later, because failed payments return pairs. Effort: S
 - **Reference:** architecture checklist "error handling is consistent"
 
+### ARC-09 · Low · Confirmed (found by test): Pairs that come back after a failed payment aren't offered to anyone
+- **Where:** `demo/flash-sale/fixed/server.mjs:259-262, 271-275` (a 410 "Sold out" is returned while pairs are only *reserved*; the release puts them back silently), `demo/flash-sale/shared/public/app.js:67` (the page switches to "Sold out" for good after a 410)
+- **Impact:** In the rush, shoppers are told "Sold out" while some pairs are only reserved by payments that later fail. When those pairs come back, everyone has already given up. In the test 4 of 100 pairs stayed unsold, and in real life they go to whoever keeps refreshing (usually bots), after the shop has publicly sold out.
+- **Evidence:** `peak-traffic/oversell-summary.md`: 1,000 buyers × 2 clicks → 96 sold, "Stock counter in database: 4", "Undersold: only 96 of 100 units sold although 1000 buyers tried".
+- **Fix:** Tell people the difference between "sold out" and "all pairs reserved, check again in a minute" (the server knows: pending orders exist), and have the page re-check automatically. Or hand returned pairs to a short waitlist in arrival order. Effort: S
+- **Reference:** peak-traffic anti-pattern E6 (graceful degradation)
+
+## Test evidence folded in after the review
+- `peak-traffic/oversell-summary.md` (PASS: never oversold, "buyers charged twice: 0") supports the "no overselling by design" point below. It **does not** contradict ARC-01: the simulated provider never charges a call the app has abandoned, so a timed-out payment can't turn into a charge in that test. ARC-01 needed a provider answering at about 3 s to show up.
+- `acceptance/ACCEPTANCE.md` AC-08 ("Payment problems are explained, and the pair goes back on sale") passes, and it checks exactly the behaviour ARC-01 warns about: releasing the pair when the payment outcome is unknown. Amend the criterion to say: "if the payment outcome is unknown, the pair stays reserved until confirmed; no customer is ever charged without an order".
+- No acceptance criterion covers the shipping address (ARC-03), the sale start time (ARC-04) or the confirmation email (ARC-07), which is why the suite passes despite them.
+
 ## Verified and holding up (no finding)
 - **No overselling by design:** the reservation is a single conditional statement `UPDATE products SET stock = stock - 1 WHERE id = ? AND stock > 0` with a rows-affected check, inside one short transaction with the order insert (`server.mjs:247-254`). The database backs it up with `CHECK (stock >= 0)`. The payment call happens outside the transaction (no lock held during the call, anti-pattern A3 avoided).
 - **One live order per customer** is enforced by the database: partial unique index on `(product_id, customer)` for `pending`/`paid` (`server.mjs:50`). A double click gets 409 (local: second buy → 409).

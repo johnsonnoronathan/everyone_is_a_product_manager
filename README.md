@@ -16,7 +16,15 @@ The skills hand work to each other: `launch-review` calls `peak-traffic-test` fo
 
 [`demo/flash-sale`](demo/flash-sale/) is a sneaker drop built twice: a **naive** version with 20 planted problems (the kind AI-assisted builds typically ship with) and a **fixed** version. Every skill was run on both; the full outputs are in [`demo/flash-sale/sample-reports/`](demo/flash-sale/sample-reports/).
 
-<!-- RESULTS -->
+| | naive | fixed |
+|---|---|---|
+| **Launch review** | NO-GO: 10 Critical, 6 High ([report](demo/flash-sale/sample-reports/naive/launch-review/REPORT.md)) | NO-GO: 1 Critical, 6 High ([report](demo/flash-sale/sample-reports/fixed/launch-review/REPORT.md)) |
+| **Load test**, target 600 req/s | Breaks at 50%: product page takes 2.6 s+ | Holds 200% (1,200 req/s) |
+| **Oversell race**, 100 pairs, 1,000 buyers double-clicking | 1,962 pairs sold, 963 buyers charged twice | 96 sold, nobody charged twice |
+| **Acceptance**, 10 criteria × 3 runs | Not ready: 3 "Must" criteria fail | Ready for sign-off |
+| **Planted issues found** by a review that never saw the answer key | 19 of 20, plus a real crash bug we hadn't planted | n/a |
+
+The most useful result is in the right-hand column. The "fixed" version passed the load test, the oversell race and every acceptance test. The review still found that a single `GET //` request crashes the server, and that a slow payment provider leads to double charges (reproduced: 57 payments for 39 pairs). No single check is enough, which is why the kit layers them. The details, and what we changed in the skills because of this run, are in the [scorecard](demo/flash-sale/sample-reports/SCORECARD.md).
 
 ## Use it on your own (or a client's) project
 

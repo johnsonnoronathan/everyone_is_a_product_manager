@@ -29,6 +29,12 @@ Severity guide: anything that makes the system *wrong* under load (oversell, dou
 ### A4. Coupon / limited-use counters, "first N customers", seat booking
 Same as A1 with different names (`uses`, `redeemed`, `seats`, `balance`, `credits`). Check every counter that has a limit.
 
+### A5. Treating a timeout as a failure (charged but "please try again")
+- **Looks like:** payment call with a timeout → on timeout, mark failed, release stock, tell the shopper to retry; a new idempotency key on each attempt.
+- **Why it breaks:** at peak, partners slow down; a call your app gave up on may still have charged the card. The shopper retries and pays twice, or loses the item they paid for. Load tests with a stub that never charges abandoned calls **can't see this**: reproduce it by setting the stub's latency just around your timeout.
+- **Fix:** treat a timeout as *unknown*: keep the reservation, show "confirming your payment", settle via the provider's lookup or webhook, reuse one idempotency key per purchase attempt, and reconcile charges against orders.
+- **PM sentence:** "When the payment provider is slow at midnight, some customers would be charged twice."
+
 ---
 
 ## B. Database load

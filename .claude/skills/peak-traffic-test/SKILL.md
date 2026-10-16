@@ -52,6 +52,8 @@ k6 run -q -e PLAN=$PWD/launch-review/peak-traffic/plan.json -e OUT_DIR=$PWD/laun
 - **Watch the load generator.** If the machine running k6 is above ~80% CPU, the numbers are about the laptop, not the app. One laptop can usually generate a few thousand simple requests/second. For bigger targets run k6 from a cloud VM near the app or use Grafana Cloud k6, and say so in the report.
 - While it runs, ask the user (or check yourself if you have access) to watch the app's dashboards: CPU, memory, DB connections, DB CPU, error logs. Note which resource ran out first; that is the bottleneck to fix.
 
+**Slow partners:** if the test stack uses a stub for payments/email, also run one short test with the stub's latency set just around the app's timeout (e.g. 2.9–3.1 s for a 3 s timeout), then compare the provider's charge count with paid orders. Stubs that never complete abandoned calls hide double charges (anti-pattern A5).
+
 ### 4. Oversell / double-order test (when anything has limited stock or "one per customer")
 Add an `oversell` section to the brief (see the interview guide), regenerate the plan, then:
 ```bash

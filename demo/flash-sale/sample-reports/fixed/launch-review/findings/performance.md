@@ -45,6 +45,12 @@ Target from the owner: 3,000 visitors within 60 s of opening, planned at 3× pea
 | E5 jobs at midnight | none in the code; ask whether backups/reports run at midnight on the host | |
 | E6 graceful degradation / kill switch | ⚠️ no pause switch → **OPS-02** | |
 
+## Test evidence folded in after the review (`peak-traffic/load-summary.md`, `oversell-summary.md`)
+- Load test (k6, local process, 20 s per step): PASS at every step up to **200% of target (1,200 req/s)**. Product page p95 ≤ 6 ms and p99 ≤ 56 ms; buy p95 ≤ 128 ms. 4 server errors (0.27%) at the 50% step, which matches the simulator's 2% hanging payments hitting the 3 s timeout.
+- Caveat: the 100 pairs sold during the first (50%) step. At 100–200% the buy requests were answered by the in-memory "sold out" shortcut (`server.mjs:237`) without touching the database or the payment provider. The test proves the cached and sold-out paths are fast. The checkout path itself was exercised only at 75 buys/s with stock remaining.
+- Oversell (1,000 buyers × 2 clicks): never more than 100 sold, 0 double charges, 96 sold and 4 pairs left unsold → new finding ARC-09 (found by test).
+- Neither test can show ARC-01 or ARC-02: the simulated provider never charges an abandoned call and the simulated database never slows down. Both were reproduced separately (`launch-review/repro/`).
+
 ## Could not check
 - Real capacity of one Node process on the production instance size, and through the real load balancer (the existing k6 run is against a local process; see the final report).
 - Hosted Postgres tier limits (`max_connections`, CPU) and the identity provider's sign-in limits at midnight (OPS-03).
