@@ -1,0 +1,21 @@
+{
+  "sent": {
+    "productId": 1,
+    "price": 1
+  },
+  "response": {
+    "status": 200,
+    "body": "{\"orderId\":2,\"amountCents\":1}"
+  },
+  "ordersAfterwards": [
+    {
+      "id": 2,
+      "product_id": 1,
+      "customer": "tamperer-1792153633507-1@acceptance.test",
+      "amount_cents": 1,
+      "address": "",
+      "status": "paid",
+      "created_at": "2026-10-16 12:27:13"
+    }
+  ]
+}

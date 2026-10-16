@@ -1,0 +1,26 @@
+{
+  "pass": false,
+  "problems": [
+    "Oversold: 1962 purchases confirmed for 100 units (1862 customers were promised items that don't exist).",
+    "Double orders: 963 buyers got two confirmed orders from one double-click.",
+    "Database shows 1962 orders for 100 units.",
+    "Inventory doesn't add up: 1962 sold + 92 remaining ≠ 100 starting stock.",
+    "963 orders belong to customers who already had one."
+  ],
+  "warnings": [
+    "38 of 2000 requests (1.9%) failed with a server error or timeout."
+  ],
+  "stock": 100,
+  "buyers": 1000,
+  "clicksPerBuyer": 2,
+  "successfulPurchases": 1962,
+  "buyersChargedTwice": 963,
+  "rejected": 0,
+  "errors": 38,
+  "server": {
+    "sold": 1962,
+    "remaining": 92,
+    "customers": 999,
+    "initial": 100
+  }
+}

@@ -1,0 +1,187 @@
+{
+  "plan": {
+    "event": "Midnight sneaker drop (demo)",
+    "baseUrl": "http://127.0.0.1:3000",
+    "totalTargetRps": 600
+  },
+  "verdict": {
+    "meetsTarget": true,
+    "holdsUpTo": {
+      "multiplier": 2,
+      "rps": 1200
+    },
+    "breaksAt": null,
+    "stagesPassed": 4,
+    "stagesTotal": 4
+  },
+  "stages": [
+    {
+      "stage": "s1",
+      "multiplier": 0.5,
+      "totalTargetRps": 300,
+      "pass": true,
+      "endpoints": [
+        {
+          "endpoint": "product_page",
+          "name": "Product page",
+          "targetRps": 225,
+          "achievedRps": 225.1,
+          "requests": 4501,
+          "p50": 0.546253,
+          "p95": 1.19123,
+          "p99": 3.824319,
+          "budgetMs": 500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        },
+        {
+          "endpoint": "buy",
+          "name": "Buy",
+          "targetRps": 75,
+          "achievedRps": 75.1,
+          "requests": 1501,
+          "p50": 0.648512,
+          "p95": 127.55092,
+          "p99": 194.423618,
+          "budgetMs": 1500,
+          "errorRate": 0.002664890073284477,
+          "serverErrors": 4,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "stage": "s2",
+      "multiplier": 1,
+      "totalTargetRps": 600,
+      "pass": true,
+      "endpoints": [
+        {
+          "endpoint": "product_page",
+          "name": "Product page",
+          "targetRps": 450,
+          "achievedRps": 450.1,
+          "requests": 9001,
+          "p50": 0.482628,
+          "p95": 1.171536,
+          "p99": 5.467966,
+          "budgetMs": 500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        },
+        {
+          "endpoint": "buy",
+          "name": "Buy",
+          "targetRps": 150,
+          "achievedRps": 150,
+          "requests": 3000,
+          "p50": 0.557095,
+          "p95": 1.2078854999999995,
+          "p99": 4.746252069999954,
+          "budgetMs": 1500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "stage": "s3",
+      "multiplier": 1.5,
+      "totalTargetRps": 900,
+      "pass": true,
+      "endpoints": [
+        {
+          "endpoint": "product_page",
+          "name": "Product page",
+          "targetRps": 675,
+          "achievedRps": 675.1,
+          "requests": 13501,
+          "p50": 0.47683,
+          "p95": 5.658049,
+          "p99": 55.827176,
+          "budgetMs": 500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        },
+        {
+          "endpoint": "buy",
+          "name": "Buy",
+          "targetRps": 225,
+          "achievedRps": 225.1,
+          "requests": 4501,
+          "p50": 0.556693,
+          "p95": 3.29518,
+          "p99": 30.115161,
+          "budgetMs": 1500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "stage": "s4",
+      "multiplier": 2,
+      "totalTargetRps": 1200,
+      "pass": true,
+      "endpoints": [
+        {
+          "endpoint": "product_page",
+          "name": "Product page",
+          "targetRps": 900,
+          "achievedRps": 900.1,
+          "requests": 18001,
+          "p50": 0.462308,
+          "p95": 1.69897,
+          "p99": 6.338842,
+          "budgetMs": 500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        },
+        {
+          "endpoint": "buy",
+          "name": "Buy",
+          "targetRps": 300,
+          "achievedRps": 300,
+          "requests": 6000,
+          "p50": 0.52422,
+          "p95": 1.3540168500000012,
+          "p99": 5.561708840000018,
+          "budgetMs": 1500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        }
+      ]
+    }
+  ]
+}
