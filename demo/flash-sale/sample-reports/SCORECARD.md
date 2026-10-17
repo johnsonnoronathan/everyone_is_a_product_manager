@@ -7,10 +7,10 @@
 
 | | naive | fixed |
 |---|---|---|
-| Launch review | **NO-GO**: 10 Critical, 6 High, 12 Medium, 2 Low ([report](naive/launch-review/REPORT.md)) | **NO-GO**: 1 Critical, 6 High, 11 Medium, 5 Low ([report](fixed/launch-review/REPORT.md)) |
-| Load test (600 req/s target) | Breaks at 50%: product page p95 2.6 s, requests piling up ([summary](naive/launch-review/peak-traffic/load-summary.md)) | Holds 200% (1,200 req/s): product page p95 ≤ 6 ms, checkout p95 ≤ 128 ms ([summary](fixed/launch-review/peak-traffic/load-summary.md)) |
-| Oversell test (100 pairs) | **1,962 sold**, 963 buyers charged twice ([summary](naive/launch-review/peak-traffic/oversell-summary.md)) | 96 sold, 0 double charges ([summary](fixed/launch-review/peak-traffic/oversell-summary.md)) |
-| Acceptance (10 criteria × 3 runs) | Not ready: AC-03, AC-04, AC-06 (Must) and AC-08 fail ([matrix](naive/launch-review/acceptance/ACCEPTANCE.md)) | Ready for sign-off ([matrix](fixed/launch-review/acceptance/ACCEPTANCE.md)), but see below |
+| Launch review | **NO-GO**: 10 Critical, 6 High, 12 Medium, 2 Low ([report](naive/launch-review/REPORT.md)) | **NO-GO**: 1 Critical, 6 High, 11 Medium, 5 Low ([report](fixed-round1/launch-review/REPORT.md)) |
+| Load test (600 req/s target) | Breaks at 50%: product page p95 2.6 s, requests piling up ([summary](naive/launch-review/peak-traffic/load-summary.md)) | Holds 200% (1,200 req/s): product page p95 ≤ 6 ms, checkout p95 ≤ 128 ms ([summary](fixed-round1/launch-review/peak-traffic/load-summary.md)) |
+| Oversell test (100 pairs) | **1,962 sold**, 963 buyers charged twice ([summary](naive/launch-review/peak-traffic/oversell-summary.md)) | 96 sold, 0 double charges ([summary](fixed-round1/launch-review/peak-traffic/oversell-summary.md)) |
+| Acceptance (10 criteria × 3 runs) | Not ready: AC-03, AC-04, AC-06 (Must) and AC-08 fail ([matrix](naive/launch-review/acceptance/ACCEPTANCE.md)) | Ready for sign-off ([matrix](fixed-round1/launch-review/acceptance/ACCEPTANCE.md)), but see below |
 
 ## Naive: 19 of 20 planted issues found
 

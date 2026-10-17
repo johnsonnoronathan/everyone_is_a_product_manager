@@ -39,18 +39,18 @@ export function openDb({
   let free = poolSize;
   const waiters = [];
 
-  function acquire() {
+  function acquire(timeoutMs) {
     if (free > 0) {
       free--;
       return Promise.resolve();
     }
     return new Promise((resolve, reject) => {
       const waiter = { resolve, timer: null };
-      if (acquireTimeoutMs > 0) {
+      if (timeoutMs > 0) {
         waiter.timer = setTimeout(() => {
           waiters.splice(waiters.indexOf(waiter), 1);
           reject(new PoolTimeoutError());
-        }, acquireTimeoutMs);
+        }, timeoutMs);
       }
       waiters.push(waiter);
     });
@@ -66,8 +66,8 @@ export function openDb({
     }
   }
 
-  async function withConnection(fn) {
-    await acquire();
+  async function withConnection(fn, timeoutMs = acquireTimeoutMs) {
+    await acquire(timeoutMs);
     try {
       await sleep(latencyMs);
       return fn();
@@ -88,7 +88,8 @@ export function openDb({
     all: (sql, ...params) => withConnection(() => tx.all(sql, ...params)),
     run: (sql, ...params) => withConnection(() => tx.run(sql, ...params)),
     // Runs fn synchronously inside BEGIN IMMEDIATE ... COMMIT on one connection.
-    transaction: (fn) =>
+    // Pass { acquireTimeoutMs: 0 } to wait as long as it takes for a connection.
+    transaction: (fn, { acquireTimeoutMs: timeoutMs = acquireTimeoutMs } = {}) =>
       withConnection(() => {
         sqlite.exec('BEGIN IMMEDIATE');
         try {
@@ -99,9 +100,10 @@ export function openDb({
           sqlite.exec('ROLLBACK');
           throw err;
         }
-      }),
-    // Schema setup only; bypasses the pool.
+      }, timeoutMs),
+    // Schema setup only; bypass the pool.
     exec: (sql) => sqlite.exec(sql),
+    prepare: (sql) => sqlite.prepare(sql),
     poolStats: () => ({ poolSize, inUse: poolSize - free, waiting: waiters.length }),
   };
 }

@@ -18,7 +18,7 @@ The skills hand work to each other: `launch-review` calls `peak-traffic-test` fo
 
 | | naive | fixed |
 |---|---|---|
-| **Launch review** | NO-GO: 10 Critical, 6 High ([report](demo/flash-sale/sample-reports/naive/launch-review/REPORT.md)) | NO-GO: 1 Critical, 6 High ([report](demo/flash-sale/sample-reports/fixed/launch-review/REPORT.md)) |
+| **Launch review** | NO-GO: 10 Critical, 6 High ([report](demo/flash-sale/sample-reports/naive/launch-review/REPORT.md)) | NO-GO: 1 Critical, 6 High ([report](demo/flash-sale/sample-reports/fixed-round1/launch-review/REPORT.md)) |
 | **Load test**, target 600 req/s | Breaks at 50%: product page takes 2.6 s+ | Holds 200% (1,200 req/s) |
 | **Oversell race**, 100 pairs, 1,000 buyers double-clicking | 1,962 pairs sold, 963 buyers charged twice | 96 sold, nobody charged twice |
 | **Acceptance**, 10 criteria × 3 runs | Not ready: 3 "Must" criteria fail | Ready for sign-off |

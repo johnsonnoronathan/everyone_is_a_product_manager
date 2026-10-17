@@ -32,8 +32,9 @@ export default defineConfig({
     command: `node ../run.mjs ${variant}`,
     url: 'http://127.0.0.1:3000/',
     reuseExistingServer: false,
-    // Payment hangs are switched off for deterministic runs; AC-08 turns them on explicitly.
-    env: { PAYMENT_HANG_RATE: '0' },
+    // Payment hangs are off for deterministic runs; AC-08 turns them on explicitly. Short hangs
+    // and a fast reconciler keep AC-08 under 15 seconds.
+    env: { PAYMENT_HANG_RATE: '0', PAYMENT_HANG_MS: '6000', RECONCILE_INTERVAL_MS: '1000' },
     stdout: 'ignore',
     stderr: 'pipe',
   },

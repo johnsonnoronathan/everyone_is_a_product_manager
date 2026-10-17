@@ -15,7 +15,7 @@
       "perVisitor": 1,
       "p95Ms": 1500,
       "auth": true,
-      "body": { "productId": 1, "price": 4999 },
+      "body": { "productId": 1, "price": 4999, "address": "{{n}} Load Test Street, Testville" },
       "okStatuses": [409, 410, 429]
     }
   ],
@@ -38,7 +38,7 @@
     "stock": 100,
     "buyers": 1000,
     "clicksPerBuyer": 2,
-    "buy": { "method": "POST", "path": "/api/buy", "auth": true, "body": { "productId": 1, "price": 4999 } },
+    "buy": { "method": "POST", "path": "/api/buy", "auth": true, "body": { "productId": 1, "price": 4999, "address": "{{n}} Rush Hour Road, Testville" } },
     "setup": {
       "method": "POST",
       "path": "/api/admin/reset",
@@ -49,7 +49,7 @@
       "method": "GET",
       "path": "/api/admin/stats",
       "headers": { "x-admin-token": "demo-admin-token" },
-      "fields": { "sold": "paidOrders", "remaining": "stockRemaining", "customers": "distinctCustomers", "initial": "initialStock" }
+      "fields": { "sold": "paidOrders", "pending": "pendingOrders", "remaining": "stockRemaining", "customers": "distinctCustomers", "initial": "initialStock" }
     }
   }
 }

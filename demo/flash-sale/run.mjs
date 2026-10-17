@@ -21,6 +21,8 @@ const env = {
   TOKEN_SECRET: process.env.TOKEN_SECRET ?? 'demo-token-secret-change-me',
   ADMIN_TOKEN: process.env.ADMIN_TOKEN ?? 'demo-admin-token',
   DEMO_LOGIN: process.env.DEMO_LOGIN ?? '1',
+  ENABLE_TEST_ROUTES: process.env.ENABLE_TEST_ROUTES ?? '1',
+  SEED_DEMO_DATA: process.env.SEED_DEMO_DATA ?? '1',
 };
 env.PAYMENT_URL = `http://127.0.0.1:${env.PAYMENT_PORT}`;
 

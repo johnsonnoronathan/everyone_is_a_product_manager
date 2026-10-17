@@ -9,3 +9,9 @@ button { padding: 10px 18px; font-size: 1rem; cursor: pointer; }
 #buy { background: #1d4ed8; color: #fff; border: 0; border-radius: 6px; }
 #buy:disabled { background: #6b7280; cursor: not-allowed; }
 #message { min-height: 1.5em; font-weight: 600; }
+#sale-status:empty { display: none; }
+#sale-status { font-weight: 600; }
+#checkout-fields { display: grid; gap: 6px; margin-bottom: 12px; }
+#checkout-fields[hidden] { display: none; }
+textarea { padding: 8px; font: inherit; max-width: 100%; }
+.hint { flex-basis: 100%; margin: 0; font-size: 0.9rem; }

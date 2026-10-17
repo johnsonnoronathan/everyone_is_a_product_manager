@@ -12,6 +12,7 @@
     <h1 id="name">Loading…</h1>
     <p id="description"></p>
     <p class="price"><span id="price"></span> · <span id="stock" data-testid="stock"></span></p>
+    <p id="sale-status" data-testid="sale-status"></p>
 
     <section aria-labelledby="checkout-heading">
       <h2 id="checkout-heading">Checkout</h2>
@@ -19,8 +20,13 @@
         <label for="email">Email</label>
         <input id="email" name="email" type="email" autocomplete="email" required>
         <button type="submit">Sign in</button>
+        <p class="hint">Sign in before the sale opens: you stay signed in for 12 hours.</p>
       </form>
       <p id="signed-in" hidden></p>
+      <div id="checkout-fields" hidden>
+        <label for="address">Shipping address</label>
+        <textarea id="address" name="address" autocomplete="street-address" rows="3" required></textarea>
+      </div>
       <button id="buy" type="button" disabled>Buy now</button>
       <p id="message" role="status" data-testid="message"></p>
     </section>

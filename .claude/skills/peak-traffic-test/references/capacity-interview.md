@@ -65,6 +65,8 @@ Notes:
 - `okStatuses`: business "no" answers that are *correct* behaviour under load (409 already ordered, 410 sold out, 429 rate limited) so they aren't counted as errors. Never add 5xx here.
 - `auth.poolSize` test users are signed in before the test starts (not measured). If the app has no test-login endpoint, options: a staging-only endpoint, pre-generated tokens loaded from a file (edit `setup` in `k6/load.js`), or Supabase/Firebase admin APIs to mint test-user tokens. Never weaken production auth for testing.
 - `setup` runs once before the test (e.g. reset stock). `oversell.stats` is optional; without it, query the database after the run.
+- Asynchronous payments: by default the oversell check counts HTTP 200/201/202 as accepted orders (`oversell.successStatuses`), with 202 meaning "accepted, payment still being confirmed" (`oversell.pendingStatuses`). If the stats endpoint reports such orders (`fields.pending`), the check waits up to `oversell.settleSeconds` (default 60) for them to settle, then verifies sold + pending + remaining = starting stock.
+- Use `{{n}}` to make values that must be unique per buyer unique (e.g. `"address": "{{n}} Test Street"` when the shop limits one order per address).
 - Bodies must match what the real frontend sends, including fields the server *shouldn't* trust (e.g. `price`).
 
 ## Worked example (sanity-check your arithmetic)

@@ -49,6 +49,7 @@ k6 run -q -e PLAN=$PWD/launch-review/peak-traffic/plan.json -e OUT_DIR=$PWD/laun
 ```
 - Exit code 99 means thresholds were crossed, i.e. the app failed some step. That's a result, not a tool error. Read `load-summary.md` / `load-summary.json`.
 - The test runs each step (50/100/150/200% of target by default) at a fixed arrival rate and judges each request type against its speed budget and error budget. It reports the highest step that passed and why the next one failed.
+- **Run it more than once.** Run the full plan at least twice (three times if the results differ), keep every summary, and judge on the worst run. Before calling a slowdown a regression, run the previous version under the same conditions on the same day: shared machines are noisy.
 - **Watch the load generator.** If the machine running k6 is above ~80% CPU, the numbers are about the laptop, not the app. One laptop can usually generate a few thousand simple requests/second. For bigger targets run k6 from a cloud VM near the app or use Grafana Cloud k6, and say so in the report.
 - While it runs, ask the user (or check yourself if you have access) to watch the app's dashboards: CPU, memory, DB connections, DB CPU, error logs. Note which resource ran out first; that is the bottleneck to fix.
 

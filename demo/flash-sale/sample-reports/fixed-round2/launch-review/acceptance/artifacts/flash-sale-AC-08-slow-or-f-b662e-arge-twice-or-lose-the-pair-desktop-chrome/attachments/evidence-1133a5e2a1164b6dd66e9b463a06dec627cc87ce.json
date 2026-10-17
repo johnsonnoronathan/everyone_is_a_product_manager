@@ -1,0 +1,13 @@
+{
+  "stats": {
+    "initialStock": 1,
+    "stockRemaining": 0,
+    "paidOrders": 1,
+    "pendingOrders": 0,
+    "distinctCustomers": 1,
+    "payments": {
+      "charges": 1,
+      "chargedCents": 4999
+    }
+  }
+}

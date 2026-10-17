@@ -1,0 +1,8 @@
+{
+  "sent": {
+    "productId": 1,
+    "price": 4999
+  },
+  "status": 400,
+  "body": "{\"error\":\"Please enter your full shipping address\"}"
+}
