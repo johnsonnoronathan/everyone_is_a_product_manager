@@ -119,7 +119,7 @@ Scaling up takes minutes; a drop peaks in seconds. Check max instances/concurren
 Scalper bots can be most of the traffic at a drop. Options: rate limits per user/IP, bot protection (Cloudflare, DataDome, hCaptcha/Turnstile), and a **virtual waiting room** (Cloudflare Waiting Room, Queue-it, Queue-Fair, CrowdHandler), which caps how many people are in checkout at once. Often the cheapest insurance; recommend it whenever the load test shows little headroom.
 
 ### E4. Frontend multiplies load
-Polling "stock left" every second × 10,000 open tabs = 10,000 req/s. Prefer longer intervals with jitter, server-sent events, or a CDN-cached endpoint. Huge unoptimised images eat bandwidth.
+Polling "stock left" every second × 10,000 open tabs = 10,000 req/s. Watch countdowns too: browsers and Node fire a `setTimeout` longer than ~24.8 days (2³¹ ms) immediately, so a "reload when the sale opens" timer on a page opened weeks early becomes a reload loop. Cap timer delays. Prefer longer intervals with jitter, server-sent events, or a CDN-cached endpoint. Huge unoptimised images eat bandwidth.
 
 ### E5. Scheduled jobs at the same time as the sale
 Midnight cron jobs (reports, emails, backups, cache rebuilds) colliding with a midnight drop. Check schedulers.

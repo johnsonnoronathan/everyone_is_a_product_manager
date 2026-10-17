@@ -18,6 +18,7 @@ Draws on the AWS Well-Architected Framework (reliability, security, performance,
 - **Work after money moved must not be abandoned**: once a charge succeeded, the follow-up writes retry until they land (or go to an outbox); fail-fast load shedding applies only before the charge.
 - **Concurrency**: limited resources use atomic updates or locks (see `peak-traffic-test` → anti-patterns A1–A4).
 - **Time**: stored in UTC; time zones applied at display. Sale start/end times tested across time zones.
+- **Settings that must be right on the day** (sale start/end, prices, stock, feature flags): one source of truth (not "env var on first boot, database afterwards"), strict parsing (full ISO timestamps *with* a time-zone offset; reject "Nov 27", bare dates and numbers; booleans as booleans), and the value actually in force is logged and visible to the team.
 - **Migrations are versioned and repeatable** (checked into the repo, applied by a tool, not by hand in a dashboard). Destructive migrations have a backup and rollback plan.
 - **Deletion**: what happens to related data when a user or record is deleted (cascades, orphans, legal retention)?
 

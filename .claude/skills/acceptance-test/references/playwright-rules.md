@@ -16,6 +16,9 @@
 - Clean up or reset in `beforeEach`, not `afterEach` (a failed test may never reach its cleanup).
 - Never point tests at production data, real payment keys, or real customers' inboxes.
 
+## Assert what should disappear, too
+After a state change, check that the old state is gone, not only that the new one appeared: the sign-in form hides after signing in, the "Buy" button is disabled after selling out, the error message clears. (A real example: a CSS rule `form { display: flex }` silently overrode the `hidden` attribute, and every screenshot showed the sign-in form after sign-in for two review rounds.) `await expect(locator).toBeHidden()` costs one line.
+
 ## Assert the outcome
 - Pair UI assertions with a check of the source of truth for money, counts, permissions and data: `request.get('/api/my-orders')`, an admin/test endpoint, or a DB query in a fixture.
 - Give assertions a message that reads as the business rule: `expect(orders, 'orders for this customer').toHaveLength(1)`. The report shows it.

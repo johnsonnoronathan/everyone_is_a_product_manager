@@ -22,7 +22,7 @@ The question here is: when something goes wrong after launch (and something will
 
 ## Respond
 - **Who's on call** during launch and the first week, and how they're reached.
-- **A one-page runbook**: how to roll back, how to put up a maintenance page, how to rotate a leaked key, who has admin access to which dashboard, contact routes for the hosting/payment providers.
+- **A one-page runbook**: how to roll back, how to put up a maintenance page, how to rotate a leaked key, who has admin access to which dashboard, contact routes for the hosting/payment providers. **Every step must point to a tool or command that exists and has been tried once** (on staging). A runbook that relies on scripts nobody wrote, or a rollback nobody tested against the new database schema, fails at the worst moment.
 - **Status/support channel** for customers (status page, support email, in-app banner).
 - **Access hygiene**: the founders/PM aren't the only people with production access; access is via personal accounts with MFA, not shared passwords; departed contractors removed.
 

@@ -1,16 +1,17 @@
 # Scorecard: what the skills caught on the demo
 
 ## How this was measured
-- **Launch review**: two fresh Claude Code agents each ran the `launch-review` skill on one variant (commit `d572634`). They were not allowed to read the answer key, the other variant or the acceptance test code, and had to write their findings *before* seeing the load-test and acceptance results. Every Critical was reproduced against a local instance; the most surprising claims were re-run independently afterwards (marked ✔︎ below).
-- **Peak traffic**: `peak-traffic-test` scripts (k6) with the brief in `demo/flash-sale/peak-brief.json`: 600 req/s target, steps 50–200%, plus 1,000 double-clicking buyers racing for 100 pairs.
-- **Acceptance**: `acceptance-test` with 10 agreed criteria, each test run 3× without retries.
+- **Launch review**: for every version, a fresh Claude Code agent ran the `launch-review` skill. It wasn't allowed to read the answer key, the other variant or the acceptance test code, and had to write its findings *before* seeing the test results. Every Critical was reproduced against a local instance. The most surprising claims were re-run independently afterwards (marked ✔︎).
+- **Peak traffic**: `peak-traffic-test` with the brief in `demo/flash-sale/peak-brief.json`: a 600 req/s target, steps from 50% to 200%, plus 1,000 double-clicking buyers racing for 100 pairs.
+- **Acceptance**: `acceptance-test`, each test run 3× without retries. Criteria v1.0 had 10 criteria; v1.1 (round 2) rewords one and adds three.
 
-| | naive | fixed |
-|---|---|---|
-| Launch review | **NO-GO**: 10 Critical, 6 High, 12 Medium, 2 Low ([report](naive/launch-review/REPORT.md)) | **NO-GO**: 1 Critical, 6 High, 11 Medium, 5 Low ([report](fixed-round1/launch-review/REPORT.md)) |
-| Load test (600 req/s target) | Breaks at 50%: product page p95 2.6 s, requests piling up ([summary](naive/launch-review/peak-traffic/load-summary.md)) | Holds 200% (1,200 req/s): product page p95 ≤ 6 ms, checkout p95 ≤ 128 ms ([summary](fixed-round1/launch-review/peak-traffic/load-summary.md)) |
-| Oversell test (100 pairs) | **1,962 sold**, 963 buyers charged twice ([summary](naive/launch-review/peak-traffic/oversell-summary.md)) | 96 sold, 0 double charges ([summary](fixed-round1/launch-review/peak-traffic/oversell-summary.md)) |
-| Acceptance (10 criteria × 3 runs) | Not ready: AC-03, AC-04, AC-06 (Must) and AC-08 fail ([matrix](naive/launch-review/acceptance/ACCEPTANCE.md)) | Ready for sign-off ([matrix](fixed-round1/launch-review/acceptance/ACCEPTANCE.md)), but see below |
+| | naive | fixed, round 1 | fixed, round 2 |
+|---|---|---|---|
+| Launch review | **NO-GO**: 10 Critical, 6 High ([report](naive/launch-review/REPORT.md)) | **NO-GO**: 1 Critical, 6 High ([report](fixed-round1/launch-review/REPORT.md)) | **NO-GO**: 0 Critical, 1 High; 16 of 23 round-1 findings fixed and verified ([report](fixed-round2/launch-review/REPORT.md)) |
+| Load test (600 req/s target) | Breaks at 50% ([summary](naive/launch-review/peak-traffic/load-summary.md)) | Holds 200% ([summary](fixed-round1/launch-review/peak-traffic/load-summary.md)) | Target passes in 3 of 3 runs; 200% in 2 of 3 ([all runs](fixed-round2/launch-review/peak-traffic/RUNS.md)) |
+| Oversell race (100 pairs) | **1,962 sold**, 963 charged twice | 96 sold, 0 double ([summary](fixed-round1/launch-review/peak-traffic/oversell-summary.md)) | 100 sold, 0 double, nothing stuck ([summary](fixed-round2/launch-review/peak-traffic/oversell-summary.md)) |
+| Slow payment provider (~3 s) | n/a (no timeout at all) | **57 payments for 39 pairs** ✔︎ | 40 for 40 ✔︎ and 60 for 60; repeat clicks refused |
+| Acceptance | 3 Must criteria fail ([matrix](naive/launch-review/acceptance/ACCEPTANCE.md)) | All 10 pass ([matrix](fixed-round1/launch-review/acceptance/ACCEPTANCE.md)), but AC-08 encoded a risky behaviour | All 13 pass, v1.1 ([matrix](fixed-round2/launch-review/acceptance/ACCEPTANCE.md)) |
 
 ## Naive: 19 of 20 planted issues found
 
@@ -35,24 +36,51 @@
 | S8 Stack traces to the client | SEC-09 | ✅ |
 | S9 No security headers, CORS `*` | SEC-10, SEC-11 | ✅ |
 | S10 PII in API responses and logs | SEC-04, OPS-04 | ✅ |
-| O1 No health check / graceful shutdown / server timeouts | not reported | ❌ missed: the operations checklist didn't list these (fixed, see below) |
+| O1 No health check / graceful shutdown / server timeouts | not reported | ❌ missed: the operations checklist didn't list these (since added) |
 
-**Real problems it found that we had not planted** (all genuine): a malformed `Host` header crashes the server ✔︎ (part of SEC-07); every start-up deletes all orders (ARC-02); the "midnight" start isn't enforced (ARC-05); no database constraints (ARC-03). None of the 30 findings was a false alarm on inspection.
+**Real problems found that we hadn't planted**: a malformed `Host` header crashes the server ✔︎; every start-up deletes all orders; the "midnight" start isn't enforced; no database constraints. None of the 30 findings was a false alarm on inspection.
 
-## Fixed: what three passing test layers missed
+## Fixed, round 1: what three passing test layers missed
+The first "fixed" version passed the load test at 2× target, the oversell race and every acceptance criterion. The review still said NO-GO:
+- **SEC-01 (Critical) ✔︎:** one `GET //` crashes the only server. The bug was introduced while fixing the naive version's Host-header crash.
+- **ARC-01 (High) ✔︎:** when the payment provider answers in about 3 s, the app times out and tells the shopper to retry, but the provider has already charged. Result: 57 payments for 39 pairs. The tests couldn't see this because the payment stub never completed a charge the app had abandoned. Acceptance criterion AC-08 even *required* the risky behaviour.
+- Also: no shipping address collected, no enforced start time, stuck paid orders when the database was busy, a shared-token "delete everything" endpoint, and a start-up that wiped data.
 
-The "fixed" variant passed the load test at 2× target, the oversell race and every acceptance criterion. The review still said **NO-GO**, and the two most serious findings hold up:
+## Fixed, round 2: the fix-and-verify loop
+All 23 round-1 findings were re-checked against the new code with evidence:
+- **16 fixed and verified.** These include the crash (7 malformed paths now get 400), double charges (40/40 and 60/60; repeat clicks get 409), stuck orders (0 of 3 runs), missing addresses, early opening, and the start-up wipe (orders survive a restart).
+- **5 partially fixed:**
+  - email normalisation applies only to the test login;
+  - emails are queued durably, but sending is still simulated;
+  - logs have no request ids;
+  - sessions don't survive a new tab;
+  - backups and alerting are still unverified.
+- **2 left as conditions:** production safety depends on `NODE_ENV`; run one server only.
 
-- **SEC-01 (Critical) ✔︎:** one request to `GET //` crashes the only server (`new URL()` throws outside the `try`, an unhandled rejection ends the process). We introduced it while "fixing" the naive version's Host-header crash. No test sent a malformed URL.
-- **ARC-01 (High) ✔︎:** when the payment provider answers in about 3 s, the app times out, tells the shopper "try again" and releases the pair, but the provider may already have charged. Our independent re-run: **57 payments for 39 pairs** (the reviewer's run: 41 for 39). The load and oversell tests couldn't see this: the payment stub never completes a charge the app abandoned. Acceptance criterion AC-08 even *required* the risky behaviour ("the pair goes back on sale"). The review flagged the criterion itself.
-- Also real: the page never collects a shipping address (ARC-03), nothing enforces the sale start (ARC-04), a busy database after a successful charge leaves a paid order stuck (ARC-02), and a shared-token "delete everything" admin endpoint would ship (SEC-02). A few findings depend on production wiring the demo doesn't have (start-up seeding, test-login gating); the reviewer correctly marked those *Likely* rather than *Confirmed*.
+The fresh review then found **13 new issues in the new and old code**:
+- **ARC-11 (High) ✔︎:** changing `SALE_STARTS_AT` after the first start does nothing while the log claims it did, and `"Nov 27"` is accepted as 27 Nov 2001.
+- **PERF-04 ✔︎:** a countdown longer than about 25 days overflows the browser timer and reloads non-stop.
+- **ARC-15 ✔︎ (found from the acceptance screenshots):** the sign-in form never hides, because a CSS rule overrides `hidden`. It had been there since the very first version; neither round-1 review nor any test caught it.
+- **The runbook's rollback fails against the new schema**, and the runbook relies on operator tools that don't exist.
 
-## What we changed in the skills after this run
-- Operations checklist: health check, graceful shutdown, server timeouts and safe automatic restarts (the one planted miss).
-- New Semgrep rule `url-parse-outside-try` (flags the crash line in both variants), plus a regression fixture, and a "try `GET //` and a bad Host header" step in the security checklist.
-- "A timeout is *unknown*, not *failed*": added to the architecture checklist, peak-traffic anti-patterns (A5), the peak-traffic workflow (test a stub with latency around the timeout), and the acceptance-criteria guide.
+Verdict: still **NO-GO**, for two reasons:
+- One High (ARC-11, a small fix).
+- The production card-payment and sign-in integrations aren't in the demo, so the real payment flow has never been tested. Under the severity rules that blocks GO for a shop, and **no demo can clear it**: only a real integration and a real test purchase can.
 
-## Takeaway
-Each layer caught things the others couldn't. Scanners caught secrets and risky patterns. The review caught logic and failure modes. The load test measured capacity. The oversell race tested concurrency. Acceptance tests checked agreed behaviour and caught three Must failures on the naive version. On the fixed version three green test layers still hid a one-request crash and a double-charge path. A trustworthy "ready to launch" needs all of them, plus honest limits on what wasn't checked.
+## What we changed in the skills after each run
+- **After round 1:**
+  - health check, graceful shutdown, timeouts and safe restarts added to the operations checklist;
+  - a new Semgrep rule `url-parse-outside-try`;
+  - "a timeout is *unknown*, not *failed*" added across the checklists, anti-patterns and the acceptance guide.
+- **After round 2:**
+  - run load tests more than once and keep every run; compare against the previous version on the same day before calling a regression;
+  - the oversell check understands orders awaiting payment confirmation;
+  - settings that must be right on the day: single source of truth, strict time-zone-aware parsing;
+  - browser timer overflow added to the anti-patterns;
+  - acceptance tests should also assert what should *disappear*;
+  - every runbook step must be backed by a tool that exists and has been tried.
 
-**Not done yet:** a second round of fixes for `fixed/` (and rewording AC-08 with the product owner). Its findings are open.
+## Takeaways
+- **Each layer catches what the others can't.** Scanners catch secrets and patterns. The review catches logic, failure modes and operations. The load test measures capacity. The oversell race tests concurrency. Acceptance tests check agreed behaviour, and their screenshots are evidence a reviewer can read.
+- **Fixes need re-review, not just re-testing.** Each round of fixes introduced at least one new problem that only a fresh, sceptical review found.
+- **A verdict is only as good as its coverage.** The round-2 report says exactly what would turn NO-GO into GO WITH CONDITIONS, and what it couldn't check.

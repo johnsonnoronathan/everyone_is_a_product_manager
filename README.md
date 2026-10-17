@@ -38,7 +38,21 @@ The skills hand work to each other: `launch-review` calls on the other two and f
 
 [`demo/flash-sale`](demo/flash-sale/) is a sneaker drop (100 pairs, one per customer). It comes in two versions: a **naive** one with 20 planted problems of the kind AI-assisted builds often ship with, and a **fixed** one that went through two rounds of review and fixes. Every skill was run on every version, by reviewers that never saw the answer key. The full reports are in [`demo/flash-sale/sample-reports/`](demo/flash-sale/sample-reports/).
 
-<!-- RESULTS -->
+| | naive | fixed, round 1 | fixed, round 2 |
+|---|---|---|---|
+| **Launch review** | NO-GO: 10 Critical, 6 High | NO-GO: 1 Critical, 6 High | NO-GO: 0 Critical, 1 High (16 of 23 earlier findings fixed and verified) |
+| **Load test**, target 600 req/s | Breaks at 50% | Holds 200% | Target passes in every run; 200% in 2 of 3 runs |
+| **Oversell race**, 100 pairs, 1,000 double-clicking buyers | **1,962 sold**, 963 charged twice | 96 sold, none charged twice | 100 sold, none charged twice |
+| **Slow payment provider** (~3 s) | n/a | **57 payments for 39 pairs** | 40 payments for 40 pairs |
+| **Acceptance tests**, 3 runs each | 3 must-have criteria fail | All pass | All pass (criteria v1.1) |
+| **Planted issues found** by a review that never saw the answer key | 19 of 20, plus a real crash bug we hadn't planted | | |
+
+What this shows:
+- **The first "fixed" version passed every test and still had serious problems.** It passed the load test, the oversell race and all acceptance tests. The review found that one `GET //` request crashes the server, and that a slow payment provider double-charges customers.
+- **Round 2 fixed and verified those**, then found new problems, including a sale start time that silently stays wrong after a redeploy.
+- **It's still NO-GO, for an honest reason:** a demo has no real payment integration, so its payment flow can never be fully verified.
+
+No single check is enough, and fixes need re-review, not just re-testing.
 
 Details, including what we changed in the skills after each run: [scorecard](demo/flash-sale/sample-reports/SCORECARD.md).
 

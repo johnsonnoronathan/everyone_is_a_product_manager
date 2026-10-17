@@ -34,7 +34,7 @@ Severity uses the rubric in `.claude/skills/launch-review/references/severity.md
 The validation run ([`sample-reports/SCORECARD.md`](sample-reports/SCORECARD.md)) found real issues we didn't plant:
 
 - **Both variants:** parsing the request URL outside `try`. In `naive/`, a bad `Host` header crashes the process; in `fixed/`, `GET //` does (Critical). Start-up deletes all data via `seed()`. The page never asks for a shipping address. The midnight start isn't enforced.
-- **`fixed/` only, introduced by the "fixes" above:** P5's fix (timeout → release the reservation → 503 "try again") can charge a customer twice when the provider is slow but succeeds. The correct fix treats a timeout as *unknown* and reconciles with the provider. After a successful charge, a pool timeout can leave a paid order stuck as pending.
+- **`fixed/` round 1 only, introduced by the "fixes" above (round 2 is in the scorecard):** P5's fix (timeout → release the reservation → 503 "try again") can charge a customer twice when the provider is slow but succeeds. The correct fix treats a timeout as *unknown* and reconciles with the provider. After a successful charge, a pool timeout can leave a paid order stuck as pending.
 
 ## Deliberate demo simplifications (present in both variants, not bugs to score)
 
