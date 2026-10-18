@@ -91,7 +91,7 @@ The skills drive established open-source tools and add what they lack: a plain-l
 | [k6](https://github.com/grafana/k6) | Load and oversell tests | AGPL-3.0 (run as a separate tool) |
 | [Playwright](https://playwright.dev) + [axe-core](https://github.com/dequelabs/axe-core) | Acceptance and accessibility tests | Apache-2.0 / MPL-2.0 |
 
-**Note for consultants:** Semgrep's own registry rules are under the Semgrep Rules License, which requires a commercial licence if you charge for a scanning service that uses them. They are therefore off by default, and the skills ship their own MIT-licensed rules, with regression tests. Optional add-ons (OWASP ZAP baseline, Supabase Security Advisor, Trail of Bits' security skills, Claude Code's `/security-review`) are described in [`tooling.md`](.claude/skills/launch-review/references/tooling.md).
+**Note for consultants:** see [Running a launch review for a client](docs/running-client-reviews.md) for permission, expectations, delivery and re-review. Semgrep's own registry rules are under the Semgrep Rules License, which requires a commercial licence if you charge for a scanning service that uses them. They are therefore off by default, and the skills ship their own MIT-licensed rules, with regression tests. Optional add-ons (OWASP ZAP baseline, Supabase Security Advisor, Trail of Bits' security skills, Claude Code's `/security-review`) are described in [`tooling.md`](.claude/skills/launch-review/references/tooling.md).
 
 The checklists draw on the [OWASP Top 10:2025](https://owasp.org/Top10/2025/), the OWASP API Security and LLM Top 10s, the AWS Well-Architected Framework, the Twelve-Factor App and Google SRE production-readiness practice.
 
@@ -104,6 +104,7 @@ The checklists draw on the [OWASP Top 10:2025](https://owasp.org/Top10/2025/), t
   acceptance-test/      SKILL.md, references (writing criteria, Playwright rules), report generator, templates
 .claude-plugin/         marketplace.json: installs the three skills as the "launch-readiness" plugin
 demo/flash-sale/        naive/ and fixed/ apps, simulated infrastructure, acceptance suite, sample reports, answer key
+docs/                   running-client-reviews.md: a playbook for paid review engagements
 tests/                  unit tests for the skill scripts, Semgrep rule fixtures
 ```
 

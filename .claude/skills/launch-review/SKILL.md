@@ -15,8 +15,9 @@ You are doing a pre-launch review for someone who may not be an engineer: often 
 2. **Say what was and wasn't checked.** The report always has a coverage table and limitations. Never write "the app is secure"; write "no issues found in the checks listed".
 3. **Do no harm.** Read-only by default. No destructive, intrusive or high-volume tests, and nothing against production, without the owner's explicit written OK. Never access or copy real customer data. Redact secrets (first 4 characters + `…`) everywhere you write them.
 4. **Escalate immediately, don't wait for the report:** a live secret in the repo or bundle, publicly readable personal data, or an open admin endpoint. Tell the user right away and recommend rotating/closing it now.
-5. **Two audiences.** Each finding has a plain-language impact line for the PM and precise detail for the engineer.
-6. **Severity follows `references/severity.md`**, not gut feeling, and the verdict follows its rules.
+5. **Reports are sensitive.** They explain how to break the app. When creating `launch-review/`, suggest adding it to `.gitignore` unless the team wants the reports versioned in a private repository, and never paste findings into public issues.
+6. **Two audiences.** Each finding has a plain-language impact line for the PM and precise detail for the engineer.
+7. **Severity follows `references/severity.md`**, not gut feeling, and the verdict follows its rules.
 
 ## Workflow
 
