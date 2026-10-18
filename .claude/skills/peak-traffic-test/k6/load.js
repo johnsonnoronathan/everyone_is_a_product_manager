@@ -22,6 +22,10 @@ const serverErrors = new Counter('server_errors');
 const timeouts = new Counter('timeouts');
 const responses = new Counter('responses');
 
+// Up to 1% of a step's planned requests may go unsent. Uses requests/second (ep.stageRates[].rps),
+// not the k6 `rate`, which is per minute for low-traffic endpoints.
+const allowedDrops = (ep, si) => Math.ceil(ep.stageRates[si].rps * plan.stageSeconds * 0.01);
+
 const scenarios = {};
 const thresholds = {};
 const byScenario = {};
@@ -71,7 +75,7 @@ if (SMOKE) {
     thresholds[`server_errors${filter}`] = ['count>=0'];
     thresholds[`timeouts${filter}`] = ['count>=0'];
     // Iterations k6 could not start because every virtual user was still waiting on a slow response.
-    thresholds[`dropped_iterations{scenario:${name}}`] = [`count<=${Math.ceil(rate * 0.01 * plan.stageSeconds)}`];
+    thresholds[`dropped_iterations{scenario:${name}}`] = [`count<=${allowedDrops(ep, si)}`];
   });
   startAt += plan.stageSeconds + plan.cooldownSeconds;
 });
@@ -154,8 +158,7 @@ export function handleSummary(data) {
       if (requests === 0) reasons.push('no requests completed');
       if (p95 !== undefined && p95 >= ep.p95Ms) reasons.push(`too slow (p95 ${fmtMs(p95)} > ${fmtMs(ep.p95Ms)})`);
       if (errorRate !== undefined && errorRate >= plan.maxErrorRate) reasons.push(`${pct(errorRate)} errors`);
-      const allowedDrops = Math.ceil(ep.stageRates[si].rate * 0.01 * plan.stageSeconds);
-      if (dropped > allowedDrops) reasons.push(`${dropped} requests never sent (all virtual users stuck waiting)`);
+      if (dropped > allowedDrops(ep, si)) reasons.push(`${dropped} requests never sent (all virtual users stuck waiting)`);
       return {
         endpoint: ep.id,
         name: ep.name,

@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "playwright test --repeat-each=3",
-    "report": "node ../../../.claude/skills/acceptance-test/scripts/ac-report.mjs results/results.json criteria.md results/ACCEPTANCE.md"
+    "report:fixed": "node ../../../.claude/skills/acceptance-test/scripts/ac-report.mjs results/fixed/results.json criteria.md results/fixed/ACCEPTANCE.md",
+    "report:naive": "node ../../../.claude/skills/acceptance-test/scripts/ac-report.mjs results/naive/results.json criteria.md results/naive/ACCEPTANCE.md"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",

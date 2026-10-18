@@ -23,11 +23,15 @@ const STOCK = Number(cfg.stock);
 const SUCCESS = cfg.successStatuses || [200, 201, 202];
 const PENDING = cfg.pendingStatuses || [202];
 const SETTLE_SECONDS = Number(cfg.settleSeconds || 60);
+// Where the order id sits in a successful response. Idempotent shops may answer a double-click
+// with the same order twice; that is one purchase, not two.
+const ORDER_ID_PATH = cfg.orderIdField || 'orderId';
 
 const successes = new Counter('buy_success');
 const doubleCharged = new Counter('buyers_with_multiple_successes');
 const rejected = new Counter('buy_rejected');
 const pendingAtCheckout = new Counter('buy_pending');
+const successWithoutId = new Counter('buy_success_without_order_id');
 const errors = new Counter('buy_errors');
 const serverSold = new Gauge('server_sold');
 const serverRemaining = new Gauge('server_remaining');
@@ -53,6 +57,7 @@ export const options = {
     buyers_with_multiple_successes: ['count>=0'],
     buy_rejected: ['count>=0'],
     buy_pending: ['count>=0'],
+    buy_success_without_order_id: ['count>=0'],
     buy_errors: ['count>=0'],
   },
 };
@@ -73,13 +78,26 @@ export function buy(data) {
     timeoutSeconds: plan.requestTimeoutSeconds || 30,
   });
   const responses = http.batch(Array.from({ length: CLICKS }, () => request));
-  let ok = 0;
+  const orderIds = new Set();
+  let withoutId = 0;
   for (const res of responses) {
-    if (SUCCESS.includes(res.status)) ok++;
+    if (SUCCESS.includes(res.status)) {
+      let id;
+      try {
+        id = ORDER_ID_PATH.split('.').reduce((o, k) => (o == null ? undefined : o[k]), res.json());
+      } catch (_) {
+        id = undefined;
+      }
+      if (id === undefined || id === null) withoutId++;
+      else orderIds.add(String(id));
+    }
     if (PENDING.includes(res.status)) pendingAtCheckout.add(1);
     else if (res.status === 0 || res.status >= 500) errors.add(1);
     else rejected.add(1);
   }
+  // Responses without an order id can't be told apart, so each counts as a purchase (conservative).
+  const ok = orderIds.size + withoutId;
+  if (withoutId) successWithoutId.add(withoutId);
   successes.add(ok);
   if (ok > 1) doubleCharged.add(1);
 }
@@ -122,6 +140,7 @@ export function handleSummary(data) {
     buyersChargedTwice: value(data, 'buyers_with_multiple_successes') || 0,
     rejected: value(data, 'buy_rejected') || 0,
     pendingAtCheckout: value(data, 'buy_pending') || 0,
+    successWithoutId: value(data, 'buy_success_without_order_id') || 0,
     errors: value(data, 'buy_errors') || 0,
     server: {
       sold: value(data, 'server_sold', 'value'),
@@ -153,6 +172,9 @@ export function handleSummary(data) {
     );
   }
   const totalRequests = BUYERS * CLICKS;
+  if (r.successWithoutId > 0) {
+    warnings.push(`${r.successWithoutId} successful responses carried no order id at "${ORDER_ID_PATH}" (set oversell.orderIdField), so repeated answers for the same order could not be told apart. The database numbers below are the authoritative check.`);
+  }
   if (r.errors > 0) warnings.push(`${r.errors} of ${totalRequests} requests (${pct(r.errors / totalRequests)}) failed with a server error or timeout.`);
 
   const pass = problems.length === 0;
