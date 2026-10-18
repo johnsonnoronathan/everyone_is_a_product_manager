@@ -1,0 +1,19 @@
+{
+  "sent": {
+    "productId": 1,
+    "price": 1
+  },
+  "response": {
+    "status": 200,
+    "body": "{\"orderId\":2,\"amountCents\":4999}"
+  },
+  "ordersAfterwards": [
+    {
+      "id": 2,
+      "product_id": 1,
+      "amount_cents": 4999,
+      "status": "paid",
+      "created_at": "2026-10-16 12:28:04"
+    }
+  ]
+}

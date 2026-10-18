@@ -1,0 +1,20 @@
+{
+  "pass": true,
+  "problems": [],
+  "warnings": [],
+  "stock": 100,
+  "buyers": 1000,
+  "clicksPerBuyer": 2,
+  "successfulPurchases": 100,
+  "buyersChargedTwice": 0,
+  "rejected": 1998,
+  "pendingAtCheckout": 2,
+  "errors": 0,
+  "server": {
+        "sold": 100,
+        "remaining": 0,
+        "customers": 100,
+        "initial": 100,
+        "pending": 0
+      }
+}

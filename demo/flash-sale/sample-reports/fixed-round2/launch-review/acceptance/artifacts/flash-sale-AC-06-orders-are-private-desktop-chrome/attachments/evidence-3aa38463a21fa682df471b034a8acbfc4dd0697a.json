@@ -1,0 +1,6 @@
+{
+  "who": "logged-out visitor",
+  "request": "GET /api/orders/4",
+  "status": 401,
+  "body": "{\"error\":\"Please sign in\"}"
+}

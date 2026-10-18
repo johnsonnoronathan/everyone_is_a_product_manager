@@ -1,0 +1,17 @@
+{
+  "name": "everyone-is-a-product-manager",
+  "description": "Pre-launch review, peak-traffic testing and acceptance testing for apps built with AI help",
+  "owner": { "name": "johnsonnoronathan" },
+  "plugins": [
+    {
+      "name": "launch-readiness",
+      "source": "./",
+      "description": "Launch review (architecture, security, performance, operations), peak-traffic load and oversell tests, and acceptance testing with evidence for sign-off",
+      "skills": [
+        "./.claude/skills/launch-review",
+        "./.claude/skills/peak-traffic-test",
+        "./.claude/skills/acceptance-test"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "event": "Midnight sneaker drop (demo)",
+  "baseUrl": "http://127.0.0.1:3000",
+  "visitors": 3000,
+  "windowSeconds": 60,
+  "peakFactor": 3,
+  "stages": [0.5, 1, 1.5, 2],
+  "stageSeconds": 20,
+  "journey": [
+    { "name": "Product page", "method": "GET", "path": "/api/products/1", "perVisitor": 3, "p95Ms": 500 },
+    {
+      "name": "Buy",
+      "method": "POST",
+      "path": "/api/buy",
+      "perVisitor": 1,
+      "p95Ms": 1500,
+      "auth": true,
+      "body": { "productId": 1, "price": 4999 },
+      "okStatuses": [409, 410, 429]
+    }
+  ],
+  "auth": {
+    "method": "POST",
+    "path": "/api/login",
+    "body": { "email": "{{user}}@loadtest.example" },
+    "tokenField": "token",
+    "header": "Authorization",
+    "prefix": "Bearer ",
+    "poolSize": 1000
+  },
+  "setup": {
+    "method": "POST",
+    "path": "/api/admin/reset",
+    "headers": { "x-admin-token": "demo-admin-token" },
+    "body": { "stock": 100 }
+  },
+  "oversell": {
+    "stock": 100,
+    "buyers": 1000,
+    "clicksPerBuyer": 2,
+    "buy": { "method": "POST", "path": "/api/buy", "auth": true, "body": { "productId": 1, "price": 4999 } },
+    "setup": {
+      "method": "POST",
+      "path": "/api/admin/reset",
+      "headers": { "x-admin-token": "demo-admin-token" },
+      "body": { "stock": 100 }
+    },
+    "stats": {
+      "method": "GET",
+      "path": "/api/admin/stats",
+      "headers": { "x-admin-token": "demo-admin-token" },
+      "fields": { "sold": "paidOrders", "remaining": "stockRemaining", "customers": "distinctCustomers", "initial": "initialStock" }
+    }
+  }
+}

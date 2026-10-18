@@ -1,0 +1,21 @@
+{
+  "pass": true,
+  "problems": [],
+  "warnings": [
+      "Undersold: only 96 of 100 units sold although 1000 buyers tried. The other 4 units are back in stock (typically released after failed payments); real shoppers would retry and buy them.",
+      "4 of 2000 requests (0.20%) failed with a server error or timeout."
+    ],
+  "stock": 100,
+  "buyers": 1000,
+  "clicksPerBuyer": 2,
+  "successfulPurchases": 96,
+  "buyersChargedTwice": 0,
+  "rejected": 1900,
+  "errors": 4,
+  "server": {
+      "sold": 96,
+      "remaining": 4,
+      "customers": 96,
+      "initial": 100
+    }
+}

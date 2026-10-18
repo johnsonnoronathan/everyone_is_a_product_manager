@@ -1,0 +1,23 @@
+[
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 10,
+  "EndLine": 10,
+  "StartColumn": 8,
+  "EndColumn": 71,
+  "Match": "PAYMENT_SECRET_KEY = 'REDACTED'",
+  "Secret": "REDACTED",
+  "File": "demo/flash-sale/naive/server.mjs",
+  "SymlinkFile": "",
+  "Commit": "2f9131ab9ce2c3d98b7b6aca7a5ea26eedec63d1",
+  "Link": "https://github.com/johnsonnoronathan/everyone_is_a_product_manager/blob/2f9131ab9ce2c3d98b7b6aca7a5ea26eedec63d1/demo/flash-sale/naive/server.mjs#L10",
+  "Entropy": 5.2112107,
+  "Author": "Claude",
+  "Email": "noreply@anthropic.com",
+  "Date": "2026-10-16T12:05:45Z",
+  "Message": "WIP: peak-traffic-test skill, flash-sale demo app, launch-review security rules\n\nCo-Authored-By: Claude Opus 5.5 \u003cnoreply@anthropic.com\u003e\nClaude-Session: https://claude.ai/code/session_01R5vFmA66bo8Qje1Ca55LuF",
+  "Tags": [],
+  "Fingerprint": "2f9131ab9ce2c3d98b7b6aca7a5ea26eedec63d1:demo/flash-sale/naive/server.mjs:generic-api-key:10"
+ }
+]

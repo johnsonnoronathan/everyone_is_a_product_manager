@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Script and rule tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Semgrep
+        run: pip install semgrep==1.181.0
+      - name: Unit tests and Semgrep rule fixtures
+        run: npm test
+        env:
+          SEMGREP_ENABLE_VERSION_CHECK: "0"
+
+  demo:
+    name: Demo checks (fixed variant)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install k6
+        run: |
+          curl -sSL https://github.com/grafana/k6/releases/download/v1.3.0/k6-v1.3.0-linux-amd64.tar.gz | tar xz
+          sudo mv k6-v1.3.0-linux-amd64/k6 /usr/local/bin/
+      # Correctness under concurrency: 1,000 buyers race for 100 pairs. The load test is not run
+      # here on purpose: shared CI machines are too noisy for capacity numbers.
+      - name: Oversell check
+        run: |
+          node .claude/skills/peak-traffic-test/scripts/capacity.mjs demo/flash-sale/peak-brief.json "$RUNNER_TEMP/plan.json"
+          node demo/flash-sale/run.mjs fixed > "$RUNNER_TEMP/app.log" 2>&1 &
+          APP_PID=$!
+          for _ in $(seq 30); do curl -sf http://127.0.0.1:3000/healthz > /dev/null && break; sleep 1; done
+          k6 run -q -e PLAN="$RUNNER_TEMP/plan.json" -e OUT_DIR="$RUNNER_TEMP" .claude/skills/peak-traffic-test/k6/oversell.js
+          kill "$APP_PID"
+          node -e 'const r = require(process.argv[1]); if (!r.pass) { console.error(r.problems.join("\n")); process.exit(1); }' "$RUNNER_TEMP/oversell-summary.json"
+      - name: Acceptance tests
+        working-directory: demo/flash-sale/acceptance
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          VARIANT=fixed npx playwright test --repeat-each=2
+          node ../../../.claude/skills/acceptance-test/scripts/ac-report.mjs results/fixed/results.json criteria.md results/fixed/ACCEPTANCE.md
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-results
+          path: demo/flash-sale/acceptance/results/
+          retention-days: 14

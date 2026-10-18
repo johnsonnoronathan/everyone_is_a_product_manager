@@ -1,0 +1,21 @@
+# Gitleaks config for scanning the current files of a project: the default rules,
+# minus dependency/build folders that aren't the client's code.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dependencies and build output"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next/''',
+  '''(^|/)\.nuxt/''',
+  '''(^|/)\.svelte-kit/''',
+  '''(^|/)dist/''',
+  '''(^|/)build/''',
+  '''(^|/)coverage/''',
+  '''(^|/)\.venv/''',
+  '''(^|/)venv/''',
+  '''(^|/)vendor/''',
+  '''(^|/)\.git/''',
+  '''(^|/)launch-review/''',
+]

@@ -1,0 +1,9 @@
+{
+  "duringPause": {
+    "status": 403,
+    "body": "{\"error\":\"The sale is paused. Please check back in a few minutes.\"}"
+  },
+  "afterResume": {
+    "status": 200
+  }
+}

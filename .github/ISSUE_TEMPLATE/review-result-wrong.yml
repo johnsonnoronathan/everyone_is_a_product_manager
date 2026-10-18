@@ -1,0 +1,44 @@
+name: Review result was wrong
+description: A skill flagged something that wasn't a problem, or missed a real one.
+labels: [review-quality]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks: these reports are how the checklists and rules get better.
+        **Remove secrets, customer data and anything confidential before posting.** For a security problem in this repository itself, use the Security tab instead.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong?
+      options:
+        - False alarm (flagged, but not a real problem)
+        - Missed issue (a real problem was not reported)
+        - Wrong severity
+        - Unclear or misleading explanation
+    validations:
+      required: true
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Skill
+      options: [launch-review, peak-traffic-test, acceptance-test]
+    validations:
+      required: true
+  - type: input
+    id: rule
+    attributes:
+      label: Finding ID or Semgrep rule id (if any)
+      placeholder: e.g. SEC-03, url-parse-outside-try
+  - type: input
+    id: stack
+    attributes:
+      label: Stack
+      placeholder: e.g. Next.js 15 + Supabase, Django 5 + Postgres
+  - type: textarea
+    id: details
+    attributes:
+      label: What happened, and what should have happened?
+      description: A minimal code excerpt helps most.
+    validations:
+      required: true

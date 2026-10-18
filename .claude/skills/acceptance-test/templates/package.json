@@ -1,0 +1,13 @@
+{
+  "name": "acceptance-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test --repeat-each=3",
+    "report": "node <skill-dir>/scripts/ac-report.mjs results/results.json criteria.md ACCEPTANCE.md"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@playwright/test": "1.56.1"
+  }
+}

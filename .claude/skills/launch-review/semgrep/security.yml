@@ -1,0 +1,271 @@
+# Pre-launch security leads. Our own rules (MIT, same as this repo), so they can be
+# used in paid client work without a Semgrep registry license.
+#
+#   semgrep scan --metrics=off --disable-version-check --config <skill-dir>/semgrep/ --json -o semgrep-security.json <project>
+#
+# Every hit is a lead to verify by reading the code, not a finding by itself.
+rules:
+  # ---------- Injection (OWASP A05:2025) ----------
+  - id: sql-built-from-strings-js
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: '$DB.$M(`...${$X}...`, ...)'
+          - pattern: '$DB.$M("..." + $X, ...)'
+          - pattern: '$DB.$M($A + "..." + $X, ...)'
+          - pattern: '$DB.$M("..." + $X + "...", ...)'
+      - metavariable-regex:
+          metavariable: $M
+          regex: ^(query|all|get|run|exec|execute|raw|prepare|unsafe|\$queryRawUnsafe|\$executeRawUnsafe|sql|whereRaw|orderByRaw|havingRaw)$
+      - metavariable-regex:
+          metavariable: $DB
+          regex: ^(?!(child_process|childProcess|cp)$)
+    message: >-
+      A SQL statement is built by inserting values into a string. If any of those values
+      can come from a visitor (URL, form, header, cookie), they can rewrite the query and
+      read or delete other customers' data (SQL injection). Use parameters (?, $1) or the
+      ORM's safe query builder. Verify whether the inserted value can be influenced by a user.
+    severity: ERROR
+    metadata: { owasp: "A05:2025 Injection", cwe: "CWE-89" }
+
+  - id: sql-built-from-strings-python
+    languages: [python]
+    pattern-either:
+      - pattern: $CUR.execute(f"...", ...)
+      - pattern: $CUR.execute("..." % $X, ...)
+      - pattern: $CUR.execute("...".format(...), ...)
+      - pattern: $CUR.execute("..." + $X, ...)
+      - pattern: $M.objects.raw(f"...", ...)
+      - pattern: $Q.extra(...)
+      - pattern: sqlalchemy.text(f"...")
+      - pattern: text(f"...")
+    message: >-
+      SQL built with string formatting. A visitor-controlled value here means SQL
+      injection. Pass values as parameters (cursor.execute(sql, params), ORM filters).
+    severity: ERROR
+    metadata: { owasp: "A05:2025 Injection", cwe: "CWE-89" }
+
+  - id: command-injection-js
+    languages: [javascript, typescript]
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: '$CP.exec(`...${$X}...`, ...)'
+              - pattern: '$CP.execSync(`...${$X}...`, ...)'
+          - metavariable-regex:
+              metavariable: $CP
+              regex: ^(child_process|childProcess|cp)$
+      - pattern: 'exec(`...${$X}...`, ...)'
+      - pattern: 'execSync(`...${$X}...`, ...)'
+      - pattern: eval($X)
+      - pattern: new Function(...)
+    message: >-
+      A shell command or code is built from a variable. If a visitor can influence it, they
+      can run commands on your server. Use execFile/spawn with an argument array, never eval.
+    severity: ERROR
+    metadata: { owasp: "A05:2025 Injection", cwe: "CWE-78" }
+
+  - id: shell-true-python
+    languages: [python]
+    pattern: subprocess.$F(..., shell=True, ...)
+    message: Shell command with shell=True. If any part comes from user input, this allows command injection. Pass an argument list without shell=True.
+    severity: WARNING
+    metadata: { owasp: "A05:2025 Injection", cwe: "CWE-78" }
+
+  - id: react-dangerously-set-html
+    languages: [javascript, typescript]
+    pattern: '<$EL dangerouslySetInnerHTML={{__html: $X}} />'
+    message: >-
+      Raw HTML is inserted into the page. If $X contains anything a user wrote (names,
+      reviews, messages, AI output), attackers can run scripts in other users' browsers
+      (XSS). Sanitise with DOMPurify or render as text.
+    severity: WARNING
+    metadata: { owasp: "A05:2025 Injection", cwe: "CWE-79" }
+
+  # ---------- Access control / business logic (A01, A06) ----------
+  - id: price-from-client
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: $REQ.body.$F
+          - pattern: 'const {..., $F, ...} = $REQ.body;'
+          - pattern: 'const {..., $F, ...} = await $REQ.json();'
+          - pattern: 'const {..., $F, ...} = await $READ($REQ);'
+          - pattern: 'const {..., $F, ...} = $DATA;'
+      - metavariable-regex:
+          metavariable: $F
+          regex: ^(price|amount|total|unitPrice|unit_price|priceCents|price_cents|amountCents|amount_cents|cost|discount|subtotal|fee)$
+    message: >-
+      The request carries "$F". Check what the server does with it: prices, totals and
+      discounts must come from your database, never from the browser, or buyers can pay
+      whatever they like by editing the request.
+    severity: WARNING
+    metadata: { owasp: "A06:2025 Insecure Design", cwe: "CWE-602" }
+
+  - id: admin-route-inventory
+    languages: [generic]
+    paths:
+      include: ["*.js", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.py", "*.rb", "*.php", "*.go"]
+    pattern-regex: (?i)["'`](?:(?:GET|POST|PUT|PATCH|DELETE)\s+)?/(?:api/)?(?:v\d+/)?(?:admin|internal|debug|test|seed|reset|backoffice|staff)\b[^"'`]*["'`]
+    message: >-
+      Privileged-looking route. Confirm it (1) requires authentication, (2) checks the
+      caller is an admin, and (3) is disabled in production if it's a test/debug/seed route.
+    severity: INFO
+    metadata: { owasp: "A01:2025 Broken Access Control", cwe: "CWE-862" }
+
+  # ---------- Authentication / sessions (A07) ----------
+  - id: unverified-token-decode
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: JSON.parse(Buffer.from($T, "base64").toString(...))
+      - pattern: JSON.parse(Buffer.from($T, "base64").toString())
+      - pattern: JSON.parse(atob($T))
+      - pattern: jwt.decode(...)
+      - pattern: jwtDecode(...)
+    message: >-
+      A token is decoded without checking its signature. If this decides who the user is,
+      anyone can forge a token and log in as anyone. Use a signed token and verify it
+      (jwt.verify, your auth provider's SDK, or an HMAC check with a server-side secret).
+      Decoding without verifying is only OK for display purposes in the browser.
+    severity: ERROR
+    metadata: { owasp: "A07:2025 Authentication Failures", cwe: "CWE-347" }
+
+  - id: insecure-randomness-for-secrets
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: 'const $X = <... Math.random() ...>;'
+          - pattern: 'let $X = <... Math.random() ...>;'
+          - pattern: '$X = <... Math.random() ...>'
+      - metavariable-regex:
+          metavariable: $X
+          regex: (?i).*(token|secret|password|passwd|otp|code|nonce|salt|key|session|reset).*
+    message: Math.random() is predictable. Use crypto.randomUUID() / crypto.randomBytes() for tokens, codes and secrets.
+    severity: WARNING
+    metadata: { owasp: "A04:2025 Cryptographic Failures", cwe: "CWE-338" }
+
+  - id: cookie-without-flags
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: $RES.cookie($NAME, $VAL)
+          - pattern: '$RES.cookie($NAME, $VAL, {...})'
+      - pattern-not: '$RES.cookie($NAME, $VAL, {..., httpOnly: true, ..., secure: $S, ...})'
+      - pattern-not: '$RES.cookie($NAME, $VAL, {..., secure: $S, ..., httpOnly: true, ...})'
+    message: Cookie set without both httpOnly and secure. Session cookies need httpOnly (scripts can't steal them), secure (HTTPS only) and sameSite.
+    severity: WARNING
+    metadata: { owasp: "A07:2025 Authentication Failures", cwe: "CWE-1004" }
+
+  # ---------- Misconfiguration / secrets exposure (A02) ----------
+  - id: secret-in-browser-env-var
+    languages: [generic]
+    paths:
+      include: ["*.js", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.jsx", "*.vue", "*.svelte", ".env*", "*.env", "*.json", "*.yml", "*.yaml", "*.toml"]
+    pattern-regex: \b(?:NEXT_PUBLIC|VITE|REACT_APP|EXPO_PUBLIC|PUBLIC|NUXT_PUBLIC|GATSBY)_[A-Z0-9_]*(?:SECRET|SERVICE_ROLE|SERVICE_KEY|PRIVATE|PASSWORD|SK_LIVE|ADMIN_KEY|API_SECRET)[A-Z0-9_]*
+    message: >-
+      An environment variable with a browser-exposed prefix holds a secret. Variables with
+      these prefixes are bundled into the JavaScript every visitor downloads. A Supabase
+      service_role key here gives anyone full read/write access to your whole database.
+      Move it to a server-only variable and rotate the key.
+    severity: ERROR
+    metadata: { owasp: "A02:2025 Security Misconfiguration", cwe: "CWE-200" }
+
+  - id: stack-trace-to-client
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: '$RES.$M(..., <... $E.stack ...>, ...)'
+          - pattern: '$RES.status($C).$M(<... $E.stack ...>)'
+      - metavariable-regex:
+          metavariable: $M
+          regex: ^(end|send|json|write)$
+    message: >-
+      Error details (stack trace) are sent to the visitor. They reveal file paths, library
+      versions and sometimes data, which helps attackers. Log the details server-side and
+      return a generic message with a request id.
+    severity: WARNING
+    metadata: { owasp: "A10:2025 Mishandling of Exceptional Conditions", cwe: "CWE-209" }
+
+  - id: cors-wildcard
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: '{..., $K: "*", ...}'
+          - pattern: $RES.setHeader($K, "*")
+          - pattern: $RES.header($K, "*")
+          - pattern: $RES.set($K, "*")
+      - metavariable-regex:
+          metavariable: $K
+          regex: (?i)^["']?access-control-allow-origin["']?$
+    message: >-
+      Any website may call this API from a visitor's browser. That's fine for public data;
+      it's a problem for anything that relies on cookies or returns personal data.
+      List the allowed origins instead.
+    severity: INFO
+    metadata: { owasp: "A02:2025 Security Misconfiguration", cwe: "CWE-942" }
+
+  - id: tls-verification-disabled
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: '{..., rejectUnauthorized: false, ...}'
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+    message: TLS certificate checking is turned off, so traffic to this service can be intercepted. Remove it (fix the certificate instead).
+    severity: ERROR
+    metadata: { owasp: "A04:2025 Cryptographic Failures", cwe: "CWE-295" }
+
+  - id: python-debug-or-tls-off
+    languages: [python]
+    pattern-either:
+      - pattern: $APP.run(..., debug=True, ...)
+      - pattern: DEBUG = True
+      - pattern: requests.$F(..., verify=False, ...)
+    message: Debug mode or disabled TLS verification. Debug mode in production exposes an interactive console/tracebacks; verify=False allows interception. Make sure neither reaches production.
+    severity: WARNING
+    metadata: { owasp: "A02:2025 Security Misconfiguration", cwe: "CWE-489" }
+
+  # ---------- Exceptional conditions (A10) ----------
+  - id: json-parse-in-stream-callback
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-inside: $S.on("end", ...)
+      - pattern: JSON.parse(...)
+      - pattern-not-inside: |
+          try { ... } catch ($E) { ... }
+    message: >-
+      JSON.parse runs inside a stream callback without try/catch. One request with a
+      malformed body throws an uncaught exception, which crashes the whole Node.js process
+      and takes the site down for everyone. Wrap it in try/catch and answer 400. Also cap
+      the body size.
+    severity: ERROR
+    metadata: { owasp: "A10:2025 Mishandling of Exceptional Conditions", cwe: "CWE-248" }
+
+  - id: url-parse-outside-try
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: new URL($REQ.url, ...)
+          - pattern: new URL(<... $REQ.headers ...>, ...)
+          - pattern: new URL($X, <... $REQ.headers.host ...>)
+      - pattern-not-inside: |
+          try { ... } catch ($E) { ... }
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: ^(req|request)$
+    message: >-
+      The request's URL/Host is parsed without try/catch. A malformed request (e.g.
+      "GET //" or a bad Host header) makes new URL() throw; in an async handler that
+      becomes an unhandled rejection, which stops the whole Node.js process. One
+      request takes the site down. Parse inside try/catch and answer 400.
+    severity: ERROR
+    metadata: { owasp: "A10:2025 Mishandling of Exceptional Conditions", cwe: "CWE-248" }
+
+  - id: swallowed-error-fake-success
+    languages: [javascript, typescript]
+    patterns:
+      - pattern: |
+          try { ... } catch ($E) { ... return { ..., success: true, ... }; }
+    message: >-
+      An error is caught and the code still reports success. AI-generated code often does
+      this to "make it work", and it hides real failures (orders not saved, payments not taken).
+    severity: WARNING
+    metadata: { owasp: "A10:2025 Mishandling of Exceptional Conditions", cwe: "CWE-390" }

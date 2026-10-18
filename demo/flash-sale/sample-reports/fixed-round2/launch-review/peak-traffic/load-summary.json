@@ -1,0 +1,195 @@
+{
+  "plan": {
+    "event": "Midnight sneaker drop (demo)",
+    "baseUrl": "http://127.0.0.1:3000",
+    "totalTargetRps": 600
+  },
+  "verdict": {
+    "meetsTarget": true,
+    "holdsUpTo": {
+      "multiplier": 1,
+      "rps": 600
+    },
+    "breaksAt": {
+      "multiplier": 1.5,
+      "rps": 900,
+      "reasons": [
+        "Product page: 481 requests never sent (all virtual users stuck waiting)"
+      ]
+    },
+    "stagesPassed": 3,
+    "stagesTotal": 4
+  },
+  "stages": [
+    {
+      "stage": "s1",
+      "multiplier": 0.5,
+      "totalTargetRps": 300,
+      "pass": true,
+      "endpoints": [
+        {
+          "endpoint": "product_page",
+          "name": "Product page",
+          "targetRps": 225,
+          "achievedRps": 225.1,
+          "requests": 4501,
+          "p50": 0.823256,
+          "p95": 3.376357,
+          "p99": 14.035341,
+          "budgetMs": 500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        },
+        {
+          "endpoint": "buy",
+          "name": "Buy",
+          "targetRps": 75,
+          "achievedRps": 75.1,
+          "requests": 1501,
+          "p50": 1.098821,
+          "p95": 128.329374,
+          "p99": 200.53906,
+          "budgetMs": 1500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "stage": "s2",
+      "multiplier": 1,
+      "totalTargetRps": 600,
+      "pass": true,
+      "endpoints": [
+        {
+          "endpoint": "product_page",
+          "name": "Product page",
+          "targetRps": 450,
+          "achievedRps": 450.1,
+          "requests": 9001,
+          "p50": 0.626751,
+          "p95": 4.986093,
+          "p99": 21.81565,
+          "budgetMs": 500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        },
+        {
+          "endpoint": "buy",
+          "name": "Buy",
+          "targetRps": 150,
+          "achievedRps": 150.1,
+          "requests": 3001,
+          "p50": 0.902942,
+          "p95": 4.865608,
+          "p99": 22.473057,
+          "budgetMs": 1500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "stage": "s3",
+      "multiplier": 1.5,
+      "totalTargetRps": 900,
+      "pass": false,
+      "endpoints": [
+        {
+          "endpoint": "product_page",
+          "name": "Product page",
+          "targetRps": 675,
+          "achievedRps": 651,
+          "requests": 13020,
+          "p50": 0.5884510000000001,
+          "p95": 206.2396541999998,
+          "p99": 448.4709274499999,
+          "budgetMs": 500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 481,
+          "pass": false,
+          "reasons": [
+            "481 requests never sent (all virtual users stuck waiting)"
+          ]
+        },
+        {
+          "endpoint": "buy",
+          "name": "Buy",
+          "targetRps": 225,
+          "achievedRps": 225.1,
+          "requests": 4501,
+          "p50": 0.83899,
+          "p95": 103.597408,
+          "p99": 182.046109,
+          "budgetMs": 1500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "stage": "s4",
+      "multiplier": 2,
+      "totalTargetRps": 1200,
+      "pass": true,
+      "endpoints": [
+        {
+          "endpoint": "product_page",
+          "name": "Product page",
+          "targetRps": 900,
+          "achievedRps": 900,
+          "requests": 18000,
+          "p50": 0.5520725,
+          "p95": 186.62509604999985,
+          "p99": 561.5232262399994,
+          "budgetMs": 500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 1,
+          "pass": true,
+          "reasons": []
+        },
+        {
+          "endpoint": "buy",
+          "name": "Buy",
+          "targetRps": 300,
+          "achievedRps": 300.1,
+          "requests": 6001,
+          "p50": 0.781808,
+          "p95": 109.550114,
+          "p99": 258.773764,
+          "budgetMs": 1500,
+          "errorRate": 0,
+          "serverErrors": 0,
+          "timeouts": 0,
+          "dropped": 0,
+          "pass": true,
+          "reasons": []
+        }
+      ]
+    }
+  ]
+}

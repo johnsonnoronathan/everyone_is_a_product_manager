@@ -1,0 +1,197 @@
+{
+  "event": "Midnight sneaker drop (demo)",
+  "baseUrl": "http://127.0.0.1:3000",
+  "visitors": 3000,
+  "windowSeconds": 60,
+  "peakFactor": 3,
+  "stages": [
+    0.5,
+    1,
+    1.5,
+    2
+  ],
+  "stageSeconds": 20,
+  "cooldownSeconds": 5,
+  "maxErrorRate": 0.01,
+  "requestTimeoutSeconds": 10,
+  "totalTargetRps": 600,
+  "endpoints": [
+    {
+      "id": "product_page",
+      "name": "Product page",
+      "method": "GET",
+      "path": "/api/products/1",
+      "headers": {},
+      "body": null,
+      "auth": false,
+      "okStatuses": [],
+      "p95Ms": 500,
+      "perVisitor": 3,
+      "averageRps": 150,
+      "targetRps": 450,
+      "stageRates": [
+        {
+          "rate": 225,
+          "timeUnit": "1s",
+          "rps": 225
+        },
+        {
+          "rate": 450,
+          "timeUnit": "1s",
+          "rps": 450
+        },
+        {
+          "rate": 675,
+          "timeUnit": "1s",
+          "rps": 675
+        },
+        {
+          "rate": 900,
+          "timeUnit": "1s",
+          "rps": 900
+        }
+      ],
+      "vus": [
+        {
+          "preAllocated": 230,
+          "max": 460
+        },
+        {
+          "preAllocated": 455,
+          "max": 910
+        },
+        {
+          "preAllocated": 680,
+          "max": 1360
+        },
+        {
+          "preAllocated": 905,
+          "max": 1500
+        }
+      ]
+    },
+    {
+      "id": "buy",
+      "name": "Buy",
+      "method": "POST",
+      "path": "/api/buy",
+      "headers": {},
+      "body": {
+        "productId": 1,
+        "price": 4999,
+        "address": "{{n}} Load Test Street, Testville"
+      },
+      "auth": true,
+      "okStatuses": [
+        409,
+        410,
+        429
+      ],
+      "p95Ms": 1500,
+      "perVisitor": 1,
+      "averageRps": 50,
+      "targetRps": 150,
+      "stageRates": [
+        {
+          "rate": 75,
+          "timeUnit": "1s",
+          "rps": 75
+        },
+        {
+          "rate": 150,
+          "timeUnit": "1s",
+          "rps": 150
+        },
+        {
+          "rate": 225,
+          "timeUnit": "1s",
+          "rps": 225
+        },
+        {
+          "rate": 300,
+          "timeUnit": "1s",
+          "rps": 300
+        }
+      ],
+      "vus": [
+        {
+          "preAllocated": 230,
+          "max": 460
+        },
+        {
+          "preAllocated": 455,
+          "max": 910
+        },
+        {
+          "preAllocated": 680,
+          "max": 1360
+        },
+        {
+          "preAllocated": 905,
+          "max": 1500
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "method": "POST",
+    "path": "/api/login",
+    "body": {
+      "email": "{{user}}@loadtest.example"
+    },
+    "tokenField": "token",
+    "header": "Authorization",
+    "prefix": "Bearer ",
+    "poolSize": 1000
+  },
+  "setup": {
+    "method": "POST",
+    "path": "/api/admin/reset",
+    "headers": {
+      "x-admin-token": "demo-admin-token"
+    },
+    "body": {
+      "stock": 100
+    }
+  },
+  "oversell": {
+    "stock": 100,
+    "buyers": 1000,
+    "clicksPerBuyer": 2,
+    "buy": {
+      "method": "POST",
+      "path": "/api/buy",
+      "auth": true,
+      "body": {
+        "productId": 1,
+        "price": 4999,
+        "address": "{{n}} Rush Hour Road, Testville"
+      }
+    },
+    "setup": {
+      "method": "POST",
+      "path": "/api/admin/reset",
+      "headers": {
+        "x-admin-token": "demo-admin-token"
+      },
+      "body": {
+        "stock": 100
+      }
+    },
+    "stats": {
+      "method": "GET",
+      "path": "/api/admin/stats",
+      "headers": {
+        "x-admin-token": "demo-admin-token"
+      },
+      "fields": {
+        "sold": "paidOrders",
+        "pending": "pendingOrders",
+        "remaining": "stockRemaining",
+        "customers": "distinctCustomers",
+        "initial": "initialStock"
+      }
+    }
+  },
+  "estimatedDurationSeconds": 100
+}
