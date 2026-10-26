@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- **The release gate** (`docs/release-gate.md`): the project's core lessons on one page. It covers three principles, the seven questions every review must answer, a definition of ready, how to run the gate, and the evidence from the demo. Linked from the README.
+- `launch-review`: a new first principle, "judge the evidence, not the author or the tool", with a recommendation for independent review when the reviewer also wrote the code. It starts from an author's submission pack when one exists, but verifies it.
+
 ## 0.1.0 (2026-10-18): first public release
 
 ### Skills

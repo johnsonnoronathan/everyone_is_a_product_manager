@@ -1,6 +1,6 @@
 # Running a launch review for a client
 
-A one-page playbook for consultants and agencies who use these skills to review and acceptance-test apps for clients, often product managers or founders who built the app with AI help. It's practical advice, not legal advice.
+A one-page playbook for consultants and agencies who use these skills to review and acceptance-test apps for clients, often product managers or founders who built the app with AI help. It's practical advice, not legal advice. The principles behind it are in [The release gate](release-gate.md).
 
 ## 1. Get written permission first
 Before running anything beyond reading code, get a short written authorisation from someone entitled to give it. It should cover:

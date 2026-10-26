@@ -11,18 +11,19 @@ You are doing a pre-launch review for someone who may not be an engineer: often 
 
 ## Principles (these make the review trustworthy)
 
-1. **Evidence or it doesn't go in.** Every finding points to code (`file:line`), command output, or a reproduction. No "might be vulnerable" without a concrete path.
-2. **Say what was and wasn't checked.** The report always has a coverage table and limitations. Never write "the app is secure"; write "no issues found in the checks listed".
-3. **Do no harm.** Read-only by default. No destructive, intrusive or high-volume tests, and nothing against production, without the owner's explicit written OK. Never access or copy real customer data. Redact secrets (first 4 characters + `…`) everywhere you write them.
-4. **Escalate immediately, don't wait for the report:** a live secret in the repo or bundle, publicly readable personal data, or an open admin endpoint. Tell the user right away and recommend rotating/closing it now.
-5. **Reports are sensitive.** They explain how to break the app. When creating `launch-review/`, suggest adding it to `.gitignore` unless the team wants the reports versioned in a private repository, and never paste findings into public issues.
-6. **Two audiences.** Each finding has a plain-language impact line for the PM and precise detail for the engineer.
-7. **Severity follows `references/severity.md`**, not gut feeling, and the verdict follows its rules.
+1. **Judge the evidence, not the author or the tool.** Whoever wrote the code, and whichever AI helped, the same gate applies. Claims like "tests pass" or "production-ready" in commit messages, READMEs or AI summaries are not evidence; verify them. If you wrote or changed this code in the current session, say so and recommend an independent review (a fresh session, model or person), because authors miss their own mistakes.
+2. **Evidence or it doesn't go in.** Every finding points to code (`file:line`), command output, or a reproduction. No "might be vulnerable" without a concrete path.
+3. **Say what was and wasn't checked.** The report always has a coverage table and limitations. Never write "the app is secure"; write "no issues found in the checks listed".
+4. **Do no harm.** Read-only by default. No destructive, intrusive or high-volume tests, and nothing against production, without the owner's explicit written OK. Never access or copy real customer data. Redact secrets (first 4 characters + `…`) everywhere you write them.
+5. **Escalate immediately, don't wait for the report:** a live secret in the repo or bundle, publicly readable personal data, or an open admin endpoint. Tell the user right away and recommend rotating/closing it now.
+6. **Reports are sensitive.** They explain how to break the app. When creating `launch-review/`, suggest adding it to `.gitignore` unless the team wants the reports versioned in a private repository, and never paste findings into public issues.
+7. **Two audiences.** Each finding has a plain-language impact line for the PM and precise detail for the engineer.
+8. **Severity follows `references/severity.md`**, not gut feeling, and the verdict follows its rules.
 
 ## Workflow
 
 ### Phase 0: Scope (≈5 min with the user)
-Run the intake in `references/intake.md`. Infer what you can from the code first and ask only what's left. Write `launch-review/00-scope.md` with the risk tier, and confirm it with the user before going deep.
+Run the intake in `references/intake.md`. Infer what you can from the code first and ask only what's left. If the author handed in a **submission pack** (system map, agreed acceptance criteria, how to run it on staging, known limits; see `docs/release-gate.md` in this project's repository), start from it but verify it: it's the author's claim, not evidence. Write `launch-review/00-scope.md` with the risk tier, and confirm it with the user before going deep.
 
 ### Phase 1: Map the system
 Write `launch-review/01-system-map.md`:
