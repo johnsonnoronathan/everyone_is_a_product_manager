@@ -42,3 +42,7 @@ VARIANT=fixed npx playwright test          # demo acceptance suite (should pass)
 - One topic per pull request, with a short description of what changed and why.
 - `npm test` passes.
 - New rules come with fixtures; new checklist items come with a source.
+
+## Releasing (maintainers)
+1. In `CHANGELOG.md`, give the changes since the last release a `## <version> (<date>)` heading and merge that to `main`.
+2. In the Actions tab, run the **Release** workflow on `main` with the version number (for example `0.2.0`). It creates the tag `v<version>` and a GitHub release whose notes are that changelog section.
