@@ -15,6 +15,16 @@ AI lets anyone build a web app in a weekend. It doesn't tell you whether that ap
 
 The skills hand work to each other: `launch-review` calls on the other two and folds their results into one verdict.
 
+## The core idea
+
+Anyone can now write code with AI, using many different tools and models, so the last check before customers has to work no matter who or what wrote the code:
+
+- **Judge the evidence, not the author or the tool.** "The AI says it's ready" is a claim, not evidence.
+- **Review independently of the author**, and again after every round of fixes, not just re-test.
+- **"Ready" is a written set of evidence signed by a person**, not a feeling.
+
+The one-page version, with the seven questions every review must answer and the definition of ready: **[The release gate](docs/release-gate.md)**.
+
 ## Quick start
 
 1. **Install** the skills in Claude Code:
@@ -104,7 +114,7 @@ The checklists draw on the [OWASP Top 10:2025](https://owasp.org/Top10/2025/), t
   acceptance-test/      SKILL.md, references (writing criteria, Playwright rules), report generator, templates
 .claude-plugin/         marketplace.json: installs the three skills as the "launch-readiness" plugin
 demo/flash-sale/        naive/ and fixed/ apps, simulated infrastructure, acceptance suite, sample reports, answer key
-docs/                   running-client-reviews.md: a playbook for paid review engagements
+docs/                   release-gate.md: the core lessons; running-client-reviews.md: a playbook for paid review engagements
 tests/                  unit tests for the skill scripts, Semgrep rule fixtures
 ```
 
