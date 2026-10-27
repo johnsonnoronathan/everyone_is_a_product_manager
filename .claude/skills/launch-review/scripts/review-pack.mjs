@@ -2,7 +2,7 @@
 // Review pack: check it against the review standard and render it as one self-contained web page.
 //
 //   node review-pack.mjs validate <pack.json> [--stage submission|review]
-//   node review-pack.mjs gate     <submission|worksheet|review> <pack.json> [--areas S,A]   (counts; exit 1 if anything is missing)
+//   node review-pack.mjs gate     <submission|worksheet|review> <pack.json> [--areas S,A] [--readme README.md]   (counts; exit 1 if anything is missing)
 //   node review-pack.mjs render   <pack.json> <out.html> [--fragment]
 //   node review-pack.mjs template <out.json> [--tier 1|2|3] [--features money,accounts,...]
 //   node review-pack.mjs status   <pack.json>                  (per area: results so far, mandatory criteria still missing)
@@ -404,7 +404,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
     ${errors.length ? `<div class="incomplete"><p><strong>${reviewed ? 'This review is incomplete' : 'This submission is not reviewable yet'}.</strong> ${errors.length} required item${errors.length > 1 ? 's are' : ' is'} missing or inconsistent:</p><ul>${errors.map((e) => `<li><code>${esc(e.where)}</code> ${esc(e.message)}</li>`).join('')}</ul></div>` : ''}
     <div class="verdict-grid">
       <div class="stamp ${dClass}"><span class="stamp-label">${reviewed ? 'Verdict' : 'Status'}</span><span class="stamp-text">${esc(decision || 'Awaiting review')}</span><span class="stamp-meta">Risk tier ${esc(p.riskTier)} of 3</span></div>
-      <div class="verdict-text">${reviewed && v.reason ? `<p class="reason">${fmt(v.reason)}</p>` : `<p class="reason">Submitted by ${fmt(p.author)} for review. The verdict, results and findings are filled in by the reviewer.</p>`}
+      <div class="verdict-text">${reviewed && v.reason ? `<p class="reason">${fmt(v.reason)}</p>` : `<p class="reason">Submitted by ${fmt(String(p.author || '').replace(/\.$/, ''))} for review. The verdict, results and findings are filled in by the reviewer.</p>`}
         ${v.ifLaunchedNow ? `<div class="anyway"><h3>If you launched anyway</h3><p>${fmt(v.ifLaunchedNow)}</p></div>` : ''}
       </div>
     </div>
@@ -465,7 +465,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
       .filter(([, c]) => filled(c)).map(([k, c]) => `<div class="cmd"><span class="lbl">${k}</span>${(Array.isArray(c) ? c : [c]).map((x) => `<pre><code>${esc(x)}</code></pre>`).join('')}</div>`).join('')}</div>
     ${run.staging !== undefined ? `<p><span class="lbl">Test copy (staging)</span> ${run.staging ? fmt(run.staging) : '<span class="dim">None provided.</span>'}</p>` : ''}
     ${filled(run.accounts) ? `<h3>Test accounts</h3>${table(['Role', 'How to sign in'], run.accounts.map((a) => [fmt(a.role), fmt(a.how)]))}` : ''}
-    ${filled(run.settings) ? `<h3>Settings (${run.settings.length})</h3>${table(['Setting', 'What it does', 'Secret', 'Needed in production', 'Example'], run.settings.map((s) => [`<code>${esc(s.name)}</code>`, fmt(s.purpose), s.secret ? 'Yes' : 'No', s.production ? 'Yes' : 'No', s.example ? `<code>${esc(s.example)}</code>` : '']))}` : ''}`;
+    ${filled(run.settings) ? `<h3>Settings (${run.settings.length})</h3>${table(['Setting', 'What it does', 'Secret', 'Needed in production', 'Example'], run.settings.map((s) => [`<code>${esc(s.name)}</code>`, fmt(s.purpose), s.secret ? 'Yes' : 'No', typeof s.production === 'string' ? fmt(s.production) : s.production ? 'Yes' : 'No', s.example ? `<code>${esc(s.example)}</code>` : '']))}` : ''}`;
 
   const reqBody = filled(pack.requirements) ? table(['ID', 'Requirement', 'Target', 'Agreed by'], pack.requirements.map((r) => [esc(r.id || ''), fmt(r.text), fmt(r.target), `${fmt(r.agreedBy || '—')}${r.agreedOn ? ` <span class="dim">${esc(r.agreedOn)}</span>` : ''}${r.source ? `<br><span class="dim">${fmt(r.source)}</span>` : ''}`])) : '';
 
@@ -523,7 +523,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
     ${acc.criteriaVersion ? `<p><span class="lbl">Criteria</span> version ${fmt(acc.criteriaVersion)}${acc.agreedBy ? `, agreed by ${fmt(acc.agreedBy)}` : ''}${acc.run ? `. ${fmt(acc.run)}` : ''}</p>` : ''}
     ${filled(acc.rows) ? `<ul class="acc">${acc.rows.map((r) => `<li id="a-${esc(r.id)}" class="acc-row">
         <div class="acc-head"><span class="crit-id">${esc(r.id)}</span><span class="prio">${esc(r.priority || '')}</span><span class="acc-c">${fmt(r.criterion)}</span>
-        <span class="chip ${r.status === 'pass' ? 'r-meets' : r.status === 'fail' || r.status === 'flaky' ? 'r-does-not-meet' : r.status === 'external' ? 'r-not-applicable' : 'r-cannot-verify'}">${esc({ pass: 'Pass', fail: 'Fail', flaky: 'Flaky', external: 'Checked elsewhere', 'not-run': 'Not run' }[r.status] || r.status || 'Not run')}${r.runs ? ` ${esc(r.runs)}` : ''}</span></div>
+        <span class="chip ${r.status === 'pass' ? 'r-meets' : r.status === 'fail' || r.status === 'flaky' ? 'r-does-not-meet' : r.status === 'external' ? 'r-not-applicable' : 'r-cannot-verify'}">${esc({ pass: 'Pass', fail: 'Fail', flaky: 'Flaky', external: 'Checked by another test (see note)', 'not-run': 'Not run' }[r.status] || r.status || 'Not run')}${r.runs ? ` ${esc(r.runs)}` : ''}</span></div>
         ${r.note ? `<p class="dim">${fmt(r.note)}</p>` : ''}${evidenceList(r.evidence, baseDir, { thumbs: true })}</li>`).join('')}</ul>` : ''}`;
 
   const body = [
@@ -850,7 +850,15 @@ function evidencePaths(pack) {
   ].filter((e) => e.path).map((e) => e.path);
 }
 
-export function gate(stage, pack, catalogue, { baseDir = '.', areas } = {}) {
+// The README's nine items (standard §1.1), found by their labels as bold text or headings.
+export const README_ITEMS = ['What it is', 'Review page', 'Quick start', 'Test access', 'Tests', 'Settings', 'Architecture', 'Known problems', 'For AI agents'];
+
+export function readmeItems(text) {
+  const has = (label) => new RegExp(`(^|\\n)\\s*(#{1,6}\\s*|\\*\\*|__)${label.replace(/ /g, '\\s+')}\\b`, 'i').test(text);
+  return { present: README_ITEMS.filter(has), missing: README_ITEMS.filter((l) => !has(l)), linksPage: /review\/index\.html/.test(text) };
+}
+
+export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme } = {}) {
   const checks = [];
   const add = (name, expected, found, missing = []) => checks.push({ name, expected, found, missing, ok: found === expected && missing.length === 0 });
   const codes = areas && areas.length ? areas : catalogue.areas.map((a) => a.code);
@@ -864,6 +872,13 @@ export function gate(stage, pack, catalogue, { baseDir = '.', areas } = {}) {
     const paths = evidencePaths(pack);
     const present = paths.filter((p) => existsSync(resolve(baseDir, p)));
     add('Evidence files that exist', paths.length, present.length, paths.filter((p) => !existsSync(resolve(baseDir, p))));
+    const readmePath = readme || resolve(baseDir, '..', 'README.md');
+    if (!existsSync(readmePath)) add('README items (standard §1.1)', README_ITEMS.length, 0, [`no README at ${readmePath}`]);
+    else {
+      const r = readmeItems(readFileSync(readmePath, 'utf8'));
+      add('README items (standard §1.1)', README_ITEMS.length, r.present.length, r.missing);
+      add('README links to the review page', 1, r.linksPage ? 1 : 0, r.linksPage ? [] : ['a link to review/index.html']);
+    }
   }
   if (stage === 'worksheet' || stage === 'review') {
     const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
@@ -976,7 +991,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   } else if (cmd === 'gate' && ['submission', 'worksheet', 'review'].includes(args[0]) && args[1]) {
     const pack = JSON.parse(readFileSync(args[1], 'utf8'));
     const areas = (arg(args, '--areas', '') || '').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
-    const result = gate(args[0], pack, catalogue, { baseDir: dirname(resolve(args[1])), areas });
+    const result = gate(args[0], pack, catalogue, { baseDir: dirname(resolve(args[1])), areas, readme: arg(args, '--readme') });
     for (const c of result.checks) {
       console.log(`${c.ok ? 'PASS' : 'FAIL'}  ${c.name}: expected ${c.expected}, found ${c.found}`);
       for (const m of c.missing.slice(0, 40)) console.log(`        missing: ${m}`);

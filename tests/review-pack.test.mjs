@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   loadCatalogue, applicability, validatePack, verdictCeiling, renderPage, templatePack, criteriaMarkdown,
-  gate, worksheetStatus, mergeWorksheet,
+  gate, worksheetStatus, mergeWorksheet, readmeItems, README_ITEMS,
 } from '../.claude/skills/launch-review/scripts/review-pack.mjs';
 
 const catalogue = loadCatalogue();
@@ -146,6 +146,17 @@ test('gates count what is missing instead of trusting a summary', () => {
   noBlocker.verdict.blockers = noBlocker.verdict.blockers.filter((b) => !b.refs.includes('ARC-11'));
   const bl = gate('review', noBlocker, catalogue, { baseDir: base }).checks.find((c) => c.name.startsWith('Open Critical'));
   assert.deepEqual(bl.missing, ['ARC-11']);
+});
+
+test('README check: the nine items by label, and the link to the review page', () => {
+  const full = README_ITEMS.map((l, i) => (i % 2 ? `**${l}:** x` : `## ${l}`)).join('\n') + '\n[page](review/index.html)';
+  assert.deepEqual(readmeItems(full).missing, []);
+  assert.equal(readmeItems(full).linksPage, true);
+  const partial = '# App\n**What it is:** x\n## Quick start\nTests are fun\n';
+  const r = readmeItems(partial);
+  assert.deepEqual(r.present, ['What it is', 'Quick start']);
+  assert.ok(r.missing.includes('Tests'), 'the word "Tests" in a sentence is not the Tests item');
+  assert.equal(r.linksPage, false);
 });
 
 test('status and merge: worksheet split across lenses', () => {
