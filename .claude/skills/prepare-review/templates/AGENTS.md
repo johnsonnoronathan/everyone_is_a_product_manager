@@ -13,9 +13,9 @@ Read this before changing anything. Keep it short: link to details instead of co
 - <Prices come from the server, never from the browser.> Proved by `<test>`.
 
 ## Where care is needed
-- Money: <files>. Every outside call has a time limit, a repeat-safe key, and an "unknown" outcome that is settled later, never treated as failed.
-- Secrets: only from environment variables; never in code, logs or the browser.
-- Never edit an applied database migration; add a new one.
+- Money: <files>. Every call to an outside service must have a time limit and a repeat-safe key, and a time-out must be treated as "unknown" and settled later, never as failed.
+- Secrets must come from environment variables; never put them in code, logs or anything sent to the browser.
+- <If the app has database migrations:> never edit one that has been applied; add a new one.
 
 ## Lessons from past problems
 <!-- One line per problem that came back (review page, Quality history): the rule, and the check that enforces it. -->

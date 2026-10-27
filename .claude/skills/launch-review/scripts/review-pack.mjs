@@ -455,6 +455,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
       <h3>${j.id ? `<span class="jid">${esc(j.id)}</span> ` : ''}${esc(j.name)}</h3>${j.who ? `<p class="dim">${fmt(j.who)}</p>` : ''}
       <ol class="steps">${(j.steps || []).map((s) => `<li>${fmt(s)}</li>`).join('')}</ol>
       <p><span class="lbl">Expected</span> ${fmt(j.expected)}</p>
+      ${j.actual ? `<p class="${j.actual.trim().toLowerCase().startsWith('as expected') ? '' : 'actual-diff'}"><span class="lbl">What happened</span> ${fmt(j.actual)}</p>` : ''}
       ${evidenceList(j.evidence, baseDir)}
       ${filled(j.criteria) ? `<p class="refs">Proved by acceptance criteria ${j.criteria.map((c) => `<a class="fref" href="#a-${esc(c)}">${esc(c)}</a>`).join(' ')}</p>` : ''}
     </article>`).join('')}</div>`;
@@ -770,6 +771,7 @@ dialog .close { font: 500 13px var(--body); border: 1px solid var(--line); backg
 .att-what { color: var(--muted); font-size: 13.5px; padding-left: 2px; }
 .decide { border: 1px solid var(--accent); border-radius: 6px; padding: 12px 14px; display: grid; gap: 6px; }
 .decide ul { gap: 6px; }
+.actual-diff { border-left: 3px solid var(--fails); padding-left: 8px; }
 .estimate { font-size: 15px; }
 details summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 6px 0; }
 details[open] summary { margin-bottom: 4px; }

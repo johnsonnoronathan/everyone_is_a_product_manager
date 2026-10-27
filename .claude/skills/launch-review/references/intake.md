@@ -20,7 +20,7 @@ Read the code first (README, package files, routes, env examples, migrations) an
 |---|---|---|
 | **1: Low** | Internal tool or prototype, no personal data beyond staff emails, no money | Standard review; Medium findings rarely block |
 | **2: Standard** | Public users with accounts or personal data, or payments via a hosted checkout | Full review; Critical blocks, High blocks unless risk-accepted in writing |
-| **3: High** | Handles payments/cards in-app, health/financial/children's data, regulated sector, large launch (≥ 10k users in week one or a paid promotion), or anything where a breach makes the news | Full review **plus** a recommendation for an independent human penetration test before or soon after launch; High findings always block; operational readiness (backups, monitoring, incident plan) is mandatory |
+| **3: High** | Handles payments in the app (the app's own server charges cards or calls a payment provider's charge API, even if no card form is shown), cards in-app, health/financial/children's data, regulated sector, large launch (≥ 10k users in week one or a paid promotion), or anything where a breach makes the news | Full review **plus** a recommendation for an independent human penetration test before or soon after launch; High findings always block; operational readiness (backups, monitoring, incident plan) is mandatory |
 
 ## Output: `launch-review/00-scope.md`
 
