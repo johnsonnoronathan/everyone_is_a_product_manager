@@ -1,6 +1,6 @@
 ---
 name: launch-review
-description: Independent pre-launch review of a web or mobile app against the review standard (98 criteria): architecture, security, performance, operations, data and business rules, the test harness (tests, CI, AGENTS.md or CLAUDE.md) and the defect history, including why the same bugs keep coming back. Produces an evidence-backed GO / GO WITH CONDITIONS / NO-GO report and a one-page review site a product manager can read and an engineer can fix from. Use before going live or a big promotion, when a project or review pack is handed in, when taking over an AI-built ("vibe-coded") app, or when someone asks "is this ready for production?", "review my app before launch", "can we go live?", "review the architecture", "security audit", "check our AGENTS.md", "why do the same bugs keep coming back?".
+description: For the reviewer: an independent pre-launch review of a web or mobile app against the review standard (99 criteria): architecture, security, performance, operations, data and business rules, the test harness (tests, CI, AGENTS.md or CLAUDE.md) and why the same bugs keep coming back. Produces a GO / GO WITH CONDITIONS / NO-GO verdict with a to-do list of who does what, and a one-page review site an owner can read and an engineer can fix from. A narrow question (just the architecture, the AGENTS.md, the recurring bugs) gets a focused review of that part. Use before going live, when a project or review pack is handed in, when taking over an AI-built app, or for "is this ready for production?", "review my app before launch", "can we go live?", "review the architecture", "check our AGENTS.md". Traffic-only questions go to peak-traffic-test; preparing your own project for a reviewer goes to prepare-review.
 ---
 
 # Launch review
@@ -20,6 +20,20 @@ You are doing a pre-launch review for someone who may not be an engineer: often 
 7. **Two audiences.** Each finding has a plain-language impact line for the PM and precise detail for the engineer.
 8. **Severity follows `references/severity.md`**, not gut feeling, and the verdict follows its rules.
 9. **Software counts, you don't.** Models miscount: "all 94 criteria checked" can really be 92. Each phase ends with a **gate** (`review-pack.mjs gate`) that counts what the phase must have produced and lists exactly what's missing. Don't start the next phase until the gate passes, and copy every number you report (criteria, results, findings) from the gate or `status` output, never from your own tally.
+
+## Full or focused review
+
+A **full review** runs every phase below and ends in a verdict. A **narrow question** gets a **focused review** of that part only, and no GO/NO-GO verdict (say so plainly: a verdict needs every area):
+
+| The user asks about | Run | Gate |
+|---|---|---|
+| the architecture | Phase 1, then the architecture & data lens | `gate worksheet --areas A,D` |
+| `AGENTS.md` / `CLAUDE.md`, tests, CI | the harness lens | `gate worksheet --areas H` |
+| why the same bugs keep coming back | the quality-history step in Phase 2 | `gate worksheet --areas Q` |
+| security only | Phases 1–2, then the security lens | `gate worksheet --areas S` |
+| traffic or capacity only | hand over to `peak-traffic-test` | — |
+
+Write the focused results into the same `launch-review/` files (worksheet rows, findings), so a later full review builds on them. Offer the full review at the end if the app is heading for launch.
 
 ## Workflow
 
@@ -105,7 +119,9 @@ For every Critical and High finding, take a second, sceptical pass (a fresh suba
 ### Phase 5: Verdict and report
 Apply `references/severity.md` and write `launch-review/REPORT.md` from `references/report-template.md`: verdict first, then the top actions, findings, coverage and limitations. Record the commit reviewed, date and tool versions so the result is reproducible.
 
-Then fill in the review pack's reviewer sections in `launch-review/review-pack.json`: write `worksheet/U.json` from the acceptance results and merge it; add the verdict, findings, quality history (classes, hotspots, known problems), area notes, not-checked list and glossary. Every result is *meets* with evidence of at least the criterion's grade, *does not meet* with severity or finding, *cannot verify* with what's needed, or *not applicable* with why. Grade C evidence (documentation, the author's word, an AI summary) never supports *meets*. Don't grade the readability criteria (U-04, U-05) *meets* on a report you wrote yourself unless someone else read it; otherwise *cannot verify*, needed: "a reading test with the owner".
+Then fill in the review pack's reviewer sections in `launch-review/review-pack.json`: write `worksheet/U.json` from the acceptance results and merge it; add the verdict, findings, quality history (classes, hotspots, known problems), area notes, not-checked list and glossary.
+
+Write the verdict for the owner, who is usually not an engineer: the decision and why in two or three plain sentences; **what would happen if they launched anyway** (`ifLaunchedNow`); **one to-do list** of blockers and conditions, each with **who** does it (a name, or a role such as developer, hosting provider, product owner), **how big** a job it is and **when**; and **what customers would notice** today (`noticeable`). Codes go in `refs`, never in the sentence. Every open finding says who fixes it, where, the fix, and for Critical and High how anyone can tell it's done (`doneWhen`); every failed criterion without a finding says its fix. Never state a count in prose that you haven't taken from `status` or a gate: the page shows the counts itself. Every result is *meets* with evidence of at least the criterion's grade, *does not meet* with severity or finding, *cannot verify* with what's needed, or *not applicable* with why. Grade C evidence (documentation, the author's word, an AI summary) never supports *meets*. Don't grade the readability criteria (U-04, U-05) *meets* on a report you wrote yourself unless someone else read it; otherwise *cannot verify*, needed: "a reading test with the owner".
 
 **Gate 5**, then render:
 ```bash

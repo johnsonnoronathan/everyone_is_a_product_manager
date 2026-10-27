@@ -17,10 +17,10 @@
 
 **Tests:** `<one command that runs all tests>`. They cover: <in plain words>.
 
-**Settings:** every setting the app reads is listed in the review page, §4 (or here as a table).
+**Settings:** every setting the app reads is listed in the review page under How to run it (or here as a table).
 
-**Architecture:** <one paragraph>. Details: review page §6.
+**Architecture:** <one paragraph>. Details: the review page's Architecture section.
 
-**Known problems:** review page §12, known problems register.
+**Known problems:** the known problems register in the review page's Quality history section.
 
 **For AI agents:** [`AGENTS.md`](AGENTS.md) <or: "none yet">.

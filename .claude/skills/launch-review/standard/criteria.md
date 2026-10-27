@@ -59,7 +59,7 @@ Each criterion is **mandatory from** the risk tier shown, and recommended below 
 | A-11 | **Dependencies are real and needed** | Every dependency exists in the official registry under that exact name, is maintained, and is needed.<br>*Source: OWASP Top 10:2025 A03 Software Supply Chain Failures* | Dependency list checked against the registry. | Tier 1 | B |
 | A-12 | **Partner limits are known** | Rate limits, quotas and costs of each outside service are known and fit the expected peak. | Provider documentation compared with the target load. | Tier 3 | B |
 
-## D: Data and business rules (12)
+## D: Data and business rules (13)
 
 *Can the data become wrong?*
 
@@ -77,6 +77,7 @@ Each criterion is **mandatory from** the risk tier shown, and recommended below 
 | D-10 | **Changes leave an audit trail** | Changes to money, stock and admin settings record who, what and when.<br>*Only if the product takes payments, issues refunds or credits, or holds balances or has admin or staff functions.* | Logs or audit table after an admin change. | Tier 2 | B |
 | D-11 | **Personal data has a lifecycle** | What personal data is kept, why, for how long, and how it is deleted on request is stated and implemented.<br>*Only if the product stores personal data (names, emails, addresses, messages, health, financial).* | Privacy notes and the deletion path. | Tier 2 | B |
 | D-12 | **Records are reconciled** | A routine check compares records with reality (charges with orders, stock with sales) and alerts on any difference.<br>*Only if the product takes payments, issues refunds or credits, or holds balances or sells or allocates something limited (stock, seats, coupons, slots).* | The check, run once. | Tier 3 | A |
+| D-13 | **Real payments work end to end** | The real payment flow has been exercised with the real provider: a purchase, a decline and a refund in the provider's test mode, and one small real purchase and refund in production before launch.<br>*Only if the product takes payments, issues refunds or credits, or holds balances.* | The provider's records of those transactions, matched to the app's orders. | Tier 2 | A |
 
 ## S: Security (15)
 

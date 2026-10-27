@@ -29,6 +29,7 @@ const ORDER_ID_PATH = cfg.orderIdField || 'orderId';
 
 const successes = new Counter('buy_success');
 const doubleCharged = new Counter('buyers_with_multiple_successes');
+const accepted = new Counter('buy_accepted_responses');
 const rejected = new Counter('buy_rejected');
 const pendingAtCheckout = new Counter('buy_pending');
 const successWithoutId = new Counter('buy_success_without_order_id');
@@ -55,6 +56,7 @@ export const options = {
   thresholds: {
     buy_success: ['count>=0'],
     buyers_with_multiple_successes: ['count>=0'],
+    buy_accepted_responses: ['count>=0'],
     buy_rejected: ['count>=0'],
     buy_pending: ['count>=0'],
     buy_success_without_order_id: ['count>=0'],
@@ -80,8 +82,11 @@ export function buy(data) {
   const responses = http.batch(Array.from({ length: CLICKS }, () => request));
   const orderIds = new Set();
   let withoutId = 0;
+  // Every response lands in exactly one bucket (accepted, rejected, error); handleSummary checks they add up.
   for (const res of responses) {
     if (SUCCESS.includes(res.status)) {
+      accepted.add(1);
+      if (PENDING.includes(res.status)) pendingAtCheckout.add(1);
       let id;
       try {
         id = ORDER_ID_PATH.split('.').reduce((o, k) => (o == null ? undefined : o[k]), res.json());
@@ -90,9 +95,7 @@ export function buy(data) {
       }
       if (id === undefined || id === null) withoutId++;
       else orderIds.add(String(id));
-    }
-    if (PENDING.includes(res.status)) pendingAtCheckout.add(1);
-    else if (res.status === 0 || res.status >= 500) errors.add(1);
+    } else if (res.status === 0 || res.status >= 500) errors.add(1);
     else rejected.add(1);
   }
   // Responses without an order id can't be told apart, so each counts as a purchase (conservative).
@@ -138,6 +141,7 @@ export function handleSummary(data) {
     clicksPerBuyer: CLICKS,
     successfulPurchases: value(data, 'buy_success') || 0,
     buyersChargedTwice: value(data, 'buyers_with_multiple_successes') || 0,
+    acceptedResponses: value(data, 'buy_accepted_responses') || 0,
     rejected: value(data, 'buy_rejected') || 0,
     pendingAtCheckout: value(data, 'buy_pending') || 0,
     successWithoutId: value(data, 'buy_success_without_order_id') || 0,
@@ -172,6 +176,9 @@ export function handleSummary(data) {
     );
   }
   const totalRequests = BUYERS * CLICKS;
+  // Software counts: every click must be accounted for exactly once, or the other numbers can't be trusted.
+  const counted = r.acceptedResponses + r.rejected + r.errors;
+  if (counted !== totalRequests) problems.push(`The counts don't add up: ${r.acceptedResponses} accepted + ${r.rejected} rejected + ${r.errors} errors = ${counted}, but ${totalRequests} clicks were sent. Fix the test before trusting its numbers.`);
   if (r.successWithoutId > 0) {
     warnings.push(`${r.successWithoutId} successful responses carried no order id at "${ORDER_ID_PATH}" (set oversell.orderIdField), so repeated answers for the same order could not be told apart. The database numbers below are the authoritative check.`);
   }
@@ -190,10 +197,11 @@ export function handleSummary(data) {
     '| Measure | Value |',
     '|---|---|',
     `| Units in stock | ${STOCK} |`,
+    `| Clicks sent | ${totalRequests} |`,
     `| Accepted purchases (seen by buyers) | ${r.successfulPurchases} |`,
     ...(r.pendingAtCheckout ? [`| …of which "confirming payment" at checkout | ${r.pendingAtCheckout} |`] : []),
     `| Buyers charged twice | ${r.buyersChargedTwice} |`,
-    `| Rejected (sold out / already ordered / rate limited) | ${r.rejected} |`,
+    `| Clicks rejected (sold out / already ordered / rate limited) | ${r.rejected} |`,
     `| Server errors or timeouts | ${r.errors} |`,
     ...(s.sold !== undefined ? [`| Orders in database | ${s.sold} |`] : []),
     ...(s.pending !== undefined ? [`| Orders still awaiting payment confirmation | ${s.pending} |`] : []),

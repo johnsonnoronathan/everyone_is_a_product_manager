@@ -8,7 +8,7 @@ Read this before changing anything. Keep it short: link to details instead of co
 - Test everything: `<command>`. All tests must pass before you hand back a change. Never weaken or skip a test to make it pass.
 
 ## Rules that must never be broken
-<!-- The business rules from the review pack (§7), each with the test that proves it. -->
+<!-- The business rules from the review pack (Business rules section), each with the test that proves it. -->
 - <Never sell more than the stock.> Enforced by <the atomic update in …>; proved by `<test>`.
 - <Prices come from the server, never from the browser.> Proved by `<test>`.
 
@@ -18,7 +18,7 @@ Read this before changing anything. Keep it short: link to details instead of co
 - Never edit an applied database migration; add a new one.
 
 ## Lessons from past problems
-<!-- One line per problem that came back (review page §12): the rule, and the check that enforces it. -->
+<!-- One line per problem that came back (review page, Quality history): the rule, and the check that enforces it. -->
 - <Bad input crashed the server twice.> Parse input once, strictly, at the edge; add new inputs to `<malformed-input test>`.
 - <Settings were ignored after a restart.> Any change to start-up or settings needs a test that starts the app twice on the same data.
 

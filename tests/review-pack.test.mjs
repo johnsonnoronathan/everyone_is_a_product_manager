@@ -45,7 +45,7 @@ function reviewedPack(rows, extra = {}) {
   const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
   pack.project.riskTier = extra.tier ?? 2;
   pack.worksheet = rows;
-  pack.verdict = { decision: extra.decision ?? 'GO', reason: 'r', blockers: [], conditions: extra.conditions ?? [] };
+  pack.verdict = { decision: extra.decision ?? 'GO', reason: 'r', ifLaunchedNow: 'x', blockers: [], conditions: extra.conditions ?? [] };
   pack.findings = extra.findings ?? [];
   return pack;
 }
@@ -85,7 +85,7 @@ test('GO WITH CONDITIONS must list every mandatory criterion that could not be v
   pack.worksheet[0] = { id: pack.worksheet[0].id, result: 'cannot-verify', needed: 'staging access' };
   let errors = validatePack(pack, catalogue, { stage: 'review' }).filter((p) => p.level === 'error');
   assert.ok(errors.some((e) => e.where === 'verdict.conditions'));
-  pack.verdict.conditions = [{ text: 'Get staging access', refs: [pack.worksheet[0].id] }];
+  pack.verdict.conditions = [{ text: 'Get staging access', who: 'Product owner', refs: [pack.worksheet[0].id] }];
   errors = validatePack(pack, catalogue, { stage: 'review' }).filter((p) => p.level === 'error');
   assert.deepEqual(errors, []);
 });
@@ -146,7 +146,8 @@ test('status and merge: worksheet split across lenses', () => {
   const rows = pack.worksheet;
   const empty = { ...pack, worksheet: [] };
   const before = worksheetStatus(empty, catalogue);
-  assert.equal(before.reduce((n, a) => n + a.missing.length, 0), 94);
+  const mandatory = catalogue.criteria.filter((c) => applicability(c, pack.project) === 'mandatory').length;
+  assert.equal(before.reduce((n, a) => n + a.missing.length, 0), mandatory);
   const security = rows.filter((r) => r.id.startsWith('S-'));
   const rest = rows.filter((r) => !r.id.startsWith('S-'));
   const merged = mergeWorksheet(structuredClone(empty), [rest, security]);
@@ -156,6 +157,21 @@ test('status and merge: worksheet split across lenses', () => {
   // A later file replaces an earlier row for the same criterion.
   const again = mergeWorksheet(structuredClone(merged), [[{ id: 'S-01', result: 'cannot-verify', needed: 'x' }]]);
   assert.equal(again.worksheet.find((r) => r.id === 'S-01').result, 'cannot-verify');
+});
+
+test('numbers in the documents match the catalogue (software counts, not prose)', () => {
+  const total = catalogue.criteria.length;
+  const example = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  const applicable = catalogue.criteria.filter((c) => applicability(c, example.project) !== 'off').length;
+  const files = ['README.md', 'CHANGELOG.md', 'docs/hand-in-guide.md', '.claude/skills/launch-review/SKILL.md', '.claude/skills/launch-review/standard/review-standard.md', '.claude-plugin/marketplace.json'];
+  const patterns = [/(\d+) criteria in nine areas/g, /all (\d+) criteria\]/g, /(\d+)-criterion/g, /review standard \((\d+) criteria\)/g, /through: (\d+) in all/g, /up to (\d+) criteria/g];
+  let checked = 0;
+  for (const f of files) {
+    const text = readFileSync(f, 'utf8');
+    for (const re of patterns) for (const m of text.matchAll(re)) { checked++; assert.equal(Number(m[1]), total, `${f}: "${m[0]}" but the catalogue has ${total}`); }
+    for (const m of text.matchAll(/All (\d+) criteria that apply/g)) { checked++; assert.equal(Number(m[1]), applicable, `${f}: "${m[0]}" but ${applicable} apply to the example`); }
+  }
+  assert.ok(checked >= 6, 'the count mentions were found');
 });
 
 test('the generated criteria list is up to date', () => {

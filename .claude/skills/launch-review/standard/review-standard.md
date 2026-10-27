@@ -7,6 +7,8 @@ Version 1.0. A fixed format for handing a project in for review, and for writing
 
 The rules behind it are in [The release gate](../../../../docs/release-gate.md): judge the evidence, not the author or the tool; review independently of the author; "ready" is a written set of evidence a named person signs.
 
+**Who is who.** The *author* hands the project in (often a product manager working with an AI assistant). The *reviewer* judges it and must not be the author. The *owner* (the product owner or client) agrees the requirements and acceptance criteria and signs the result. A plain-language guide for authors is [Handing your project in](../../../../docs/hand-in-guide.md).
+
 ## 1. What the author hands in
 
 Three things, all in the repository at the commit under review:
@@ -14,12 +16,12 @@ Three things, all in the repository at the commit under review:
 | What | Where | Minimum |
 |---|---|---|
 | **README** | repository root | The nine items in §1.1. |
-| **Review pack** | `review/review-pack.json`, with screenshots and other evidence in `review/evidence/` | The author's sections in §2, passing `review-pack.mjs validate --stage submission`. |
+| **Review pack** | `review/review-pack.json`, with screenshots and other evidence in `review/evidence/` | The author's sections in §2, passing the submission gate (`review-pack.mjs gate submission`, §6). |
 | **Review page** | `review/index.html` | Rendered from the pack by `review-pack.mjs render`. One self-contained file: it can be opened offline, attached to an email or hosted as is. |
 
 The JSON pack is the record; the page is a view of it. Authors don't write HTML, and every project's page has the same sections in the same order.
 
-**Entry rule.** If the pack doesn't pass the submission check, the review doesn't start. The reviewer sends back the page as rendered: its first section lists exactly what is missing. That page is the first report.
+**Entry rule.** If the pack doesn't pass the submission gate, the review doesn't start. The reviewer sends back the page as rendered: its first section lists exactly what is missing. That page is the first report.
 
 ### 1.1 README minimum
 
@@ -31,40 +33,40 @@ The JSON pack is the record; the page is a view of it. Authors don't write HTML,
 | 4 | Test access | Test accounts or how to create them, how to reset test data, and confirmation that payments, email and other side effects are in test mode. |
 | 5 | Tests | The one command that runs all tests, and what they cover. |
 | 6 | Settings | Every setting the app reads, or a link to the table in the review pack. |
-| 7 | Architecture | One paragraph, with a link to the review page's architecture section. |
-| 8 | Known problems | A link to the known problems register (review page §12). |
+| 7 | Architecture | One paragraph, with a link to the review page's Architecture section. |
+| 8 | Known problems | A link to the known problems register (review page, Quality history section). |
 | 9 | For AI agents | A link to the agent instruction file (`AGENTS.md`, `CLAUDE.md` or equivalent) if agents work on the code. |
 
 ## 2. The review page: sections and formats
 
-Sixteen sections, always in this order. **A** = the author fills it in before the review; **R** = the reviewer fills it in. Field names refer to `review-pack.json`; a blank template comes from `review-pack.mjs template`.
+Sixteen sections, always in this order: first what the owner needs, then what the developer needs, then the evidence. **A** = the author fills it in before the review; **R** = the reviewer fills it in. Field names refer to `review-pack.json`; a blank template comes from `review-pack.mjs template`.
 
-| § | Section | Who | Minimum content | Fields |
+| # | Section | Who | Minimum content | Fields |
 |---|---|---|---|---|
-| 1 | Verdict | R | Decision (GO, GO WITH CONDITIONS, NO-GO), the reason in one or two plain sentences, blockers, conditions with owner and date, sign-off. The page adds results by area and any missing items. | `verdict`: `decision`, `reason`, `blockers[]` and `conditions[]` (`text`, `refs[]`, `owner`, `due`), `signedBy`, `signedOn` |
-| 2 | Product | A | What it does and for whom, users, out of scope, risk tier with its reason, and the features that switch criteria on (§3). | `project`: `name`, `summary`, `repository`, `commit`, `date`, `author`, `riskTier`, `riskReason`, `features[]`; `product.users`, `product.outOfScope[]` |
-| 3 | Demo | A | Each main user journey: who, numbered steps, the expected result, at least one screenshot or recording, and the acceptance criteria that prove it. | `product.journeys[]`: `id`, `name`, `who`, `steps[]`, `expected`, `evidence[]` (`path` or `url`, `caption`), `criteria[]` |
-| 4 | How to run it | A | Prerequisites with versions; set-up, start, open, test and reset commands; staging address or `null`; test accounts; every setting. | `run`: `prerequisites[]`, `setup[]`, `start`, `open`, `test[]`, `reset`, `staging`, `accounts[]` (`role`, `how`), `settings[]` (`name`, `purpose`, `secret`, `production`, `example`) |
-| 5 | Requirements | A | The standard the review judges against, with numbers: traffic, response times, acceptable data loss, recovery time, data rules, who agreed and when. | `requirements[]`: `id`, `text`, `target`, `agreedBy`, `agreedOn`, `source` |
-| 6 | Architecture | A | Summary, diagram (Mermaid), components and their jobs, every entry point with who may call it, data stores, outside services with their time limits, major decisions. | `architecture`: `summary`, `diagram`, `components[]`, `entryPoints[]` (`entry`, `caller`, `guard`, `touches`), `dataStores[]`, `services[]` (`name`, `purpose`, `timeout`, `onFailure`), `decisions[]` (`title`, `why`, `alternatives`, `downsides`) |
-| 7 | Business rules | A | Every rule the data must obey, how it is enforced and what proves it. | `rules[]`: `id`, `rule`, `enforcedBy`, `provenBy` |
-| 8 | Harness | A | The agent instruction file (or `null`), every test suite with its command, coverage and last result, CI gates, other checks. | `harness`: `agentFile` (`path`, `summary`) or `null`, `suites[]` (`name`, `kind`, `covers`, `command`, `lastRun`, `inCI`), `ci[]`, `checks[]` |
-| 9 | Performance | A, R | Target, test environment, every load-test run (failures too), results per step, race test, slow-partner test, conclusion. | `performance`: `target`, `environment`, `runs[]` (`label`, `result`, `pass`, `note`), `steps[]`, `race` (`summary`, `rows[]`), `slowPartner`, `conclusion` |
-| 10 | Security | R | A plain-language summary; the criteria do the rest. | `areaNotes.S` |
-| 11 | Operations | R | A plain-language summary; the criteria do the rest. | `areaNotes.O` |
-| 12 | Quality history | A, R | Sources and period, defect counts, recurring problem classes with root cause and control, hotspots, and the known problems register. | `history`: `period`, `sources[]`, `stats[]`, `classes[]` (`name`, `occurrences[]`, `rootCause`, `control`, `controlCheck`, `agentRule`, `status`), `hotspots[]`, `known[]` (`id`, `text`, `severity`, `owner`, `due`, `status`) |
-| 13 | Acceptance | A, R | The agreed criteria (version, who agreed), each with priority, result over three runs and its screenshots. | `acceptance`: `criteriaVersion`, `agreedBy`, `run`, `rows[]` (`id`, `priority`, `criterion`, `status`, `runs`, `evidence[]`, `note`) |
-| 14 | Findings | R | Each problem found: severity, confidence, status, plain-language impact, where, fix. | `findings[]`: `id`, `severity`, `confidence`, `status`, `title`, `impact`, `where`, `fix` |
+| 1 | Verdict | R | For the owner, in plain words: the decision (GO, GO WITH CONDITIONS, NO-GO) and why; what would happen if they launched anyway; one list of what has to happen, each with who does it, how big a job it is and when (blockers before launch, conditions at the time shown); what customers would notice; who signs. The page adds a reading key, results by area and any missing items. | `verdict`: `decision`, `reason`, `ifLaunchedNow` (required unless GO), `blockers[]` and `conditions[]` (`text`, `who` (required), `effort`, `when` (conditions), `why`, `refs[]`), `noticeable[]`, `signer`, `signedBy`, `signedOn` |
+| 2 | What to fix | R | For the developer: every problem found, blockers first, each with severity, who fixes it, where, the fix and how anyone can tell it's done; problems already fixed listed at the end. | `findings[]`: `id`, `severity`, `confidence`, `status`, `title`, `impact`, `who` (required while open), `where`, `fix` (required while open), `doneWhen` (required for open Critical and High) |
+| 3 | Product | A | What it does and for whom, users, out of scope, risk tier with its reason, and the features that switch criteria on (§3). | `project`: `name`, `summary`, `repository`, `commit`, `date`, `author`, `riskTier`, `riskReason`, `features[]`; `product.users`, `product.outOfScope[]` |
+| 4 | Demo | A | Each main user journey: who, numbered steps, the expected result, at least one screenshot or recording, and the acceptance criteria that prove it. | `product.journeys[]`: `id`, `name`, `who`, `steps[]`, `expected`, `evidence[]` (`path` or `url`, `caption`), `criteria[]` |
+| 5 | How to run it | A | Prerequisites with versions; set-up, start, open, test and reset commands; staging address or `null`; test accounts; every setting. | `run`: `prerequisites[]`, `setup[]`, `start`, `open`, `test[]`, `reset`, `staging`, `accounts[]` (`role`, `how`), `settings[]` (`name`, `purpose`, `secret`, `production`, `example`) |
+| 6 | Requirements | A | The standard the review judges against, with numbers: traffic, response times, acceptable data loss, recovery time, data rules, who agreed and when. Unknown is written "Not agreed yet", never guessed. | `requirements[]`: `id`, `text`, `target`, `agreedBy`, `agreedOn`, `source` |
+| 7 | Architecture | A | Summary, diagram (Mermaid), components and their jobs, every entry point with who may call it, data stores, outside services with their time limits, major decisions. | `architecture`: `summary`, `diagram`, `components[]`, `entryPoints[]` (`entry`, `caller`, `guard`, `touches`), `dataStores[]`, `services[]` (`name`, `purpose`, `timeout`, `onFailure`), `decisions[]` (`title`, `why`, `alternatives`, `downsides`) |
+| 8 | Business rules | A | Every rule the data must obey, how it is enforced and what proves it. | `rules[]`: `id`, `rule`, `enforcedBy`, `provenBy` |
+| 9 | Harness | A | The agent instruction file (or `null`), every test suite with its command, coverage and last result, CI gates, other checks. | `harness`: `agentFile` (`path`, `summary`) or `null`, `suites[]` (`name`, `kind`, `covers`, `command`, `lastRun`, `inCI`), `ci[]`, `checks[]` |
+| 10 | Performance | A, R | Target, test environment, every load-test run (failures too), results per step, race test, slow-partner test, conclusion. | `performance`: `target`, `environment`, `runs[]` (`label`, `result`, `pass`, `note`), `steps[]`, `race` (`summary`, `rows[]`), `slowPartner`, `conclusion` |
+| 11 | Security | R | A plain-language summary; the criteria do the rest. | `areaNotes.S` |
+| 12 | Operations | R | A plain-language summary; the criteria do the rest. | `areaNotes.O` |
+| 13 | Quality history | A, R | The author declares known problems; the reviewer adds sources and period, defect counts, recurring problem classes with root cause and control, and hotspots. | `history`: `period`, `sources[]`, `stats[]`, `classes[]` (`name`, `occurrences[]`, `rootCause`, `control`, `controlCheck`, `agentRule`, `status`), `hotspots[]`, `known[]` (`id`, `text`, `severity`, `owner`, `due`, `status`) |
+| 14 | Acceptance | A, R | The author gives the agreed criteria (version, who agreed) and the latest results; the reviewer re-runs them: each with priority, result over three runs and its screenshots. | `acceptance`: `criteriaVersion`, `agreedBy`, `run`, `rows[]` (`id`, `priority`, `criterion`, `status`, `runs`, `evidence[]`, `note`) |
 | 15 | Not checked | R | Everything the review did not or could not cover. | `notChecked[]` |
-| 16 | Glossary | R | Every technical term used, in plain words. | `glossary[]` (`term`, `meaning`) |
+| 16 | Glossary | R | Every technical term used, in plain words. The page also underlines each term where it first appears in a section, with the meaning on hover or tap. | `glossary[]` (`term`, `meaning`) |
 
-Sections 4 and 6 to 13 each end with **How this was judged**: the criteria for that area, each with its result. The reviewer records these in `worksheet[]` (§3). Optional plain-language summaries per area go in `areaNotes` (keys `R`, `H`, `A`, `D`, `S`, `P`, `O`, `Q`, `U`).
+Sections 5 and 7 to 14 each end with the checklist for their area: the items that need attention first, then the full list (folded away), each with its result. The reviewer records these in `worksheet[]` (§3). Optional plain-language summaries per area go in `areaNotes` (keys `R`, `H`, `A`, `D`, `S`, `P`, `O`, `Q`, `U`).
 
 Text fields accept `` `code` `` and `**bold**`; everything else is shown as written. Evidence paths are relative to the pack file; images are embedded in the page.
 
 ## 3. The worksheet: how each criterion is judged
 
-The criteria are listed in [`criteria.md`](criteria.md) (generated from [`criteria.json`](criteria.json)): 98 criteria in nine areas.
+The criteria are listed in [`criteria.md`](criteria.md) (generated from [`criteria.json`](criteria.json)): 99 criteria in nine areas. Only those that fit the product apply: an app without payments skips the payment criteria, so a given review usually has fewer than 99.
 
 | Code | Area | The question it answers |
 |---|---|---|
@@ -99,6 +101,14 @@ Each row of `worksheet[]` is `{ id, result, grade, evidence, note, needed, sever
 
 Each criterion names its lowest acceptable grade. Grade C never supports a "meets": a claim is not evidence. Where only C is available, the result is `cannot-verify`, and `needed` says what would turn it into A or B.
 
+**Risk tiers** decide how strict the review is (details in [`intake.md`](../references/intake.md)):
+
+| Tier | When | What it changes |
+|---|---|---|
+| 1, low | Internal tool or prototype, no personal data, no money | Fewest mandatory criteria; Medium problems rarely block |
+| 2, standard | Real users with accounts or personal data, or payments through a hosted checkout | Critical blocks; High blocks unless the owner accepts it in writing |
+| 3, high | Takes payments in the app, holds health, financial or children's data, or launches with a big rush | Every criterion mandatory; any open High blocks; backups, alerts and on-call must be shown |
+
 **Which criteria apply.** Every criterion has a tier from which it is mandatory (it's recommended below that tier), and some apply only when the product has a feature, listed in `project.features`:
 
 `aiAssisted` (AI agents write code), `accounts`, `personalData`, `money`, `limitedStock`, `adminArea`, `browserDatabase`, `webhooks`, `uploads`, `ai` (calls an AI model at runtime), `launchSpike`.
@@ -132,7 +142,7 @@ Bugs that came back once will come back again unless the reason they happen is f
 
 ## 6. Quality gates: software counts
 
-An AI reviewer (or a tired person) that says "all 94 criteria checked" may have checked 92. So counting is done by software, at the end of each stage, and a stage isn't finished until its gate passes:
+An AI reviewer (or a tired person) that says "all 95 criteria checked" may have checked 93. So counting is done by software, at the end of each stage, and a stage isn't finished until its gate passes:
 
 | Gate | When | It counts |
 |---|---|---|
@@ -155,7 +165,7 @@ node $S/scripts/review-pack.mjs gate review launch-review/review-pack.json      
 node $S/scripts/review-pack.mjs render review/review-pack.json review/index.html
 node $S/scripts/history-scan.mjs . review/history [--since 2025-01-01] [--issues issues.json]
 ```
-`validate --stage submission|review` prints the checker's messages without the counts.
+The gates are the pass/fail. `validate --stage submission|review` prints only the checker's messages, without the counts, which is handy while filling in the pack.
 
 A complete example is [`demo/flash-sale/review/`](../../../../demo/flash-sale/review/) in this repository.
 

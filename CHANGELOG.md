@@ -9,7 +9,7 @@
   - four results (meets, does not meet, cannot verify, not applicable);
   - evidence grades (measured, inspected, claim only);
   - verdict rules.
-- **98 criteria in nine areas** (`standard/criteria.json`, listed in `criteria.md`): reviewability, harness (tests, CI, agent instructions such as `AGENTS.md`), architecture, data and business rules, security, performance, operations, quality history, acceptance and report.
+- **99 criteria in nine areas** (`standard/criteria.json`, listed in `criteria.md`): reviewability, harness (tests, CI, agent instructions such as `AGENTS.md`), architecture, data and business rules, security, performance, operations, quality history, acceptance and report.
 - **`review-pack.mjs`:**
   - creates a template;
   - checks a submission or a review (it refuses a verdict more favourable than the results allow);
@@ -27,7 +27,7 @@
   - fills in the worksheet and renders the review page alongside `REPORT.md`.
 
 ### Demo
-- `demo/flash-sale/review/`: the fixed version handed in and judged under the standard. All 94 criteria that apply have a result. It records six kinds of problem that came back across three reviews, five problems introduced by fixes, and the verdict NO-GO.
+- `demo/flash-sale/review/`: the fixed version handed in and judged under the standard. All 95 criteria that apply have a result. It records six kinds of problem that came back across three reviews, five problems introduced by fixes, and the verdict NO-GO.
 
 ## 0.1.0 (2026-10-26): first public release
 

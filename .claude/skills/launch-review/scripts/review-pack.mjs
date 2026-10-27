@@ -144,6 +144,11 @@ export function validatePack(pack, catalogue, { stage } = {}) {
     const v = pack.verdict || {};
     if (!DECISIONS.includes(v.decision)) err('verdict.decision', `Give one of: ${DECISIONS.join(', ')}.`);
     need(v.reason, 'verdict.reason', 'Give the reason for the verdict in one or two plain sentences.');
+    if (v.decision && v.decision !== 'GO') need(v.ifLaunchedNow, 'verdict.ifLaunchedNow', 'Say in plain words what would happen to customers and money if the app launched anyway.');
+    [...(v.blockers || []).map((b, i) => [b, `verdict.blockers[${i}]`]), ...(v.conditions || []).map((b, i) => [b, `verdict.conditions[${i}]`])].forEach(([b, at]) => {
+      need(b.text, at, 'Say what has to happen, in plain words.');
+      need(b.who, at, `"${(b.text || '').slice(0, 50)}…": say who does it (a name, or a role such as "developer", "hosting provider", "product owner").`);
+    });
     if (!Array.isArray(pack.notChecked)) err('notChecked', 'List what was not checked.');
     else if (pack.notChecked.length === 0) warn('notChecked', 'Nothing is listed as not checked. That is rarely true.');
 
@@ -168,6 +173,7 @@ export function validatePack(pack, catalogue, { stage } = {}) {
         const sev = severityOf(r, findings);
         if (!SEVERITIES.includes(sev)) err(at, 'A failed criterion needs a severity, directly or through its finding.');
         need(r.evidence, at, 'Say what was found.');
+        if (!r.finding) need(r.fix, at, 'Say what would fix it, or link a finding that does.');
         if ((sev === 'Medium' || sev === 'Low') && pack.verdict?.decision !== 'NO-GO' && !(filled(r.owner) && filled(r.due))) {
           err(at, `An open ${sev} needs an owner and a due date before a GO or GO WITH CONDITIONS.`);
         }
@@ -178,6 +184,14 @@ export function validatePack(pack, catalogue, { stage } = {}) {
     for (const c of catalogue.criteria) {
       if (applicability(c, p) === 'mandatory' && !seen.has(c.id)) err(`worksheet ${c.id}`, `Mandatory at tier ${p.riskTier}: give a result for "${c.title}".`);
     }
+    findings.forEach((f, i) => {
+      if (/^fixed/i.test(f.status || '')) return;
+      const at = `findings[${i}] ${f.id || ''}`.trim();
+      need(f.title, at, 'Give the problem a plain-language title.');
+      need(f.fix, at, 'Say what would fix it.');
+      need(f.who, at, 'Say who fixes it (a name or a role).');
+      if (['Critical', 'High'].includes(f.severity)) need(f.doneWhen, at, 'Say how anyone can tell it is fixed (a test, a check, a result).');
+    });
 
     if (DECISIONS.includes(v.decision)) {
       const { ceiling, reasons } = verdictCeiling(pack, catalogue);
@@ -228,12 +242,19 @@ function evidenceList(items, baseDir, { thumbs = false } = {}) {
 
 const chip = (result) => `<span class="chip r-${result || 'missing'}">${esc(RESULTS[result] || 'No result')}</span>`;
 const sevChip = (sev) => (sev ? `<span class="sev s-${esc(sev.toLowerCase())}">${esc(sev)}</span>` : '');
-
+const GRADE_WORDS = { A: 'the reviewer ran or measured it', B: 'the reviewer inspected it', C: 'a statement only' };
+export const TIER_TEXT = {
+  1: 'Low risk: an internal tool or prototype, no personal data, no money. Most problems can be fixed after launch.',
+  2: 'Standard risk: real users with accounts or personal data, or payments through a hosted checkout. Critical problems block launch; High ones block unless the owner accepts them in writing.',
+  3: 'High risk: the app takes payments itself, holds sensitive data, or launches with a big rush. Every Critical or High problem blocks launch, and backups, alerts and an on-call person must be shown.',
+};
 function table(headers, rows) {
   return `<div class="table-wrap"><table><thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows
     .map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`)
     .join('')}</tbody></table></div>`;
 }
+
+const codeLink = (r) => `<a class="fref" href="#${/^[A-Z]-\d\d$/.test(r) ? 'c-' : 'f-'}${esc(r)}">${esc(r)}</a>`;
 
 function areaCounts(pack, catalogue, code) {
   const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
@@ -247,33 +268,44 @@ function areaCounts(pack, catalogue, code) {
   }
   return counts;
 }
+const countsText = (n) => `${n.meets} meet · ${n['does-not-meet']} don't · ${n['cannot-verify'] + n.missing} can't be verified`;
 
 function criteriaBlock(pack, catalogue, code) {
   const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
   const findings = pack.findings || [];
-  const items = catalogue.criteria.filter((c) => c.id.startsWith(code + '-')).map((c) => {
+  const cs = catalogue.criteria.filter((c) => c.id.startsWith(code + '-'));
+  const attention = [];
+  const items = cs.map((c) => {
     const app = applicability(c, pack.project);
     const r = rows.get(c.id) || {};
     const result = r.result || (app === 'off' ? 'not-applicable' : app === 'mandatory' ? 'missing' : 'optional');
     const sev = r.result === 'does-not-meet' ? severityOf(r, findings) : null;
-    const tag = app === 'mandatory' ? 'Mandatory' : app === 'recommended' ? `Recommended (mandatory from tier ${c.tier})` : 'Does not apply to this product';
+    if (['does-not-meet', 'cannot-verify', 'missing'].includes(result)) {
+      attention.push(`<li><a class="fref" href="#c-${esc(c.id)}">${esc(c.id)}</a> ${esc(c.title)} ${result === 'missing' ? '<span class="chip r-missing">No result</span>' : chip(result)}${sevChip(sev)}${r.finding ? ` ${codeLink(r.finding)}` : ''}</li>`);
+    }
+    const tag = app === 'recommended' ? `<span class="tag">Recommended; required from tier ${c.tier}</span>` : app === 'off' ? '<span class="tag">Doesn\'t apply to this product</span>' : '';
     const notes = [
-      r.evidence ? `<p><span class="lbl">Evidence</span> ${fmt(r.evidence)}</p>` : '',
+      r.evidence ? `<p><span class="lbl">Found</span> ${fmt(r.evidence)}</p>` : '',
+      r.fix ? `<p><span class="lbl">Fix</span> ${fmt(r.fix)}</p>` : '',
       r.note ? `<p><span class="lbl">Note</span> ${fmt(r.note)}</p>` : '',
       r.needed ? `<p><span class="lbl">Needed to verify</span> ${fmt(r.needed)}</p>` : '',
-      r.owner || r.due ? `<p><span class="lbl">Owner</span> ${fmt(r.owner || '—')} · due ${fmt(r.due || '—')}</p>` : '',
+      r.owner || r.due ? `<p><span class="lbl">Who</span> ${fmt(r.owner || 'not assigned')} · due ${fmt(r.due || 'not set')}</p>` : '',
       r.accepted ? `<p><span class="lbl">Risk accepted</span> by ${fmt(r.accepted.by)} until ${fmt(r.accepted.until)}</p>` : '',
       !r.result && app === 'off' ? `<p class="dim">Applies only to products that ${esc(c.when.map((w) => catalogue.features[w]).join(' or '))}.</p>` : '',
     ].join('');
     const status = r.result ? chip(r.result) : `<span class="chip r-${result}">${result === 'missing' ? 'No result' : result === 'optional' ? 'Not assessed' : 'Not applicable'}</span>`;
     return `<li class="crit row-${result}" id="c-${esc(c.id)}">
       <div class="crit-id">${esc(c.id)}</div>
-      <div class="crit-body"><p class="crit-title">${esc(c.title)} <span class="tag">${esc(tag)}</span></p>
+      <div class="crit-body"><p class="crit-title">${esc(c.title)} ${tag}</p>
         <p class="crit-std">${fmt(c.standard)}</p>${notes}</div>
-      <div class="crit-result">${status}${r.grade ? `<span class="grade" title="Evidence grade">Grade ${esc(r.grade)}</span>` : ''}${sevChip(sev)}${r.finding ? `<a class="fref" href="#f-${esc(r.finding)}">${esc(r.finding)}</a>` : ''}</div>
+      <div class="crit-result">${status}${r.grade ? `<span class="grade" title="${esc(GRADE_WORDS[r.grade] || '')}">Evidence ${esc(r.grade)}: ${esc(GRADE_WORDS[r.grade] || '')}</span>` : ''}${sevChip(sev)}${r.finding ? codeLink(r.finding) : ''}</div>
     </li>`;
   });
-  return `<div class="judged"><h3>How this was judged</h3><ul class="crits">${items.join('')}</ul></div>`;
+  const n = areaCounts(pack, catalogue, code);
+  return `<div class="judged">
+    ${attention.length ? `<h3>Checklist items that need attention</h3><ul class="attention">${attention.join('')}</ul>` : '<p class="dim">Every checklist item in this area that applies is met.</p>'}
+    <details><summary>Full checklist for this area: ${cs.length} items · ${countsText(n)}</summary><ul class="crits">${items.join('')}</ul></details>
+  </div>`;
 }
 
 function scoreboard(pack, catalogue) {
@@ -283,17 +315,52 @@ function scoreboard(pack, catalogue) {
     const seg = (k, label) => (n[k] ? `<span class="seg k-${k}" style="flex-grow:${n[k]}" title="${n[k]} ${label}"></span>` : '');
     return `<a class="score-row" href="#${a.section}">
       <span class="score-name">${esc(a.name)}</span>
-      <span class="bar" role="img" aria-label="${n.meets} meet, ${n['does-not-meet']} do not meet, ${n['cannot-verify']} cannot be verified, ${n.missing} without a result, ${n['not-applicable']} not applicable, out of ${total}">${seg('meets', 'meet')}${seg('does-not-meet', 'do not meet')}${seg('cannot-verify', 'cannot be verified')}${seg('missing', 'without a result')}${seg('not-applicable', 'not applicable')}</span>
-      <span class="score-n"><b class="t-meets">${n.meets}</b> · <b class="t-fails">${n['does-not-meet']}</b> · <b class="t-unknown">${n['cannot-verify'] + n.missing}</b></span>
+      <span class="bar" role="img" aria-label="${countsText(n)}, ${n['not-applicable']} don't apply, out of ${total}">${seg('meets', 'meet')}${seg('does-not-meet', "don't meet")}${seg('cannot-verify', "can't be verified")}${seg('missing', 'without a result')}${seg('not-applicable', "don't apply")}</span>
+      <span class="score-n"><b class="t-meets">${n.meets}</b> meet · <b class="t-fails">${n['does-not-meet']}</b> don't · <b class="t-unknown">${n['cannot-verify'] + n.missing}</b> can't verify</span>
     </a>`;
-  }).join('')}<p class="legend"><span><i class="k-meets"></i>Meets</span><span><i class="k-does-not-meet"></i>Does not meet</span><span><i class="k-cannot-verify"></i>Cannot verify or no result</span><span><i class="k-not-applicable"></i>Not applicable</span></p></div>`;
+  }).join('')}<p class="legend"><span><i class="k-meets"></i>Meets</span><span><i class="k-does-not-meet"></i>Does not meet</span><span><i class="k-cannot-verify"></i>Cannot be verified</span><span><i class="k-not-applicable"></i>Doesn't apply</span></p></div>`;
+}
+
+// Explain each glossary term where it first appears in a section: a dotted underline, with the meaning on hover or tap.
+function withGlossary(html, glossary) {
+  const terms = (glossary || []).flatMap((g) => {
+    const plain = String(g.meaning).replace(/[`*]/g, '');
+    const main = g.term.replace(/\s*\(.*\)\s*$/, '');
+    const alias = (g.term.match(/\(([^)]+)\)/) || [])[1];
+    return [main, alias].filter((t) => t && t.length > 2).map((t) => ({ t, plain }));
+  }).sort((a, b) => b.t.length - a.t.length);
+  if (!terms.length) return html;
+  const used = new Set();
+  const skip = /^<(?:(?:code|pre|a|abbr|h[1-6]|summary|th|dt|button|figcaption)(?=[\s>])|span class="(?:chip|sev|lbl|grade|tag|fref|crit-id|pill|oref))/i;
+  let depth = 0;
+  return html.split(/(<[^>]+>)/).map((tok) => {
+    if (tok.startsWith('<')) {
+      if (/^<\//.test(tok)) { if (depth > 0) depth--; }
+      else if (depth > 0 && !/\/>$/.test(tok) && !/^<(br|img|input|i )/i.test(tok)) depth++;
+      else if (skip.test(tok)) depth = 1;
+      return tok;
+    }
+    if (depth > 0 || !tok.trim()) return tok;
+    let out = tok;
+    for (const { t, plain } of terms) {
+      if (used.has(t.toLowerCase())) continue;
+      const re = new RegExp(`(^|[^\\w-])(${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?![\\w-])`, 'i');
+      const m = out.match(re);
+      if (!m) continue;
+      used.add(t.toLowerCase());
+      const i = m.index + m[1].length;
+      out = `${out.slice(0, i)}<abbr title="${esc(plain)}" tabindex="0">${m[2]}</abbr>${out.slice(i + m[2].length)}`;
+      break; // one term per text run keeps the markup simple; later runs pick up the rest
+    }
+    return out;
+  }).join('');
 }
 
 const SECTIONS = [
-  ['verdict', 'Verdict'], ['product', 'Product'], ['demo', 'Demo'], ['run', 'How to run it'], ['requirements', 'Requirements'],
-  ['architecture', 'Architecture'], ['rules', 'Business rules'], ['harness', 'Harness'], ['performance', 'Performance'],
-  ['security', 'Security'], ['operations', 'Operations'], ['history', 'Quality history'], ['acceptance', 'Acceptance'],
-  ['findings', 'Findings'], ['limits', 'Not checked'], ['glossary', 'Glossary'],
+  ['verdict', 'Verdict'], ['findings', 'What to fix'], ['product', 'Product'], ['demo', 'Demo'], ['run', 'How to run it'],
+  ['requirements', 'Requirements'], ['architecture', 'Architecture'], ['rules', 'Business rules'], ['harness', 'Harness'],
+  ['performance', 'Performance'], ['security', 'Security'], ['operations', 'Operations'], ['history', 'Quality history'],
+  ['acceptance', 'Acceptance'], ['limits', 'Not checked'], ['glossary', 'Glossary'],
 ];
 
 export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = loadCatalogue() } = {}) {
@@ -306,55 +373,99 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
   const decision = reviewed && DECISIONS.includes(v.decision) ? v.decision : null;
   const dClass = decision === 'GO' ? 'go' : decision === 'NO-GO' ? 'nogo' : decision ? 'cond' : 'wait';
   const area = (code) => catalogue.areas.find((a) => a.code === code);
-  const sec = (id, num, title, body, code) => `<section id="${id}"><header class="sec-head"><span class="sec-num">§${num}</span><h2>${esc(title)}</h2>${code ? `<p class="sec-q">${esc(area(code).question)}</p>` : ''}</header>${body}${code ? criteriaBlock(pack, catalogue, code) : ''}</section>`;
+  const glossary = pack.glossary || [];
+  const sec = (id, num, title, body, code) => {
+    const html = `<section id="${id}"><header class="sec-head"><span class="sec-num">${num}</span><h2>${esc(title)}</h2>${code ? `<p class="sec-q">${esc(area(code).question)}</p>` : ''}</header>${body}${code ? criteriaBlock(pack, catalogue, code) : ''}</section>`;
+    return id === 'glossary' ? html : withGlossary(html, glossary);
+  };
   const notes = (code) => (pack.areaNotes?.[code] ? `<p class="lede">${fmt(pack.areaNotes[code])}</p>` : '');
   const run = pack.run || {};
   const arch = pack.architecture || {};
   const perf = pack.performance || {};
   const hist = pack.history || {};
   const acc = pack.acceptance || {};
+  const findings = pack.findings || [];
+  const blockerRefs = new Set((v.blockers || []).flatMap((b) => b.refs || []));
+  const refs = (list) => (list && list.length ? ` <span class="refs-inline">details: ${list.map(codeLink).join(' ')}</span>` : '');
+
+  const todoRows = [
+    ...(v.blockers || []).map((b) => ({ ...b, when: 'Before launch', blocker: true })),
+    ...(v.conditions || []).map((c) => ({ ...c, when: c.when || 'Before launch' })),
+  ];
+  const todo = todoRows.length ? `<div class="table-wrap todo-table"><table><thead><tr><th>#</th><th>What has to happen</th><th>Who</th><th>How big</th><th>When</th></tr></thead><tbody>${todoRows.map((t, i) => `<tr class="${t.blocker ? 'is-blocker' : ''}">
+      <td class="num">${i + 1}</td>
+      <td>${t.blocker ? '<span class="pill pill-block">Blocker</span> ' : '<span class="pill">Condition</span> '}${fmt(t.text)}${t.why ? `<br><span class="dim">${fmt(t.why)}</span>` : ''}${refs(t.refs)}</td>
+      <td data-label="Who">${fmt(t.who || 'not assigned')}</td><td data-label="How big">${fmt(t.effort || '—')}</td><td data-label="When">${fmt(t.when)}</td></tr>`).join('')}</tbody></table></div>` : '';
 
   const verdictBody = `
     ${errors.length ? `<div class="incomplete"><p><strong>${reviewed ? 'This review is incomplete' : 'This submission is not reviewable yet'}.</strong> ${errors.length} required item${errors.length > 1 ? 's are' : ' is'} missing or inconsistent:</p><ul>${errors.map((e) => `<li><code>${esc(e.where)}</code> ${esc(e.message)}</li>`).join('')}</ul></div>` : ''}
     <div class="verdict-grid">
-      <div class="stamp ${dClass}"><span class="stamp-label">${reviewed ? 'Verdict' : 'Status'}</span><span class="stamp-text">${esc(decision || 'Awaiting review')}</span><span class="stamp-meta">Tier ${esc(p.riskTier)} · ${esc(p.commit || '')}</span></div>
+      <div class="stamp ${dClass}"><span class="stamp-label">${reviewed ? 'Verdict' : 'Status'}</span><span class="stamp-text">${esc(decision || 'Awaiting review')}</span><span class="stamp-meta">Risk tier ${esc(p.riskTier)} of 3</span></div>
       <div class="verdict-text">${reviewed && v.reason ? `<p class="reason">${fmt(v.reason)}</p>` : `<p class="reason">Submitted by ${fmt(p.author)} for review. The verdict, results and findings are filled in by the reviewer.</p>`}
-        ${filled(v.blockers) ? `<h3>Blockers</h3><ol class="todo">${v.blockers.map((b) => `<li>${fmt(b.text)}${(b.refs || []).map((r) => ` <a class="fref" href="#${/^[A-Z]-\d\d$/.test(r) ? 'c-' : 'f-'}${esc(r)}">${esc(r)}</a>`).join('')}</li>`).join('')}</ol>` : ''}
-        ${filled(v.conditions) ? `<h3>Conditions</h3><ol class="todo">${v.conditions.map((b) => `<li>${fmt(b.text)}${(b.refs || []).map((r) => ` <a class="fref" href="#${/^[A-Z]-\d\d$/.test(r) ? 'c-' : 'f-'}${esc(r)}">${esc(r)}</a>`).join('')}${b.owner || b.due ? ` <span class="dim">(${fmt(b.owner || 'owner?')}, ${fmt(b.due || 'date?')})</span>` : ''}</li>`).join('')}</ol>` : ''}
+        ${v.ifLaunchedNow ? `<div class="anyway"><h3>If you launched anyway</h3><p>${fmt(v.ifLaunchedNow)}</p></div>` : ''}
       </div>
     </div>
+    ${todo ? `<h3>What has to happen</h3>${todo}` : ''}
+    ${filled(v.noticeable) ? `<h3>What customers would notice today</h3>${list(v.noticeable)}` : ''}
+    <div class="key"><h3>How to read this page</h3><dl>
+      <dt>Blocker</dt><dd>Launch can't happen until it's done.</dd>
+      <dt>Condition</dt><dd>Also required, at the time shown, but not a reason to stop launch on its own.</dd>
+      <dt>Cannot verify</dt><dd>The reviewer didn't have what was needed to check it. It is not a pass: each one says what's needed.</dd>
+      <dt>Risk tier ${esc(p.riskTier)}</dt><dd>${esc(TIER_TEXT[p.riskTier] || '')}</dd>
+      <dt>Codes</dt><dd>Codes like ARC-11 or OPS-08 are problems found (see <a href="#findings">What to fix</a>). Codes like A-09 or O-03 are checklist items (under "Full checklist" in each section).</dd>
+      <dt>Evidence A, B, C</dt><dd>A: the reviewer ran or measured it. B: the reviewer inspected the code or settings. C: someone's statement, which never counts as proof.</dd>
+      <dt>Dotted underline</dt><dd>Hover over it, or tap it, for an explanation.</dd>
+    </dl></div>
     <h3>Results by area</h3>${scoreboard(pack, catalogue)}
-    <p class="toolbar"><button type="button" id="focus-toggle" aria-pressed="false">Show only what needs attention</button></p>
-    <p class="signoff">${v.signedBy ? `Signed by <strong>${fmt(v.signedBy)}</strong> on ${fmt(v.signedOn)} for commit <code>${esc(p.commit)}</code>.` : `Not signed yet. Sign-off: name, date and commit <code>${esc(p.commit || '…')}</code>.`}</p>`;
+    <p class="signoff">${v.signedBy ? `Signed by <strong>${fmt(v.signedBy)}</strong> on ${fmt(v.signedOn)} for version <code>${esc(p.commit)}</code>.` : `Not signed yet. ${fmt(v.signer || 'The product owner')} signs here, with name, date and the version reviewed (<code>${esc(p.commit || '…')}</code>).`}</p>
+    <p class="details-line">Review details: version <code>${esc(p.commit || '—')}</code>${p.repository ? ` of ${fmt(p.repository)}` : ''} · submitted ${esc(p.date || '—')} by ${fmt(p.author || '—')}${reviewed ? ` · reviewed ${esc(p.reviewedOn || '—')} by ${fmt(p.reviewer || '—')}` : ''}.</p>`;
+
+  const sevOrder = (f) => (blockerRefs.has(f.id) ? 0 : 1) * 10 + Math.max(0, ['Critical', 'High', 'Medium', 'Low'].indexOf(f.severity));
+  const open = findings.filter((f) => !/^fixed/i.test(f.status || '')).sort((a, b) => sevOrder(a) - sevOrder(b));
+  const done = findings.filter((f) => /^fixed/i.test(f.status || ''));
+  const findingsBody = findings.length ? `
+    <p class="lede">${open.length} open problem${open.length === 1 ? '' : 's'}, blockers first, then by severity.${done.length ? ` ${done.length} more already fixed and verified are listed at the end.` : ''}</p>
+    <ul class="findings">${open.map((f) => `<li id="f-${esc(f.id)}" class="finding${blockerRefs.has(f.id) ? ' is-blocker' : ''}">
+      <div class="f-head"><span class="crit-id">${esc(f.id)}</span>${sevChip(f.severity)}${blockerRefs.has(f.id) ? '<span class="pill pill-block">Blocks launch</span>' : ''}<span class="f-status">${fmt(f.status || 'Open')}${f.confidence ? ` · ${fmt(f.confidence)}` : ''}</span></div>
+      <p class="f-title">${fmt(f.title)}</p>
+      <dl class="f-grid">
+        ${f.impact ? `<dt>Impact</dt><dd>${fmt(f.impact)}</dd>` : ''}
+        ${f.who ? `<dt>Who</dt><dd>${fmt(f.who)}</dd>` : ''}
+        ${f.where ? `<dt>Where</dt><dd>${fmt(f.where)}</dd>` : ''}
+        ${f.fix ? `<dt>Fix</dt><dd>${fmt(f.fix)}</dd>` : ''}
+        ${f.doneWhen ? `<dt>Done when</dt><dd>${fmt(f.doneWhen)}</dd>` : ''}
+      </dl>
+    </li>`).join('')}</ul>
+    ${done.length ? `<h3>Already fixed and verified</h3><ul class="done">${done.map((f) => `<li id="f-${esc(f.id)}"><span class="crit-id">${esc(f.id)}</span> ${fmt(f.title)} <span class="dim">${fmt(f.status)}</span></li>`).join('')}</ul>` : ''}` : '<p class="dim">No problems recorded.</p>';
 
   const productBody = `<p class="lede">${fmt(p.summary)}</p>
     ${pack.product?.users ? `<p><span class="lbl">Users</span> ${fmt(pack.product.users)}</p>` : ''}
     ${filled(pack.product?.outOfScope) ? `<h3>Out of scope</h3>${list(pack.product.outOfScope)}` : ''}
-    <p class="dim">Risk tier ${esc(p.riskTier)}${p.riskReason ? `: ${fmt(p.riskReason)}` : ''}</p>
-    ${filled(p.features) ? `<p class="feats">${p.features.map((f) => `<span class="feat" title="${esc(catalogue.features[f] || '')}">${esc(catalogue.features[f] || f)}</span>`).join('')}</p>` : ''}`;
+    <p><span class="lbl">Risk tier ${esc(p.riskTier)}</span> ${fmt(p.riskReason ? p.riskReason.charAt(0).toUpperCase() + p.riskReason.slice(1) : '')} <span class="dim">${esc(TIER_TEXT[p.riskTier] || '')}</span></p>
+    ${filled(p.features) ? `<p class="feats">${p.features.map((f) => `<span class="feat">${esc(catalogue.features[f] || f)}</span>`).join('')}</p>` : ''}`;
 
   const demoBody = `<div class="journeys">${(pack.product?.journeys || []).map((j) => `<article class="journey" id="j-${esc(j.id || '')}">
       <h3>${j.id ? `<span class="jid">${esc(j.id)}</span> ` : ''}${esc(j.name)}</h3>${j.who ? `<p class="dim">${fmt(j.who)}</p>` : ''}
       <ol class="steps">${(j.steps || []).map((s) => `<li>${fmt(s)}</li>`).join('')}</ol>
       <p><span class="lbl">Expected</span> ${fmt(j.expected)}</p>
       ${evidenceList(j.evidence, baseDir)}
-      ${filled(j.criteria) ? `<p class="refs">Proved by ${j.criteria.map((c) => `<a class="fref" href="#a-${esc(c)}">${esc(c)}</a>`).join(' ')}</p>` : ''}
+      ${filled(j.criteria) ? `<p class="refs">Proved by acceptance criteria ${j.criteria.map((c) => `<a class="fref" href="#a-${esc(c)}">${esc(c)}</a>`).join(' ')}</p>` : ''}
     </article>`).join('')}</div>`;
 
-  const runBody = `${filled(run.prerequisites) ? `<h3>Prerequisites</h3>${list(run.prerequisites)}` : ''}
+  const runBody = `<p class="dim">For whoever runs the app: usually the developer.</p>${filled(run.prerequisites) ? `<h3>Prerequisites</h3>${list(run.prerequisites)}` : ''}
     <h3>Commands</h3>
     <div class="cmds">${[['Set up', run.setup], ['Start', run.start], ['Open', run.open], ['Test', run.test], ['Reset test data', run.reset]]
       .filter(([, c]) => filled(c)).map(([k, c]) => `<div class="cmd"><span class="lbl">${k}</span>${(Array.isArray(c) ? c : [c]).map((x) => `<pre><code>${esc(x)}</code></pre>`).join('')}</div>`).join('')}</div>
-    ${run.staging !== undefined ? `<p><span class="lbl">Staging</span> ${run.staging ? fmt(run.staging) : '<span class="dim">None provided.</span>'}</p>` : ''}
+    ${run.staging !== undefined ? `<p><span class="lbl">Test copy (staging)</span> ${run.staging ? fmt(run.staging) : '<span class="dim">None provided.</span>'}</p>` : ''}
     ${filled(run.accounts) ? `<h3>Test accounts</h3>${table(['Role', 'How to sign in'], run.accounts.map((a) => [fmt(a.role), fmt(a.how)]))}` : ''}
-    ${filled(run.settings) ? `<h3>Settings</h3>${table(['Setting', 'What it does', 'Secret', 'Needed in production', 'Example'], run.settings.map((s) => [`<code>${esc(s.name)}</code>`, fmt(s.purpose), s.secret ? 'Yes' : 'No', s.production ? 'Yes' : 'No', s.example ? `<code>${esc(s.example)}</code>` : '']))}` : ''}`;
+    ${filled(run.settings) ? `<h3>Settings (${run.settings.length})</h3>${table(['Setting', 'What it does', 'Secret', 'Needed in production', 'Example'], run.settings.map((s) => [`<code>${esc(s.name)}</code>`, fmt(s.purpose), s.secret ? 'Yes' : 'No', s.production ? 'Yes' : 'No', s.example ? `<code>${esc(s.example)}</code>` : '']))}` : ''}`;
 
   const reqBody = filled(pack.requirements) ? table(['ID', 'Requirement', 'Target', 'Agreed by'], pack.requirements.map((r) => [esc(r.id || ''), fmt(r.text), fmt(r.target), `${fmt(r.agreedBy || '—')}${r.agreedOn ? ` <span class="dim">${esc(r.agreedOn)}</span>` : ''}${r.source ? `<br><span class="dim">${fmt(r.source)}</span>` : ''}`])) : '';
 
   const archBody = `${arch.summary ? `<p class="lede">${fmt(arch.summary)}</p>` : ''}${notes('A')}
     ${arch.diagram ? `<div class="diagram"><pre class="mermaid">${esc(arch.diagram)}</pre></div>` : ''}
-    ${filled(arch.components) ? `<h3>Components</h3>${table(['Component', 'Its job', 'Built with'], arch.components.map((c) => [fmt(c.name), fmt(c.job), fmt(c.tech || '')]))}` : ''}
-    ${filled(arch.entryPoints) ? `<h3>Entry points</h3>${table(['Entry point', 'Who may call it', 'What stops everyone else', 'What it touches'], arch.entryPoints.map((e) => [fmt(e.entry), fmt(e.caller), fmt(e.guard || ''), fmt(e.touches || '')]))}` : ''}
+    ${filled(arch.components) ? `<h3>Components (${arch.components.length})</h3>${table(['Component', 'Its job', 'Built with'], arch.components.map((c) => [fmt(c.name), fmt(c.job), fmt(c.tech || '')]))}` : ''}
+    ${filled(arch.entryPoints) ? `<h3>Entry points (${arch.entryPoints.length})</h3>${table(['Entry point', 'Who may call it', 'What stops everyone else', 'What it touches'], arch.entryPoints.map((e) => [fmt(e.entry), fmt(e.caller), fmt(e.guard || ''), fmt(e.touches || '')]))}` : ''}
     ${filled(arch.dataStores) ? `<h3>Data stores</h3>${table(['Store', 'Holds', 'Sensitivity'], arch.dataStores.map((d) => [fmt(d.name), fmt(d.holds), fmt(d.sensitivity || '')]))}` : ''}
     ${filled(arch.services) ? `<h3>Outside services</h3>${table(['Service', 'Used for', 'Time limit', 'When it fails'], arch.services.map((s) => [fmt(s.name), fmt(s.purpose), fmt(s.timeout || '—'), fmt(s.onFailure || '—')]))}` : ''}
     ${filled(arch.decisions) ? `<h3>Decisions</h3>${table(['Decision', 'Why', 'Alternatives', 'Downsides'], arch.decisions.map((d) => [fmt(d.title), fmt(d.why), fmt(d.alternatives || ''), fmt(d.downsides || '')]))}` : ''}`;
@@ -363,14 +474,14 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
 
   const h = pack.harness || {};
   const harnessBody = `${notes('H')}
-    <p><span class="lbl">Agent instructions</span> ${h.agentFile ? `<code>${esc(h.agentFile.path)}</code> ${fmt(h.agentFile.summary || '')}` : '<span class="dim">None: coding agents get no project-specific instructions.</span>'}</p>
-    ${filled(h.suites) ? `<h3>Automated tests</h3>${table(['Suite', 'Kind', 'Covers', 'Command', 'Last run', 'In CI'], h.suites.map((s) => [fmt(s.name), fmt(s.kind), fmt(s.covers || ''), `<code>${esc(s.command || '')}</code>`, fmt(s.lastRun || '—'), s.inCI ? 'Yes' : 'No']))}` : ''}
-    ${filled(h.ci) ? `<h3>Continuous integration</h3>${list(h.ci)}` : ''}${filled(h.checks) ? `<h3>Other checks</h3>${list(h.checks)}` : ''}`;
+    <p><span class="lbl">Agent instructions</span> ${h.agentFile ? `<code>${esc(h.agentFile.path)}</code> ${fmt(h.agentFile.summary || '')}` : '<span class="dim">None: AI coding assistants get no project-specific instructions.</span>'}</p>
+    ${filled(h.suites) ? `<h3>Automated tests</h3>${table(['Suite', 'Kind', 'Covers', 'Command', 'Last run', 'Runs automatically on every change'], h.suites.map((s) => [fmt(s.name), fmt(s.kind), fmt(s.covers || ''), `<code>${esc(s.command || '')}</code>`, fmt(s.lastRun || '—'), s.inCI ? 'Yes' : 'No']))}` : ''}
+    ${filled(h.ci) ? `<h3>Automatic checks on every change (CI)</h3>${list(h.ci)}` : ''}${filled(h.checks) ? `<h3>Other checks</h3>${list(h.checks)}` : ''}`;
 
   const perfBody = `${notes('P')}
     ${perf.target ? `<p><span class="lbl">Target</span> ${fmt(perf.target)}</p>` : ''}${perf.environment ? `<p><span class="lbl">Tested on</span> ${fmt(perf.environment)}</p>` : ''}
     ${filled(perf.runs) ? `<h3>Load test runs</h3>${table(['Run', 'Result', 'Notes'], perf.runs.map((r) => [fmt(r.label), `<span class="chip ${r.pass ? 'r-meets' : 'r-does-not-meet'}">${esc(r.result)}</span>`, fmt(r.note || '')]))}` : ''}
-    ${filled(perf.steps) ? `<h3>${fmt(perf.stepsTitle || 'Per step')}</h3>${table(['Step', 'Request', 'Target', 'Achieved', 'p95 (budget)', 'Errors', 'Result'], perf.steps.map((s) => [fmt(s.step), fmt(s.endpoint), fmt(s.target), fmt(s.achieved), fmt(s.p95), fmt(s.errors), `<span class="chip ${s.pass ? 'r-meets' : 'r-does-not-meet'}">${s.pass ? 'Pass' : 'Fail'}</span>`]))}` : ''}
+    ${filled(perf.steps) ? `<h3>${fmt(perf.stepsTitle || 'Per step')}</h3>${table(['Step', 'Request', 'Target', 'Achieved', '95% faster than (budget)', 'Errors', 'Result'], perf.steps.map((s) => [fmt(s.step), fmt(s.endpoint), fmt(s.target), fmt(s.achieved), fmt(s.p95), fmt(s.errors), `<span class="chip ${s.pass ? 'r-meets' : 'r-does-not-meet'}">${s.pass ? 'Pass' : 'Fail'}</span>`]))}` : ''}
     ${perf.race ? `<h3>Race test</h3><p>${fmt(perf.race.summary)}</p>${filled(perf.race.rows) ? table(['Measure', 'Value'], perf.race.rows.map((r) => [fmt(r.measure), `<span class="num">${fmt(r.value)}</span>`])) : ''}` : ''}
     ${perf.slowPartner ? `<h3>Slow partner</h3><p>${fmt(perf.slowPartner)}</p>` : ''}
     ${perf.conclusion ? `<p class="callout">${fmt(perf.conclusion)}</p>` : ''}`;
@@ -378,17 +489,17 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
   const histBody = `${notes('Q')}
     ${hist.period ? `<p><span class="lbl">Period</span> ${fmt(hist.period)}</p>` : ''}${filled(hist.sources) ? `<p><span class="lbl">Sources</span></p>${list(hist.sources)}` : ''}
     ${filled(hist.stats) ? `<div class="stats">${hist.stats.map((s) => `<div class="stat"><span class="stat-v">${fmt(s.value)}</span><span class="stat-l">${fmt(s.label)}</span></div>`).join('')}</div>` : ''}
-    ${filled(hist.classes) ? `<h3>Recurring problems</h3><div class="classes">${hist.classes.map((c) => `<article class="pclass">
-        <header><h4>${fmt(c.name)}</h4><span class="chip ${c.status === 'controlled' ? 'r-meets' : c.status === 'partly controlled' ? 'r-cannot-verify' : 'r-does-not-meet'}">${esc(c.status || 'open')}</span></header>
-        <p class="occ-n">${(c.occurrences || []).length} occurrences</p>
+    ${filled(hist.classes) ? `<h3>Problems that came back (${hist.classes.length} kinds)</h3><div class="classes">${hist.classes.map((c) => `<article class="pclass">
+        <header><h4>${fmt(c.name)}</h4><span class="chip ${c.status === 'controlled' ? 'r-meets' : c.status === 'partly controlled' ? 'r-cannot-verify' : 'r-does-not-meet'}">${esc({ controlled: 'Caught automatically', 'partly controlled': 'Partly caught automatically', open: 'Not caught automatically' }[c.status] || c.status || 'Not caught automatically')}</span></header>
+        <p class="occ-n">Seen ${(c.occurrences || []).length} times</p>
         <ul class="occ">${(c.occurrences || []).map((o) => `<li><span class="oref">${fmt(o.ref)}</span> ${fmt(o.text)}</li>`).join('')}</ul>
-        <p><span class="lbl">Root cause</span> ${fmt(c.rootCause)}</p>
-        <p><span class="lbl">Control</span> ${fmt(c.control)}</p>
-        ${c.controlCheck ? `<p><span class="lbl">Control checked</span> ${fmt(c.controlCheck)}</p>` : ''}
-        ${c.agentRule ? `<p><span class="lbl">Agent rule</span> ${fmt(c.agentRule)}</p>` : ''}
+        <p><span class="lbl">Why it keeps happening</span> ${fmt(c.rootCause)}</p>
+        <p><span class="lbl">What catches the next one</span> ${fmt(c.control)}</p>
+        ${c.controlCheck ? `<p><span class="lbl">Checked</span> ${fmt(c.controlCheck)}</p>` : ''}
+        ${c.agentRule ? `<p><span class="lbl">Rule for AI agents</span> ${fmt(c.agentRule)}</p>` : ''}
       </article>`).join('')}</div>` : ''}
-    ${filled(hist.hotspots) ? `<h3>Hotspots</h3>${table(['File', 'Fixes', 'Note'], hist.hotspots.map((x) => [`<code>${esc(x.file)}</code>`, `<span class="num">${esc(x.fixes)}</span>`, fmt(x.note || '')]))}` : ''}
-    <h3>Known problems register</h3>${filled(hist.known) ? table(['ID', 'Problem', 'Severity', 'Owner', 'Due', 'Status'], hist.known.map((k) => [esc(k.id || ''), fmt(k.text), sevChip(k.severity), fmt(k.owner || '—'), fmt(k.due || '—'), fmt(k.status || 'Open')])) : '<p class="dim">No known problems declared.</p>'}`;
+    ${filled(hist.hotspots) ? `<h3>Hotspots: where problems cluster</h3>${table(['File', 'Fix commits', 'Note'], hist.hotspots.map((x) => [`<code>${esc(x.file)}</code>`, `<span class="num">${esc(x.fixes)}</span>`, fmt(x.note || '')]))}` : ''}
+    <h3>Known problems register (${(hist.known || []).length})</h3>${filled(hist.known) ? table(['ID', 'Problem', 'Severity', 'Who', 'Due', 'Status'], hist.known.map((k) => [codeLink(k.id || ''), fmt(k.text), sevChip(k.severity), fmt(k.owner || 'not assigned'), fmt(k.due || 'not set'), fmt(k.status || 'Open')])) : '<p class="dim">No known problems declared.</p>'}`;
 
   const accBody = `${notes('U')}
     ${acc.criteriaVersion ? `<p><span class="lbl">Criteria</span> version ${fmt(acc.criteriaVersion)}${acc.agreedBy ? `, agreed by ${fmt(acc.agreedBy)}` : ''}${acc.run ? `. ${fmt(acc.run)}` : ''}</p>` : ''}
@@ -397,29 +508,23 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
         <span class="chip ${r.status === 'pass' ? 'r-meets' : r.status === 'fail' || r.status === 'flaky' ? 'r-does-not-meet' : r.status === 'external' ? 'r-not-applicable' : 'r-cannot-verify'}">${esc({ pass: 'Pass', fail: 'Fail', flaky: 'Flaky', external: 'Checked elsewhere', 'not-run': 'Not run' }[r.status] || r.status || 'Not run')}${r.runs ? ` ${esc(r.runs)}` : ''}</span></div>
         ${r.note ? `<p class="dim">${fmt(r.note)}</p>` : ''}${evidenceList(r.evidence, baseDir, { thumbs: true })}</li>`).join('')}</ul>` : ''}`;
 
-  const findingsBody = filled(pack.findings) ? `<ul class="findings">${pack.findings.map((f) => `<li id="f-${esc(f.id)}" class="finding">
-      <div class="f-head"><span class="crit-id">${esc(f.id)}</span>${sevChip(f.severity)}<span class="f-status">${fmt(f.status || 'Open')}${f.confidence ? ` · ${fmt(f.confidence)}` : ''}</span></div>
-      <p class="f-title">${fmt(f.title)}</p>
-      ${f.impact ? `<p><span class="lbl">Impact</span> ${fmt(f.impact)}</p>` : ''}${f.where ? `<p><span class="lbl">Where</span> ${fmt(f.where)}</p>` : ''}${f.fix ? `<p><span class="lbl">Fix</span> ${fmt(f.fix)}</p>` : ''}
-    </li>`).join('')}</ul>` : '<p class="dim">No findings recorded.</p>';
-
   const body = [
     sec('verdict', 1, 'Verdict', verdictBody),
-    sec('product', 2, 'Product', productBody),
-    sec('demo', 3, 'Demo: the main journeys', demoBody),
-    sec('run', 4, 'How to run it', runBody, 'R'),
-    sec('requirements', 5, 'Requirements: the agreed standard', reqBody),
-    sec('architecture', 6, 'Architecture', archBody, 'A'),
-    sec('rules', 7, 'Business rules', rulesBody, 'D'),
-    sec('harness', 8, 'Harness: tests, CI and agent instructions', harnessBody, 'H'),
-    sec('performance', 9, 'Performance', perfBody, 'P'),
-    sec('security', 10, 'Security', notes('S'), 'S'),
-    sec('operations', 11, 'Operations', notes('O'), 'O'),
-    sec('history', 12, 'Quality history: known and recurring problems', histBody, 'Q'),
-    sec('acceptance', 13, 'Acceptance', accBody, 'U'),
-    sec('findings', 14, 'Findings', findingsBody),
+    sec('findings', 2, 'What to fix', findingsBody),
+    sec('product', 3, 'Product', productBody),
+    sec('demo', 4, 'Demo: the main journeys', demoBody),
+    sec('run', 5, 'How to run it', runBody, 'R'),
+    sec('requirements', 6, 'Requirements: the agreed standard', reqBody),
+    sec('architecture', 7, 'Architecture', archBody, 'A'),
+    sec('rules', 8, 'Business rules', rulesBody, 'D'),
+    sec('harness', 9, 'Harness: tests, automatic checks and AI-agent instructions', harnessBody, 'H'),
+    sec('performance', 10, 'Performance', perfBody, 'P'),
+    sec('security', 11, 'Security', notes('S'), 'S'),
+    sec('operations', 12, 'Operations', notes('O'), 'O'),
+    sec('history', 13, 'Quality history: problems that keep coming back', histBody, 'Q'),
+    sec('acceptance', 14, 'Acceptance', accBody, 'U'),
     sec('limits', 15, 'Not checked', filled(pack.notChecked) ? list(pack.notChecked) : '<p class="dim">Nothing listed.</p>'),
-    sec('glossary', 16, 'Glossary', filled(pack.glossary) ? `<dl class="gloss">${pack.glossary.map((g) => `<dt>${fmt(g.term)}</dt><dd>${fmt(g.meaning)}</dd>`).join('')}</dl>` : '<p class="dim">No terms listed.</p>'),
+    sec('glossary', 16, 'Glossary', filled(glossary) ? `<dl class="gloss">${glossary.map((g) => `<dt>${fmt(g.term)}</dt><dd>${fmt(g.meaning)}</dd>`).join('')}</dl>` : '<p class="dim">No terms listed.</p>'),
   ].join('\n');
 
   const nav = `<nav class="toc" aria-label="Sections"><p class="toc-title">Contents</p><ol>${SECTIONS.map(([id, label]) => {
@@ -428,10 +533,10 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
     if (a) {
       const n = areaCounts(pack, catalogue, a.code);
       const state = n['does-not-meet'] ? 'fails' : n['cannot-verify'] + n.missing ? 'unknown' : 'meets';
-      dot = `<i class="dot d-${state}" aria-hidden="true"></i>`;
+      dot = `<i class="dot d-${state}" title="${{ fails: 'Problems found', unknown: 'Some items could not be verified', meets: 'Everything that applies is met' }[state]}" aria-hidden="true"></i>`;
     }
     return `<li><a href="#${id}">${esc(label)}${dot}</a></li>`;
-  }).join('')}</ol></nav>`;
+  }).join('')}</ol><p class="toc-key"><span><i class="dot d-fails"></i>problems found</span><span><i class="dot d-unknown"></i>some can't be verified</span><span><i class="dot d-meets"></i>all met</span></p></nav>`;
 
   const title = `${p.name || 'Untitled'} review`;
   const page = `<title>${esc(title)}</title>
@@ -441,12 +546,13 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
 <style>${CSS}</style>
 <div class="page">
   <header class="masthead">
-    <p class="kicker">Review pack · standard ${esc(pack.standard || catalogue.standard)} · ${reviewed ? 'reviewed' : 'submitted'}</p>
+    <p class="kicker">Review page${reviewed ? '' : ' · submitted, awaiting review'}</p>
     <h1>${esc(p.name || 'Untitled project')}</h1>
-    <p class="meta"><span>Commit <code>${esc(p.commit || '—')}</code></span><span>Submitted ${esc(p.date || '—')} by ${fmt(p.author || '—')}</span>${reviewed ? `<span>Reviewed ${esc(p.reviewedOn || '—')} by ${fmt(p.reviewer || '—')}</span>` : ''}${p.repository ? `<span>${fmt(p.repository)}</span>` : ''}</p>
+    <p class="meta">${reviewed ? `Reviewed ${esc(p.reviewedOn || '—')} by ${fmt(p.reviewer || '—')}` : `Submitted ${esc(p.date || '—')} by ${fmt(p.author || '—')}`}</p>
+    <p class="guide">Owners: section 1 says whether you can launch and what has to happen first. Developers: section 2 lists what to fix; the rest is the evidence.</p>
   </header>
   <div class="layout">${nav}<main>${body}</main></div>
-  <footer class="foot">Generated by <code>review-pack.mjs</code> from <code>review-pack.json</code>. The JSON file is the record; this page is a view of it.</footer>
+  <footer class="foot">Generated from <code>review-pack.json</code> (review standard ${esc(pack.standard || catalogue.standard)}). The JSON file is the record; this page is a view of it.</footer>
 </div>
 <dialog id="zoom-dialog"><button type="button" class="close" aria-label="Close">Close</button><img alt=""></dialog>
 <script>${SCRIPT}</script>
@@ -456,10 +562,6 @@ ${fragment ? '' : '<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist
 
 const SCRIPT = `
 (function () {
-  var btn = document.getElementById('focus-toggle');
-  function set(on) { document.body.classList.toggle('focus', on); if (btn) { btn.setAttribute('aria-pressed', String(on)); btn.textContent = on ? 'Show everything' : 'Show only what needs attention'; } }
-  try { set(localStorage.getItem('review-focus') === '1'); } catch (e) {}
-  if (btn) btn.addEventListener('click', function () { var on = !document.body.classList.contains('focus'); set(on); try { localStorage.setItem('review-focus', on ? '1' : '0'); } catch (e) {} });
   var dlg = document.getElementById('zoom-dialog');
   document.addEventListener('click', function (ev) {
     var z = ev.target.closest && ev.target.closest('.zoom');
@@ -506,7 +608,7 @@ h1, h2, h3, h4 { font-family: var(--display); font-stretch: 87.5%; text-wrap: ba
 .toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: s; }
 .toc li { counter-increment: s; }
 .toc a { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 4px; color: var(--ink); text-decoration: none; }
-.toc a::before { content: "§" counter(s); font: 12px var(--mono); color: var(--muted); min-width: 26px; }
+.toc a::before { content: counter(s); font: 12px var(--mono); color: var(--muted); min-width: 26px; }
 .toc a:hover { background: var(--surface); }
 .dot { width: 8px; height: 8px; border-radius: 50%; margin-left: auto; flex: none; }
 .d-meets { background: var(--meets); } .d-fails { background: var(--fails); } .d-unknown { background: var(--unknown); }
@@ -534,18 +636,16 @@ ul, ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 .reason { font-size: 17px; }
 .todo { display: grid; gap: 6px; }
 .score { display: grid; gap: 6px; }
-.score-row { display: grid; grid-template-columns: minmax(120px, 190px) minmax(0, 1fr) 92px; gap: 12px; align-items: center; color: var(--ink); text-decoration: none; padding: 3px 0; }
+.score-row { display: grid; grid-template-columns: minmax(120px, 190px) minmax(0, 1fr) 210px; gap: 12px; align-items: center; color: var(--ink); text-decoration: none; padding: 3px 0; }
 .score-row:hover .score-name { text-decoration: underline; }
 .score-name { font-weight: 500; }
 .bar { display: flex; height: 12px; border-radius: 3px; overflow: hidden; background: var(--na-bg); gap: 2px; }
 .seg { display: block; min-width: 4px; }
 .k-meets { background: var(--meets); } .k-does-not-meet { background: var(--fails); } .k-cannot-verify, .k-missing { background: var(--unknown); } .k-not-applicable { background: var(--na-bg); outline: 1px solid var(--line); outline-offset: -1px; }
-.score-n { font: 13px var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.score-n { font: 12.5px var(--body); font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); }
 .t-meets { color: var(--meets); } .t-fails { color: var(--fails); } .t-unknown { color: var(--unknown); }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
-.toolbar button { font: 500 13.5px var(--body); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 5px; padding: 6px 12px; cursor: pointer; }
-.toolbar button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .signoff { color: var(--muted); font-size: 13.5px; border-top: 1px dashed var(--line); padding-top: 10px; }
 .chip { display: inline-flex; align-items: center; gap: 4px; font: 600 12px/1 var(--body); padding: 5px 8px; border-radius: 999px; white-space: nowrap; }
 .r-meets { color: var(--meets); background: var(--meets-bg); }
@@ -566,7 +666,6 @@ ul, ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 .tag { font: 500 11px var(--mono); color: var(--muted); margin-left: 6px; white-space: nowrap; }
 .crit-std { color: var(--muted); font-size: 13.5px; }
 .crit-result { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-body.focus .row-meets, body.focus .row-not-applicable, body.focus .row-optional { display: none; }
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 5px; }
 table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
 th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
@@ -622,6 +721,35 @@ dialog { border: 1px solid var(--line); border-radius: 6px; padding: 12px; backg
 dialog::backdrop { background: rgb(0 0 0 / 0.6); }
 dialog img { display: block; max-width: 100%; max-height: 82vh; margin-top: 8px; }
 dialog .close { font: 500 13px var(--body); border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+
+.guide { margin: 0; max-width: 80ch; font-size: 14px; color: var(--muted); }
+.details-line { color: var(--muted); font-size: 12.5px; }
+.anyway { border-left: 3px solid var(--fails); padding: 8px 12px; background: var(--fails-bg); border-radius: 0 5px 5px 0; display: grid; gap: 4px; }
+.stamp.go + .verdict-text .anyway { border-color: var(--meets); background: var(--meets-bg); }
+.pill { display: inline-block; font: 600 11px/1 var(--mono); letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 6px; border-radius: 3px; color: var(--muted); border: 1px solid var(--line); vertical-align: 1px; }
+.pill-block { color: var(--fails); border-color: var(--fails); }
+.todo-table table { table-layout: fixed; }
+.todo-table th:nth-child(1) { width: 34px; } .todo-table th:nth-child(2) { width: 47%; } .todo-table th:nth-child(3) { width: 21%; }
+.todo-table tr.is-blocker td:first-child { box-shadow: inset 3px 0 0 var(--fails); }
+.refs-inline { display: block; margin-top: 3px; font-size: 12px; color: var(--muted); }
+.key { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; background: var(--paper); display: grid; gap: 8px; }
+.key dl { display: grid; grid-template-columns: minmax(110px, 150px) minmax(0, 1fr); gap: 5px 14px; margin: 0; font-size: 13.5px; }
+.key dt { font-weight: 600; } .key dd { margin: 0; color: var(--muted); }
+.attention { list-style: none; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.attention li { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+details summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 6px 0; }
+details[open] summary { margin-bottom: 4px; }
+.f-grid { display: grid; grid-template-columns: minmax(80px, 100px) minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 14px; }
+.f-grid dt { font: 600 11px/1.9 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.f-grid dd { margin: 0; }
+.finding.is-blocker { box-shadow: inset 3px 0 0 var(--fails); padding-left: 12px; }
+.done { list-style: none; padding: 0; display: grid; gap: 4px; font-size: 13.5px; }
+.toc-key { display: grid; gap: 3px; margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+.toc-key span { display: flex; align-items: center; gap: 6px; }
+.toc-key .dot { margin-left: 0; }
+abbr[title] { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; position: relative; }
+abbr[title]:focus { outline: none; }
+abbr[title]:focus::after { content: attr(title); position: absolute; left: 0; top: calc(100% + 4px); z-index: 20; width: max-content; max-width: min(320px, 78vw); background: var(--ink); color: var(--surface); padding: 7px 9px; border-radius: 5px; font: 400 12.5px/1.45 var(--body); white-space: normal; text-transform: none; letter-spacing: 0; }
 @media (max-width: 960px) {
   .layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   .toc { position: static; }
@@ -632,8 +760,18 @@ dialog .close { font: 500 13px var(--body); border: 1px solid var(--line); backg
 @media (max-width: 640px) {
   .verdict-grid { grid-template-columns: minmax(0, 1fr); }
   .stamp { justify-self: start; min-width: 200px; }
-  .score-row { grid-template-columns: minmax(0, 1fr) 84px; }
-  .score-row .bar { grid-column: 1 / -1; grid-row: 2; }
+  .score-row { grid-template-columns: minmax(0, 1fr); }
+  .score-n { text-align: left; }
+  .key dl, .f-grid { grid-template-columns: minmax(0, 1fr); }
+  .todo-table { border: 0; }
+  .todo-table table, .todo-table tbody, .todo-table tr, .todo-table td { display: block; width: auto; }
+  .todo-table thead { display: none; }
+  .todo-table tr { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; }
+  .todo-table td { border: 0; padding: 2px 0; }
+  .todo-table td.num { display: none; }
+  .todo-table td[data-label]::before { content: attr(data-label) ": "; font-weight: 600; color: var(--muted); }
+  .todo-table tr.is-blocker td:first-child { box-shadow: none; }
+  .todo-table tr.is-blocker { box-shadow: inset 3px 0 0 var(--fails); }
   .crit { grid-template-columns: 44px minmax(0, 1fr); }
   .crit-result { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
   .acc-head { grid-template-columns: 48px minmax(0, 1fr); }
