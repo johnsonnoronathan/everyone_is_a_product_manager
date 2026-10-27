@@ -63,6 +63,9 @@ test('readCommits and analyse on a small repository', () => {
     const md = toMarkdown(r, { repo: dir });
     assert.match(md, /Bad input and crashes: 2 \(recurring\)/);
     assert.match(md, /leads, not conclusions/);
+    assert.equal(r.thin, false);
+    assert.equal(analyse(commits.slice(-1), []).thin, true, 'one commit is too little history');
+    assert.match(toMarkdown(analyse(commits.slice(-1), []), { repo: dir }), /Too little history to learn from/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

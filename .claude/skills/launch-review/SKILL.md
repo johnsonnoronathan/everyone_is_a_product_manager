@@ -82,9 +82,13 @@ If there's a running staging/production URL **and the owner agreed**, run the li
 ```bash
 node <skill-dir>/scripts/check-headers.mjs <url> launch-review/scans/headers.json
 ```
-Optional deeper tools (see `references/tooling.md`): OWASP ZAP baseline (passive), Supabase Security Advisor, Lighthouse, Trail of Bits security skills.
+For page speed on phones (criterion P-09), run Lighthouse against the running app's main page:
+```bash
+npx lighthouse <url> --only-categories=performance --form-factor=mobile --output=json --output=html --output-path=launch-review/scans/lighthouse/main --chrome-flags="--headless"
+```
+Optional deeper tools (see `references/tooling.md`): OWASP ZAP baseline (passive), Supabase Security Advisor, Trail of Bits security skills.
 
-Scanner output is a list of **leads**: triage every hit by reading the code. Drop false positives and say why in one line in the appendix.
+Scanner output is a list of **leads**: triage every hit by reading the code. Record each rule that fired in the pack's `scans.triage` (`tool`, `rule`, `where`, and either `outcome: "reported"` with the finding or criterion it became in `ref`, or `outcome: "dismissed"` with a one-line `reason`), and set `scans.output` to the scans folder. A hit that looks minor still gets an entry: Gate 5 reads the scanner files and fails on any rule without one.
 
 **Quality history.** Find what keeps going wrong before reviewing the code, so the review knows where to look:
 ```bash
@@ -128,7 +132,7 @@ Write the verdict for the owner, who is usually not an engineer: the decision an
 node <skill-dir>/scripts/review-pack.mjs gate review launch-review/review-pack.json
 node <skill-dir>/scripts/review-pack.mjs render launch-review/review-pack.json launch-review/review.html
 ```
-The gate re-runs the checker (which refuses a verdict more favourable than the worksheet allows), counts every area, checks that every evidence file exists, and that every open Critical and High is a blocker. Take the numbers in `REPORT.md`'s summary from `review-pack.mjs status`. Tell the user in chat: the verdict, the blockers, and the paths of the report and the page.
+The gate re-runs the checker (which refuses a verdict more favourable than the worksheet allows), counts every area, checks that every evidence file exists, that every open Critical and High is a blocker with a card, and that every scanner rule that fired is reported or dismissed. Take the numbers in `REPORT.md`'s summary from `review-pack.mjs status`. Tell the user in chat: the verdict, the blockers, and the paths of the report and the page.
 
 ### Phase 6: Fix and re-verify
 Offer to fix blockers in priority order. After each fix, re-run the evidence (the reproduction, scanner, or test) and update the finding to **Fixed: verified on <date>, commit <sha>**. Never delete findings; change their status. Re-issue the verdict when blockers are closed.

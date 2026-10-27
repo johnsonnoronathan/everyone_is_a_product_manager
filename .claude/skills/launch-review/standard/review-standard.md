@@ -53,7 +53,7 @@ Sixteen sections, always in this order: first what the owner needs, then what th
 | 8 | Business rules | A | Every rule the data must obey, how it is enforced and what proves it. | `rules[]`: `id`, `rule`, `enforcedBy`, `provenBy` |
 | 9 | Harness | A | The agent instruction file (or `null`), every test suite with its command, coverage and last result, CI gates, other checks. | `harness`: `agentFile` (`path`, `summary`) or `null`, `suites[]` (`name`, `kind`, `covers`, `command`, `lastRun`, `inCI`), `ci[]`, `checks[]` |
 | 10 | Performance | A, R | Target, test environment, every load-test run (failures too), results per step, race test, slow-partner test, conclusion. | `performance`: `target`, `environment`, `runs[]` (`label`, `result`, `pass`, `note`), `steps[]`, `race` (`summary`, `rows[]`), `slowPartner`, `conclusion` |
-| 11 | Security | R | A plain-language summary; the criteria do the rest. | `areaNotes.S` |
+| 11 | Security | R | A plain-language summary; the criteria do the rest; and what became of each automated-scanner hit. | `areaNotes.S`; `scans`: `output` (the scanner folder, relative to the pack), `triage[]` (`tool`, `rule`, `where`, `outcome`: `reported` with `ref`, or `dismissed` with `reason`) |
 | 12 | Operations | R | A plain-language summary; the criteria do the rest. | `areaNotes.O` |
 | 13 | Quality history | A, R | The author declares known problems; the reviewer adds sources and period, defect counts, recurring problem classes with root cause and control, and hotspots. | `history`: `period`, `sources[]`, `stats[]`, `classes[]` (`name`, `occurrences[]` (`ref`, `text`, `byFix`), `rootCause`, `control`, `controlCheck`, `agentRule`, `status`: `controlled`, `partly controlled` or `open`), `hotspots[]`, `known[]` (`id`, `text`, `severity`, `owner`, `due`, `status`). The page counts kinds, problems introduced by a fix, and how many kinds are caught automatically from these fields; don't type those counts. |
 | 14 | Acceptance | A, R | The author gives the agreed criteria (version, who agreed) and the latest results; the reviewer re-runs them: each with priority, result over three runs and its screenshots. | `acceptance`: `criteriaVersion`, `agreedBy`, `run`, `rows[]` (`id`, `priority`, `criterion`, `status`, `runs`, `evidence[]`, `note`) |
@@ -148,9 +148,9 @@ An AI reviewer (or a tired person) that says "all 95 criteria checked" may have 
 
 | Gate | When | It counts |
 |---|---|---|
-| `gate submission` | author, before handing in; reviewer, before starting | checker errors (must be 0), demo journeys with evidence, evidence files that really exist |
+| `gate submission` | author, before handing in; reviewer, before starting | checker errors (must be 0), demo journeys with evidence, evidence files that really exist, the README's nine items and its link to the page |
 | `gate worksheet --areas …` | reviewer, after each part of the review | per area: mandatory criteria with a result, and exactly which are missing |
-| `gate review` | reviewer, before signing | all of the above for every area, open Critical and High findings listed as blockers, Must acceptance criteria with a result, and a verdict the results allow |
+| `gate review` | reviewer, before signing | all of the above for every area (except the README, which the R criteria judge), open Critical and High findings listed as blockers, each blocker with a card in What to fix, Must acceptance criteria with a result, every scanner rule that fired reported or dismissed, and a verdict the results allow |
 
 Each gate prints expected against found, lists what's missing, and exits with an error if anything is. Numbers in the report are copied from `status` or a gate, never counted by hand. The skills (`prepare-review`, `launch-review`) run the gates themselves.
 
@@ -163,7 +163,7 @@ node $S/scripts/review-pack.mjs gate submission review/review-pack.json         
 node $S/scripts/review-pack.mjs merge launch-review/review-pack.json launch-review/worksheet/*.json
 node $S/scripts/review-pack.mjs gate worksheet launch-review/review-pack.json --areas S,A,D
 node $S/scripts/review-pack.mjs status launch-review/review-pack.json              # results so far, per area
-node $S/scripts/review-pack.mjs gate review launch-review/review-pack.json         # reviewer, before signing
+node $S/scripts/review-pack.mjs gate review launch-review/review-pack.json         # reviewer, before signing [--scans dir]
 node $S/scripts/review-pack.mjs render review/review-pack.json review/index.html
 node $S/scripts/history-scan.mjs . review/history [--since 2025-01-01] [--issues issues.json]
 ```

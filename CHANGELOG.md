@@ -17,17 +17,38 @@
 - **`history-scan.mjs`:** reads git history (and optionally an issue export) and reports:
   - fix commits, reverts and bundled fixes;
   - recurring problem classes and code hotspots;
-  - the share of AI-co-authored commits.
+  - the share of AI-co-authored commits;
+  - a warning when there is too little history to learn from.
+- **Quality gates: software counts, not the AI.** `review-pack.mjs gate submission | worksheet | review` counts what each stage must have produced, lists exactly what is missing, and fails until nothing is:
+  - checker errors, journeys with evidence, and evidence files that exist;
+  - the README's nine items and its link to the review page (at hand-in);
+  - per area, mandatory criteria with a result (the worksheet can be split per lens and merged with `merge`; `status` shows progress);
+  - open Critical and High findings listed as blockers, each blocker with a card, and Must acceptance criteria with a result;
+  - every scanner rule that fired, reported as a finding or dismissed with a reason (new `scans` field).
+- **An owner-first review page:** the verdict comes with a to-do list (who, how big, when), what would happen if the app launched anyway, decisions only the owner can make, and an estimate. Every count on the page is computed from the data, and technical terms are explained where they first appear.
+- **Criterion D-13** "Real payments work end to end", and H-08 now names malformed input and restarts.
+- **`docs/hand-in-guide.md`:** the standard in plain words, for the person handing a project in.
 
 ### Skills
+- **`prepare-review`** (new, for the author): writes the README's nine items and the review pack, with demo journeys shown by screenshots taken in a real browser, and runs the submission gate. It doesn't judge the project; `launch-review` does.
 - `launch-review`:
   - checks the author's review pack first, and hands back an incomplete one with the missing items listed;
   - reviews the quality history: root cause, automatic control and agent rule for each recurring problem;
   - has a fifth lens, the harness;
-  - fills in the worksheet and renders the review page alongside `REPORT.md`.
+  - fills in the worksheet and renders the review page alongside `REPORT.md`;
+  - runs a gate after each stage, and offers a focused review for narrow questions (just the architecture, the `AGENTS.md`, recurring bugs);
+  - records what became of every scanner hit, and gives the Lighthouse command for page speed on phones.
+- `peak-traffic-test`: **fixed a counting bug in the race test.** Accepted clicks were also counted as rejected (the round-2 sample report says 1,998 rejected; the right number is 1,900). Each response now lands in exactly one bucket, and the summary flags a problem if the buckets don't add up to the clicks sent.
+- `acceptance-test`: the report skips demo journeys tagged `@journey`.
 
 ### Demo
 - `demo/flash-sale/review/`: the fixed version handed in and judged under the standard. All 95 criteria that apply have a result. It records six kinds of problem that came back across three reviews, five problems introduced by fixes, and the verdict NO-GO.
+- The demo README has the nine-item Review section; the acceptance suite's ports are configurable (`APP_PORT`, `PAYMENT_PORT`).
+- **Skill and reading tests** ([scorecard](demo/flash-sale/sample-reports/SCORECARD.md#skill-and-reading-tests-27-october-2026)):
+  - 16 of 16 requests started the right skill;
+  - two rounds of reading tests by role;
+  - an author test of `prepare-review`;
+  - two independent reviewer tests: 72% agreement with the reference review on the fixed version, and 19 of 20 planted problems on the naive one.
 
 ## 0.1.0 (2026-10-26): first public release
 

@@ -2,7 +2,7 @@
 // Review pack: check it against the review standard and render it as one self-contained web page.
 //
 //   node review-pack.mjs validate <pack.json> [--stage submission|review]
-//   node review-pack.mjs gate     <submission|worksheet|review> <pack.json> [--areas S,A] [--readme README.md]   (counts; exit 1 if anything is missing)
+//   node review-pack.mjs gate     <submission|worksheet|review> <pack.json> [--areas S,A] [--readme README.md] [--scans dir]   (counts; exit 1 if anything is missing)
 //   node review-pack.mjs render   <pack.json> <out.html> [--fragment]
 //   node review-pack.mjs template <out.json> [--tier 1|2|3] [--features money,accounts,...]
 //   node review-pack.mjs status   <pack.json>                  (per area: results so far, mandatory criteria still missing)
@@ -10,7 +10,7 @@
 //   node review-pack.mjs criteria <out.md>
 //
 // The standard is described in ../standard/review-standard.md; the criteria are in ../standard/criteria.json.
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -155,6 +155,15 @@ export function validatePack(pack, catalogue, { stage } = {}) {
     const known = new Map(catalogue.criteria.map((c) => [c.id, c]));
     const findings = pack.findings || [];
     const findingIds = new Set(findings.map((f) => f.id));
+    need(pack.scans?.output, 'scans.output', 'Say where the scanner output is (the folder run-scanners.sh wrote, relative to this file).');
+    (pack.scans?.triage || []).forEach((t, i) => {
+      const at = `scans.triage[${i}] ${t.tool || ''} ${t.rule || ''}`.trim();
+      if (!t.tool || !t.rule) err(at, 'Give the tool and the rule that fired.');
+      if (t.outcome === 'reported') {
+        if (!findingIds.has(t.ref) && !known.has(t.ref)) err(at, `"reported" needs a ref to a finding or criterion in this pack (got "${t.ref || ''}").`);
+      } else if (t.outcome === 'dismissed') need(t.reason, at, 'Say in one line why this hit is not a problem here.');
+      else err(at, 'Set outcome to "reported" (with a ref) or "dismissed" (with a reason).');
+    });
     const seen = new Set();
     (pack.worksheet || []).forEach((r, i) => {
       const at = `worksheet[${i}] ${r.id || ''}`.trim();
@@ -538,7 +547,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
     sec('rules', 8, 'Business rules', rulesBody, 'D'),
     sec('harness', 9, 'Harness: tests, automatic checks and AI-agent instructions', harnessBody, 'H'),
     sec('performance', 10, 'Performance', perfBody, 'P'),
-    sec('security', 11, 'Security', notes('S'), 'S'),
+    sec('security', 11, 'Security', `${notes('S')}${filled(pack.scans?.triage) ? `<h3>Automated scans: what each hit became (${pack.scans.triage.length})</h3>${table(['Tool', 'Rule', 'Where', 'Outcome'], pack.scans.triage.map((t) => [fmt(t.tool), `<code>${esc(t.rule)}</code>`, fmt(t.where || ''), t.outcome === 'reported' ? `Reported as ${codeLink(t.ref)}` : `Not a problem here: ${fmt(t.reason || '')}`]))}` : ''}`, 'S'),
     sec('operations', 12, 'Operations', notes('O'), 'O'),
     sec('history', 13, 'Quality history: problems that keep coming back', histBody, 'Q'),
     sec('acceptance', 14, 'Acceptance', accBody, 'U'),
@@ -852,6 +861,28 @@ function evidencePaths(pack) {
   ].filter((e) => e.path).map((e) => e.path);
 }
 
+// Every rule that fired in the scanner output run-scanners.sh wrote, grouped by tool and rule. Each needs an entry in
+// scans.triage: reported (as a finding or criterion) or dismissed (with a reason). Dropping one quietly is what this stops.
+export function scannerHits(dir) {
+  const hits = new Map();
+  const add = (tool, rule, path, line) => {
+    const key = `${tool} ${rule}`;
+    if (!hits.has(key)) hits.set(key, { tool, rule, where: [] });
+    const at = path ? `${path.split('/').slice(-2).join('/')}${line ? `:${line}` : ''}` : '';
+    if (at && !hits.get(key).where.includes(at)) hits.get(key).where.push(at);
+  };
+  for (const name of readdirSync(dir).filter((n) => n.endsWith('.json')).sort()) {
+    let d;
+    try { d = JSON.parse(readFileSync(join(dir, name), 'utf8')); } catch { continue; }
+    if (/^semgrep/.test(name)) for (const r of d.results || []) add('semgrep', r.check_id.split('.').pop(), r.path, r.start?.line);
+    else if (/^gitleaks/.test(name) && Array.isArray(d)) for (const r of d) add('gitleaks', r.RuleID, r.File, r.StartLine);
+    else if (/^osv/.test(name)) for (const r of d.results || []) for (const p of r.packages || []) for (const v of p.vulnerabilities || []) add('osv-scanner', v.id, p.package?.name);
+    else if (/^npm-audit/.test(name)) for (const [pkg, v] of Object.entries(d.vulnerabilities || {})) add('npm audit', pkg, v.severity);
+    else if (/^trivy/.test(name)) for (const r of d.Results || []) for (const m of r.Misconfigurations || []) add('trivy', m.ID, r.Target);
+  }
+  return [...hits.values()];
+}
+
 // The README's nine items (standard §1.1), found by their labels as bold text or headings.
 export const README_ITEMS = ['What it is', 'Review page', 'Quick start', 'Test access', 'Tests', 'Settings', 'Architecture', 'Known problems', 'For AI agents'];
 
@@ -860,7 +891,7 @@ export function readmeItems(text) {
   return { present: README_ITEMS.filter(has), missing: README_ITEMS.filter((l) => !has(l)), linksPage: /review\/index\.html/.test(text) };
 }
 
-export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme } = {}) {
+export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme, scans } = {}) {
   const checks = [];
   const add = (name, expected, found, missing = []) => checks.push({ name, expected, found, missing, ok: found === expected && missing.length === 0 });
   const codes = areas && areas.length ? areas : catalogue.areas.map((a) => a.code);
@@ -904,6 +935,14 @@ export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme } = 
     const must = (pack.acceptance?.rows || []).filter((r) => r.priority === 'Must');
     const judged = must.filter((r) => ['pass', 'fail', 'flaky', 'external'].includes(r.status));
     add('Must acceptance criteria with a result', must.length, judged.length, must.filter((r) => !judged.includes(r)).map((r) => r.id));
+    const scanDir = scans || (pack.scans?.output ? resolve(baseDir, pack.scans.output) : resolve(baseDir, 'scans'));
+    if (!existsSync(scanDir)) add('Scanner output found', 1, 0, [`no folder at ${scanDir}: run run-scanners.sh, record the folder in scans.output (or pass --scans)`]);
+    else {
+      const triaged = new Set((pack.scans?.triage || []).map((t) => `${(t.tool || '').toLowerCase()} ${t.rule}`));
+      const hits = scannerHits(scanDir);
+      const open = hits.filter((h) => !triaged.has(`${h.tool} ${h.rule}`));
+      add('Scanner rules that fired, each reported or dismissed', hits.length, hits.length - open.length, open.map((h) => `${h.tool} ${h.rule} (${h.where.slice(0, 4).join(', ')}${h.where.length > 4 ? ', …' : ''})`));
+    }
   }
   return { ok: checks.every((c) => c.ok), checks };
 }
@@ -996,7 +1035,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   } else if (cmd === 'gate' && ['submission', 'worksheet', 'review'].includes(args[0]) && args[1]) {
     const pack = JSON.parse(readFileSync(args[1], 'utf8'));
     const areas = (arg(args, '--areas', '') || '').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
-    const result = gate(args[0], pack, catalogue, { baseDir: dirname(resolve(args[1])), areas, readme: arg(args, '--readme') });
+    const result = gate(args[0], pack, catalogue, { baseDir: dirname(resolve(args[1])), areas, readme: arg(args, '--readme'), scans: arg(args, '--scans') && resolve(arg(args, '--scans')) });
     for (const c of result.checks) {
       console.log(`${c.ok ? 'PASS' : 'FAIL'}  ${c.name}: expected ${c.expected}, found ${c.found}`);
       for (const m of c.missing.slice(0, 40)) console.log(`        missing: ${m}`);
@@ -1022,7 +1061,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     writeFileSync(args[0], criteriaMarkdown(catalogue) + '\n');
     console.log(`Wrote ${args[0]}`);
   } else {
-    console.error('Usage:\n  review-pack.mjs validate <pack.json> [--stage submission|review]\n  review-pack.mjs gate <submission|worksheet|review> <pack.json> [--areas S,A]\n  review-pack.mjs render <pack.json> <out.html> [--fragment]\n  review-pack.mjs template <out.json> [--tier 1|2|3] [--features a,b]\n  review-pack.mjs status <pack.json>\n  review-pack.mjs merge <pack.json> <rows.json>...\n  review-pack.mjs criteria <out.md>');
+    console.error('Usage:\n  review-pack.mjs validate <pack.json> [--stage submission|review]\n  review-pack.mjs gate <submission|worksheet|review> <pack.json> [--areas S,A] [--readme README.md] [--scans dir]\n  review-pack.mjs render <pack.json> <out.html> [--fragment]\n  review-pack.mjs template <out.json> [--tier 1|2|3] [--features a,b]\n  review-pack.mjs status <pack.json>\n  review-pack.mjs merge <pack.json> <rows.json>...\n  review-pack.mjs criteria <out.md>');
     process.exit(2);
   }
 }

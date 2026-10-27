@@ -80,6 +80,79 @@ Verdict: still **NO-GO**, for two reasons:
   - acceptance tests should also assert what should *disappear*;
   - every runbook step must be backed by a tool that exists and has been tried.
 
+## Skill and reading tests (27 October 2026)
+
+After the review standard and the `prepare-review` skill were added, we checked two things. Do the skills produce these results when someone else runs them? Can the people they are written for understand the output? Every tester was a fresh Claude Code agent with no access to the answer key or the reference review.
+
+**Trigger test.** 16 plain requests ("is this ready to go live?", "get my project ready to hand in", "will it survive Black Friday?"…), each checked for which skill it starts. All 16 started the right skill, 5 of them with only medium confidence. That led to two changes: descriptions now say which skill is for the author and which for the reviewer, and narrow questions ("just the architecture") get a focused review.
+
+**Reading tests, two rounds.** Agents read the review page, README and demo in a given role: product owner, executive, developer, newcomer to the README, author of a project. They answered what they would do next, and pointed at whatever stopped them.
+- **Round 1** found errors in our own reference example:
+  - it said "everything is fixed" when 16 of 23 problems were;
+  - counts typed in prose disagreed with the tables;
+  - the known-problems register left some findings out.
+- The developer reader also found **a counting bug in the race test** (erratum below).
+- Round 1 led to:
+  - the page leading with what the owner must do: who, how big, when, and what happens if they launch anyway;
+  - a README rewritten for newcomers;
+  - a plain-language [hand-in guide](../../../docs/hand-in-guide.md).
+- **Round 2** (owner and developer) led to:
+  - every count on the page computed from the data;
+  - a list of decisions only the owner can make;
+  - a card under What to fix for every blocker.
+
+**Author test.** An agent used `prepare-review` to hand in the `naive/` version. The submission gate passed: 6 journeys with screenshots, 27 evidence files, and the README's nine items. The hand-in was honest: 7 of 13 acceptance criteria failing and 14 known problems declared. The agent also reported 17 problems with the skill itself (unclear steps, commands that failed, missing fields), all fixed.
+
+**Reviewer test 1: the fixed version, from scratch.**
+- **Verdict:** NO-GO, the same as the reference review, and a result for all 95 mandatory criteria.
+- **Agreement with the reference:**
+  - 68 of 95 criteria (72%) got the same result;
+  - on the 44 clear-cut criteria (ones the reference measured, or where it confirmed a problem), 34 matched (77%).
+- **Problems:** it found every major problem the reference had, plus one new High (ARC-16): production starts without `DB_FILE` or `PAYMENT_URL`, so a restart loses every order. We added ARC-16 to the reference and corrected the reference rows it showed to be wrong.
+
+**Reviewer test 2: the naive version, from the author's hand-in.**
+- **Verdict:** NO-GO. The review gate passed: 95 of 95 mandatory criteria judged, 20 of 20 open Critical and High findings listed as blockers, and 18 of 18 blockers with a card. It made 23 findings.
+- **What it added to the hand-in:**
+  - SQL injection;
+  - one malformed request crashing the server;
+  - shutdown that loses paid orders;
+  - load results: the shop breaks at 50% of the target, sold 1,948 orders for 100 pairs, and charged 37 of 60 slow-payment buyers twice.
+- **Against the [answer key](../ANSWER_KEY.md): 19 of 20 planted problems found**, the same score as the first review, but it missed a different one:
+
+| Planted | Found as |
+|---|---|
+| P1 Overselling | ARC-02 (Critical) |
+| P2 Duplicate orders | ARC-03 (Critical) |
+| P3 Charging before reserving | ARC-02's fix, and the history section; not a separate finding |
+| P4 N+1, no cache | PERF-01 |
+| P5 No payment timeout | ARC-04 |
+| P6 Email inside the request | criterion A-05 (no finding card) |
+| P7 `readFileSync` per request | ❌ **missed**: Semgrep flagged it and the system map described it, but it never reached the report |
+| P8 Pool waits forever | criterion P-07 (no finding card) |
+| P9 No rate limit | SEC-06 |
+| S1 Hard-coded payment key | SEC-04 |
+| S2 Forgeable token | SEC-01 |
+| S3 SQL injection | SEC-03 |
+| S4 IDOR on orders | SEC-02 |
+| S5 Open admin endpoints | SEC-05 |
+| S6 Price from the browser | ARC-01 |
+| S7 Malformed JSON crashes the server | ARC-06 |
+| S8 Stack traces to the client | SEC-08 |
+| S9 No security headers, CORS `*` | SEC-07 |
+| S10 PII in API responses and logs | SEC-02, SEC-09 |
+| O1 No health check / graceful shutdown / server timeouts | ✅ criteria O-01, O-09 and OPS-02: missed by the first review, found now that the checklist has them |
+
+P7 is a dropped lead, not a lack of knowledge, so the review gate now counts it. It reads the scanner output and fails if any rule that fired has no entry saying what became of it: reported (with the finding) or dismissed (with a reason). Run against this review, the gate lists 14 rules without an entry, P7's among them.
+
+**Other changes from the tests:**
+- the README check runs when the project is handed in, not at the end of the review;
+- the history scan says when there is too little history to learn from (the naive version has one commit);
+- the skill now gives the Lighthouse command for the phone page-speed check.
+
+**Erratum.** The round-2 race test reported "1,998 rejected" for 2,000 clicks with 100 accepted (in `fixed-round2/…/oversell-summary.md` and `findings/architecture.md`, kept as originally produced). The script counted every accepted click that wasn't "awaiting payment" as rejected as well, so 98 accepted clicks were counted twice. The correct count is 1,900 rejected. The verdict (no overselling) was right, because it rests on the orders in the database. The script now puts each response in exactly one bucket and flags a problem if accepted + rejected + errors doesn't equal the clicks sent.
+
+**Limits of these tests.** The testers are AI agents playing a role, so their reading is a minimum bar, not proof that a real owner understands the page. All three test apps come from this repository. The scores are single runs, and a second run would vary. Reviewer agents weren't allowed to write some report files in this environment, so they returned that text to us. That is a limit of the test setup, not of the skill.
+
 ## Takeaways
 - **Each layer catches what the others can't.** Scanners catch secrets and patterns. The review catches logic, failure modes and operations. The load test measures capacity. The oversell race tests concurrency. Acceptance tests check agreed behaviour, and their screenshots are evidence a reviewer can read.
 - **Fixes need re-review, not just re-testing.** Each round of fixes introduced at least one new problem that only a fresh, sceptical review found.

@@ -1,10 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import {
   loadCatalogue, applicability, validatePack, verdictCeiling, renderPage, templatePack, criteriaMarkdown,
-  gate, worksheetStatus, mergeWorksheet, readmeItems, README_ITEMS,
+  gate, worksheetStatus, mergeWorksheet, readmeItems, README_ITEMS, scannerHits,
 } from '../.claude/skills/launch-review/scripts/review-pack.mjs';
 
 const catalogue = loadCatalogue();
@@ -47,6 +48,7 @@ function reviewedPack(rows, extra = {}) {
   pack.worksheet = rows;
   pack.verdict = { decision: extra.decision ?? 'GO', reason: 'r', ifLaunchedNow: 'x', blockers: [], conditions: extra.conditions ?? [] };
   pack.findings = extra.findings ?? [];
+  pack.scans = { output: '../sample-reports/fixed-round2/launch-review/scans', triage: [] };
   return pack;
 }
 const allMeet = (pack) => catalogue.criteria
@@ -146,6 +148,48 @@ test('gates count what is missing instead of trusting a summary', () => {
   noBlocker.verdict.blockers = noBlocker.verdict.blockers.filter((b) => !b.refs.includes('ARC-11'));
   const bl = gate('review', noBlocker, catalogue, { baseDir: base }).checks.find((c) => c.name.startsWith('Open Critical'));
   assert.deepEqual(bl.missing, ['ARC-11']);
+});
+
+test('scanner gate: every rule that fired is reported or dismissed', () => {
+  const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  const base = 'demo/flash-sale/review';
+  const dir = mkdtempSync(join(tmpdir(), 'scans-'));
+  try {
+    // A real review once saw a blocking file read in Semgrep's output and the system map, and never reported it.
+    writeFileSync(join(dir, 'semgrep.json'), JSON.stringify({ results: [
+      { check_id: 'rules.sql-built-from-strings-js', path: '/w/app/server.mjs', start: { line: 98 } },
+      { check_id: 'rules.sync-io-in-request-handler', path: '/w/app/server.mjs', start: { line: 68 } },
+      { check_id: 'rules.sync-io-in-request-handler', path: '/w/app/server.mjs', start: { line: 72 } },
+    ] }));
+    writeFileSync(join(dir, 'gitleaks-files.json'), JSON.stringify([{ RuleID: 'generic-api-key', File: 'app/server.mjs', StartLine: 10 }]));
+    writeFileSync(join(dir, 'osv.json'), JSON.stringify({ results: [] }));
+    const hits = scannerHits(dir);
+    assert.equal(hits.length, 3, 'grouped by tool and rule');
+    assert.deepEqual(hits.find((h) => h.rule === 'sync-io-in-request-handler').where, ['app/server.mjs:68', 'app/server.mjs:72']);
+
+    const p = structuredClone(pack);
+    p.scans.triage = [
+      { tool: 'semgrep', rule: 'sql-built-from-strings-js', outcome: 'reported', ref: 'SEC-06' },
+      { tool: 'gitleaks', rule: 'generic-api-key', outcome: 'dismissed', reason: 'test fixture' },
+    ];
+    const c = gate('review', p, catalogue, { baseDir: base, scans: dir }).checks.find((x) => x.name.startsWith('Scanner rules'));
+    assert.equal(c.ok, false);
+    assert.deepEqual(c.missing, ['semgrep sync-io-in-request-handler (app/server.mjs:68, app/server.mjs:72)']);
+
+    p.scans.triage.push({ tool: 'semgrep', rule: 'sync-io-in-request-handler', outcome: 'reported', ref: 'P-07' });
+    assert.equal(gate('review', p, catalogue, { baseDir: base, scans: dir }).ok, true);
+
+    // No scanner output at all fails too.
+    const none = gate('review', pack, catalogue, { baseDir: base, scans: join(dir, 'nope') }).checks.find((x) => x.name === 'Scanner output found');
+    assert.equal(none.ok, false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  // A triage entry must point at something real, or say why the hit is harmless.
+  const bad = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  bad.scans.triage = [{ tool: 'semgrep', rule: 'x', outcome: 'reported', ref: 'SEC-99' }, { tool: 'semgrep', rule: 'y', outcome: 'dismissed' }];
+  const errs = validatePack(bad, catalogue, { stage: 'review' }).filter((e) => e.where.startsWith('scans.triage'));
+  assert.equal(errs.length, 2);
 });
 
 test('README check: the nine items by label, and the link to the review page', () => {

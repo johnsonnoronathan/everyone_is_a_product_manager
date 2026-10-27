@@ -2497,6 +2497,32 @@
       "evidence": "axe (WCAG 2.1 A/AA) on the sale page: no serious or critical violations (AC-09)."
     }
   ],
+  "scans": {
+    "output": "../sample-reports/fixed-round2/launch-review/scans",
+    "triage": [
+      {
+        "tool": "semgrep",
+        "rule": "admin-route-inventory",
+        "where": "`fixed/server.mjs:532`, `:550`, `:573`",
+        "outcome": "reported",
+        "ref": "SEC-06"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "db-query-in-loop-js",
+        "where": "`fixed/server.mjs:95`, `:249`",
+        "outcome": "dismissed",
+        "reason": "One query, then `.map` over its rows in memory: not a query per row."
+      },
+      {
+        "tool": "gitleaks",
+        "rule": "generic-api-key",
+        "where": "`naive/server.mjs:10`, in git history",
+        "outcome": "dismissed",
+        "reason": "The first version's planted fake key, in `naive/`, outside the reviewed app; nothing in `fixed/` or its history."
+      }
+    ]
+  },
   "notChecked": [
     "**Production sign-in and card payments.** Not in the repository. Card collection, 3-D Secure, declines, refunds and the provider's lookup API were not checked. This blocks launch until reviewed and a real purchase and refund are made.",
     "**Production database and infrastructure:** Postgres, backups, the load balancer (HTTPS, idle timeout), CDN and firewall.",

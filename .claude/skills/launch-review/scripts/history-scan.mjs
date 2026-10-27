@@ -87,7 +87,11 @@ export function analyse(commits, issues = [], { allFiles = false } = {}) {
   // Many unrelated files in one fix commit make the history hard to read: one fix per commit, with its test, is the habit to build.
   const bundled = fixes.filter((c) => c.files.length > 10).map((c) => ({ ref: c.short, date: c.date, text: c.subject, files: c.files.length }));
 
+  // A few commits and no bug reports can't show what keeps coming back. Say so rather than read meaning into nothing.
+  const thin = fixes.length + bugIssues.length < 3;
+
   return {
+    thin,
     totals: { commits: commits.length, fixes: fixes.length, reverts: reverts.length, aiAssisted: aiAssisted.length, issues: issues.length, bugIssues: bugIssues.length, bundledFixes: bundled.length },
     bundled,
     first: commits.length ? commits[commits.length - 1].date : null,
@@ -119,6 +123,7 @@ export function toMarkdown(result, { repo, since, path }) {
     `| Issues read / bug-like | ${t.issues} / ${t.bugIssues} |`,
     `| Fix commits touching more than 10 files | ${t.bundledFixes} |`,
     '',
+    ...(result.thin ? [`**Too little history to learn from:** ${t.commits} commit(s), ${t.fixes} fix commit(s) and ${t.bugIssues} bug-like issue(s). Say so in Quality history rather than reading meaning into it, and use what else exists: earlier review reports, incident notes, support tickets, the issue tracker. With none, the recurring problems are judged from this review's own findings.`, ''] : []),
     '**These are leads, not conclusions.** Classes come from keywords in commit messages and issue titles. Before naming a root cause, read the changes behind each recurring class.',
     ...(t.bundledFixes ? ['', `**${t.bundledFixes} fix commit(s) bundle many changes**, so their keywords land in several classes at once. Use review reports or issues as the defect record for those, and prefer one fix per commit, with its test.`] : []),
     '',
@@ -168,4 +173,5 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   writeFileSync(join(out, 'history.md'), toMarkdown(result, { repo, since, path }));
   const t = result.totals;
   console.log(`${t.commits} commits, ${t.fixes} fixes, ${t.reverts} reverts, ${t.bugIssues} bug-like issues; ${result.classes.filter((c) => c.recurring).length} recurring classes. Wrote ${join(out, 'history.md')}`);
+  if (result.thin) console.log('Too little history to learn from: say so in Quality history and use review reports, incidents and issues instead.');
 }
