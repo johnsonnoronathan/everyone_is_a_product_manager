@@ -2,8 +2,11 @@
 // Review pack: check it against the review standard and render it as one self-contained web page.
 //
 //   node review-pack.mjs validate <pack.json> [--stage submission|review]
+//   node review-pack.mjs gate     <submission|worksheet|review> <pack.json> [--areas S,A]   (counts; exit 1 if anything is missing)
 //   node review-pack.mjs render   <pack.json> <out.html> [--fragment]
 //   node review-pack.mjs template <out.json> [--tier 1|2|3] [--features money,accounts,...]
+//   node review-pack.mjs status   <pack.json>                  (per area: results so far, mandatory criteria still missing)
+//   node review-pack.mjs merge    <pack.json> <rows.json>...   (add worksheet rows written by each reviewer or lens)
 //   node review-pack.mjs criteria <out.md>
 //
 // The standard is described in ../standard/review-standard.md; the criteria are in ../standard/criteria.json.
@@ -640,6 +643,75 @@ dialog .close { font: 500 13px var(--body); border: 1px solid var(--line); backg
 }
 `;
 
+// ---------- splitting the worksheet across reviewers ----------
+
+// Per area: how many criteria are mandatory, how many have each result, and which mandatory ones have none.
+export function worksheetStatus(pack, catalogue) {
+  const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
+  return catalogue.areas.map((a) => {
+    const cs = catalogue.criteria.filter((c) => c.id.startsWith(a.code + '-'));
+    const mandatory = cs.filter((c) => applicability(c, pack.project) === 'mandatory');
+    const counts = Object.fromEntries(Object.keys(RESULTS).map((k) => [k, 0]));
+    for (const c of cs) if (RESULTS[rows.get(c.id)?.result]) counts[rows.get(c.id).result]++;
+    return { code: a.code, name: a.name, mandatory: mandatory.length, counts, missing: mandatory.filter((c) => !RESULTS[rows.get(c.id)?.result]).map((c) => c.id) };
+  });
+}
+
+// Merge worksheet rows (from one file per lens) into the pack. A later row for the same criterion replaces an earlier one.
+export function mergeWorksheet(pack, rowLists) {
+  const byId = new Map((pack.worksheet || []).map((r) => [r.id, r]));
+  for (const rows of rowLists) for (const r of rows) if (r && r.id) byId.set(r.id, r);
+  const order = (id) => 'RHADSPOQU'.indexOf(id[0]) * 100 + Number(id.slice(2));
+  pack.worksheet = [...byId.values()].sort((x, y) => order(x.id) - order(y.id));
+  return pack;
+}
+
+// ---------- quality gates: software does the counting ----------
+//
+// Language models miscount: "all 94 criteria checked" may really be 92. Each gate counts what a stage must have produced
+// and lists exactly what is missing. A stage isn't done until its gate passes.
+
+function evidencePaths(pack) {
+  return [
+    ...(pack.product?.journeys || []).flatMap((j) => j.evidence || []),
+    ...(pack.acceptance?.rows || []).flatMap((r) => r.evidence || []),
+  ].filter((e) => e.path).map((e) => e.path);
+}
+
+export function gate(stage, pack, catalogue, { baseDir = '.', areas } = {}) {
+  const checks = [];
+  const add = (name, expected, found, missing = []) => checks.push({ name, expected, found, missing, ok: found === expected && missing.length === 0 });
+  const codes = areas && areas.length ? areas : catalogue.areas.map((a) => a.code);
+
+  if (stage === 'submission' || stage === 'review') {
+    const errors = validatePack(pack, catalogue, { stage }).filter((p) => p.level === 'error');
+    add(`Checker errors (${stage})`, 0, errors.length, errors.map((e) => `${e.where}: ${e.message}`));
+    const journeys = pack.product?.journeys || [];
+    const shown = journeys.filter((j) => filled(j.evidence));
+    add('Demo journeys with evidence', journeys.length, shown.length, journeys.filter((j) => !filled(j.evidence)).map((j) => j.id || j.name));
+    const paths = evidencePaths(pack);
+    const present = paths.filter((p) => existsSync(resolve(baseDir, p)));
+    add('Evidence files that exist', paths.length, present.length, paths.filter((p) => !existsSync(resolve(baseDir, p))));
+  }
+  if (stage === 'worksheet' || stage === 'review') {
+    const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
+    for (const code of codes) {
+      const ids = catalogue.criteria.filter((c) => c.id.startsWith(code + '-') && applicability(c, pack.project) === 'mandatory').map((c) => c.id);
+      const done = ids.filter((id) => RESULTS[rows.get(id)?.result]);
+      add(`${code}: mandatory criteria with a result`, ids.length, done.length, ids.filter((id) => !done.includes(id)));
+    }
+  }
+  if (stage === 'review') {
+    const blockers = new Set((pack.verdict?.blockers || []).flatMap((b) => b.refs || []));
+    const serious = (pack.findings || []).filter((f) => ['Critical', 'High'].includes(f.severity) && !/^fixed/i.test(f.status || ''));
+    add('Open Critical and High findings listed as blockers', serious.length, serious.filter((f) => blockers.has(f.id)).length, serious.filter((f) => !blockers.has(f.id)).map((f) => f.id));
+    const must = (pack.acceptance?.rows || []).filter((r) => r.priority === 'Must');
+    const judged = must.filter((r) => ['pass', 'fail', 'flaky', 'external'].includes(r.status));
+    add('Must acceptance criteria with a result', must.length, judged.length, must.filter((r) => !judged.includes(r)).map((r) => r.id));
+  }
+  return { ok: checks.every((c) => c.ok), checks };
+}
+
 // ---------- template and criteria list ----------
 
 export function templatePack(catalogue, { tier = 2, features = [] } = {}) {
@@ -725,11 +797,36 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const features = (arg(args, '--features', '') || '').split(',').filter(Boolean);
     writeFileSync(args[0], JSON.stringify(templatePack(catalogue, { tier, features }), null, 2) + '\n');
     console.log(`Wrote ${args[0]}`);
+  } else if (cmd === 'gate' && ['submission', 'worksheet', 'review'].includes(args[0]) && args[1]) {
+    const pack = JSON.parse(readFileSync(args[1], 'utf8'));
+    const areas = (arg(args, '--areas', '') || '').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+    const result = gate(args[0], pack, catalogue, { baseDir: dirname(resolve(args[1])), areas });
+    for (const c of result.checks) {
+      console.log(`${c.ok ? 'PASS' : 'FAIL'}  ${c.name}: expected ${c.expected}, found ${c.found}`);
+      for (const m of c.missing.slice(0, 40)) console.log(`        missing: ${m}`);
+      if (c.missing.length > 40) console.log(`        …and ${c.missing.length - 40} more`);
+    }
+    console.log(result.ok ? `GATE PASSED (${args[0]}).` : `GATE FAILED (${args[0]}): finish the missing items, then run the gate again.`);
+    process.exit(result.ok ? 0 : 1);
+  } else if (cmd === 'status' && args[0]) {
+    const pack = JSON.parse(readFileSync(args[0], 'utf8'));
+    let missing = 0;
+    for (const s of worksheetStatus(pack, catalogue)) {
+      missing += s.missing.length;
+      const c = s.counts;
+      console.log(`${s.code} ${s.name.padEnd(24)} mandatory ${String(s.mandatory).padStart(2)} · meets ${c.meets} · does not meet ${c['does-not-meet']} · cannot verify ${c['cannot-verify']} · n/a ${c['not-applicable']}${s.missing.length ? ` · MISSING ${s.missing.join(' ')}` : ''}`);
+    }
+    console.log(missing ? `${missing} mandatory criteria have no result yet.` : 'Every mandatory criterion has a result.');
+  } else if (cmd === 'merge' && args.length >= 2) {
+    const pack = JSON.parse(readFileSync(args[0], 'utf8'));
+    const lists = args.slice(1).map((f) => { const d = JSON.parse(readFileSync(f, 'utf8')); return Array.isArray(d) ? d : d.worksheet || []; });
+    writeFileSync(args[0], JSON.stringify(mergeWorksheet(pack, lists), null, 2) + '\n');
+    console.log(`Merged ${lists.reduce((n, l) => n + l.length, 0)} rows into ${args[0]}`);
   } else if (cmd === 'criteria' && args[0]) {
     writeFileSync(args[0], criteriaMarkdown(catalogue) + '\n');
     console.log(`Wrote ${args[0]}`);
   } else {
-    console.error('Usage:\n  review-pack.mjs validate <pack.json> [--stage submission|review]\n  review-pack.mjs render <pack.json> <out.html> [--fragment]\n  review-pack.mjs template <out.json> [--tier 1|2|3] [--features a,b]\n  review-pack.mjs criteria <out.md>');
+    console.error('Usage:\n  review-pack.mjs validate <pack.json> [--stage submission|review]\n  review-pack.mjs gate <submission|worksheet|review> <pack.json> [--areas S,A]\n  review-pack.mjs render <pack.json> <out.html> [--fragment]\n  review-pack.mjs template <out.json> [--tier 1|2|3] [--features a,b]\n  review-pack.mjs status <pack.json>\n  review-pack.mjs merge <pack.json> <rows.json>...\n  review-pack.mjs criteria <out.md>');
     process.exit(2);
   }
 }

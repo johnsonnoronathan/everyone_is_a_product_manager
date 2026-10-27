@@ -1,6 +1,6 @@
 ---
 name: launch-review
-description: Thorough pre-launch review of a web or mobile app's architecture, security, performance and operations. Produces an evidence-backed GO / GO WITH CONDITIONS / NO-GO report that a product manager can act on and an engineer can fix from. Use before going live, before a big promotion, when taking over or handing over an AI-built ("vibe-coded") app, or when someone asks "is this ready for production?", "is it secure?", "review my app before launch", "production readiness", "security audit", "can we go live?".
+description: Independent pre-launch review of a web or mobile app against the review standard (98 criteria): architecture, security, performance, operations, data and business rules, the test harness (tests, CI, AGENTS.md or CLAUDE.md) and the defect history, including why the same bugs keep coming back. Produces an evidence-backed GO / GO WITH CONDITIONS / NO-GO report and a one-page review site a product manager can read and an engineer can fix from. Use before going live or a big promotion, when a project or review pack is handed in, when taking over an AI-built ("vibe-coded") app, or when someone asks "is this ready for production?", "review my app before launch", "can we go live?", "review the architecture", "security audit", "check our AGENTS.md", "why do the same bugs keep coming back?".
 ---
 
 # Launch review
@@ -19,6 +19,7 @@ You are doing a pre-launch review for someone who may not be an engineer: often 
 6. **Reports are sensitive.** They explain how to break the app. When creating `launch-review/`, suggest adding it to `.gitignore` unless the team wants the reports versioned in a private repository, and never paste findings into public issues.
 7. **Two audiences.** Each finding has a plain-language impact line for the PM and precise detail for the engineer.
 8. **Severity follows `references/severity.md`**, not gut feeling, and the verdict follows its rules.
+9. **Software counts, you don't.** Models miscount: "all 94 criteria checked" can really be 92. Each phase ends with a **gate** (`review-pack.mjs gate`) that counts what the phase must have produced and lists exactly what's missing. Don't start the next phase until the gate passes, and copy every number you report (criteria, results, findings) from the gate or `status` output, never from your own tally.
 
 ## Workflow
 
@@ -29,7 +30,24 @@ Run the intake in `references/intake.md`. Infer what you can from the code first
 ```bash
 node <skill-dir>/scripts/review-pack.mjs validate review/review-pack.json --stage submission
 ```
-If it fails, stop: render the page (`review-pack.mjs render`) and hand it back. Its first section lists exactly what is missing, and that is the first report. If there is no pack, offer `review-pack.mjs template` to the author, or build one yourself from the code and label it as yours. Either way the pack is the author's claim, not evidence: verify it.
+If it fails, stop: render the page (`review-pack.mjs render`) and hand it back. Its first section lists exactly what is missing, and that is the first report. If there is no pack, suggest the author runs the `prepare-review` skill, or build one yourself the same way and label it as yours. Either way the pack is the author's claim, not evidence: verify it.
+
+Copy the pack to `launch-review/review-pack.json` (your working copy; evidence paths stay relative to `review/`, so copy `review/evidence/` along with it). **Gate 0:** `node <skill-dir>/scripts/review-pack.mjs gate submission launch-review/review-pack.json` must pass.
+
+**Who judges which criteria.** Every mandatory criterion (`standard/criteria.md`) gets a result, written as worksheet rows (`[{ "id", "result", "grade", "evidence", "note", "needed", "severity", "finding" }]`) in one file per part of the review:
+
+| File | Criteria | Written in |
+|---|---|---|
+| `launch-review/worksheet/R.json` | R: reviewability | Phases 0–1 (you ran it from the README?) |
+| `launch-review/worksheet/Q.json` | Q: quality history | Phase 2 |
+| `launch-review/worksheet/security.json` | S | Phase 3, security lens |
+| `launch-review/worksheet/architecture.json` | A, D | Phase 3, architecture & data lens |
+| `launch-review/worksheet/performance.json` | P | Phase 3, performance lens |
+| `launch-review/worksheet/operations.json` | O | Phase 3, operations lens |
+| `launch-review/worksheet/harness.json` | H | Phase 3, harness lens |
+| `launch-review/worksheet/U.json` | U: acceptance and report | Phase 5, from the acceptance results |
+
+Splitting the work this way keeps each part small enough to do properly; the gates make sure nothing falls between the parts.
 
 ### Phase 1: Map the system
 Write `launch-review/01-system-map.md`:
@@ -68,7 +86,14 @@ Review the code path behind every entry point in the system map against:
 - **Operations & launch readiness**: `references/operations.md`
 - **Harness**: what keeps the *next* change correct. Read the agent instruction file (`AGENTS.md`, `CLAUDE.md` or equivalent) and run every command in it; check that it states the business rules and the lessons from the quality history. Map each Must acceptance criterion and business rule to its test; check that tests assert outcomes and failure paths, run in CI, and pass three times in a row. Criteria H-01 to H-13 in `standard/criteria.md`.
 
-If the Agent tool is available, run the five lenses as parallel subagents (one message, five calls). Give each: the scope file, the system map, the relevant scan and history outputs, its checklist path, the finding format below, and the instruction "report only what you can point to in code or output; list what you could not check". Each writes `launch-review/findings/<lens>.md`. Otherwise do them one after another.
+If the Agent tool is available, run the five lenses as parallel subagents (one message, five calls). Give each: the scope file, the system map, the relevant scan and history outputs, its checklist path, its criteria (the table above), the finding format below, and the instruction "report only what you can point to in code or output; list what you could not check". Each writes `launch-review/findings/<lens>.md` and `launch-review/worksheet/<lens>.json`. Otherwise do them one after another.
+
+**Gate 3:** merge every worksheet file written so far and count:
+```bash
+node <skill-dir>/scripts/review-pack.mjs merge launch-review/review-pack.json launch-review/worksheet/*.json
+node <skill-dir>/scripts/review-pack.mjs gate worksheet launch-review/review-pack.json --areas R,Q,S,A,D,P,O,H
+```
+For each criterion it lists as missing, go back to the lens that owns it. Don't fill a gap with *cannot verify* to make the gate pass unless you really can't verify it, and say what's needed.
 
 ### Phase 4: Verify (the step that makes the report reliable)
 For every Critical and High finding, take a second, sceptical pass (a fresh subagent if available):
@@ -80,12 +105,14 @@ For every Critical and High finding, take a second, sceptical pass (a fresh suba
 ### Phase 5: Verdict and report
 Apply `references/severity.md` and write `launch-review/REPORT.md` from `references/report-template.md`: verdict first, then the top actions, findings, coverage and limitations. Record the commit reviewed, date and tool versions so the result is reproducible.
 
-Then fill in the review pack's reviewer sections (`launch-review/review-pack.json`, starting from the author's pack or the template): a **worksheet** result for every mandatory criterion in `standard/criteria.json` (*meets* with evidence of at least the criterion's grade, *does not meet* with severity or finding, *cannot verify* with what's needed, or *not applicable* with why), the verdict, findings, quality history, not-checked list and glossary. Grade C evidence (documentation, the author's word, an AI summary) never supports *meets*. Validate and render:
+Then fill in the review pack's reviewer sections in `launch-review/review-pack.json`: write `worksheet/U.json` from the acceptance results and merge it; add the verdict, findings, quality history (classes, hotspots, known problems), area notes, not-checked list and glossary. Every result is *meets* with evidence of at least the criterion's grade, *does not meet* with severity or finding, *cannot verify* with what's needed, or *not applicable* with why. Grade C evidence (documentation, the author's word, an AI summary) never supports *meets*. Don't grade the readability criteria (U-04, U-05) *meets* on a report you wrote yourself unless someone else read it; otherwise *cannot verify*, needed: "a reading test with the owner".
+
+**Gate 5**, then render:
 ```bash
-node <skill-dir>/scripts/review-pack.mjs validate launch-review/review-pack.json --stage review
+node <skill-dir>/scripts/review-pack.mjs gate review launch-review/review-pack.json
 node <skill-dir>/scripts/review-pack.mjs render launch-review/review-pack.json launch-review/review.html
 ```
-The validator refuses a verdict more favourable than the worksheet allows. Tell the user in chat: the verdict, the blockers, and the paths of the report and the page.
+The gate re-runs the checker (which refuses a verdict more favourable than the worksheet allows), counts every area, checks that every evidence file exists, and that every open Critical and High is a blocker. Take the numbers in `REPORT.md`'s summary from `review-pack.mjs status`. Tell the user in chat: the verdict, the blockers, and the paths of the report and the page.
 
 ### Phase 6: Fix and re-verify
 Offer to fix blockers in priority order. After each fix, re-run the evidence (the reproduction, scanner, or test) and update the finding to **Fixed: verified on <date>, commit <sha>**. Never delete findings; change their status. Re-issue the verdict when blockers are closed.

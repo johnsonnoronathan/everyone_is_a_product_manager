@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   loadCatalogue, applicability, validatePack, verdictCeiling, renderPage, templatePack, criteriaMarkdown,
+  gate, worksheetStatus, mergeWorksheet,
 } from '../.claude/skills/launch-review/scripts/review-pack.mjs';
 
 const catalogue = loadCatalogue();
@@ -110,6 +111,51 @@ test('render: all sections, escaped text, embedded screenshots, fragment mode', 
   const fragment = renderPage(pack, { baseDir: 'demo/flash-sale/review', catalogue, fragment: true });
   assert.ok(fragment.startsWith('<title>'));
   assert.ok(!fragment.includes('mermaid.min.js'));
+});
+
+test('gates count what is missing instead of trusting a summary', () => {
+  const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  const base = 'demo/flash-sale/review';
+  assert.equal(gate('review', pack, catalogue, { baseDir: base }).ok, true);
+
+  // Drop two security rows: the worksheet gate names exactly those two.
+  const dropped = pack.worksheet.filter((r) => r.id.startsWith('S-')).slice(0, 2).map((r) => r.id);
+  const short = { ...pack, worksheet: pack.worksheet.filter((r) => !dropped.includes(r.id)) };
+  const g = gate('worksheet', short, catalogue, { baseDir: base, areas: ['S'] });
+  assert.equal(g.ok, false);
+  const s = g.checks.find((c) => c.name.startsWith('S:'));
+  assert.equal(s.expected - s.found, 2);
+  assert.deepEqual(s.missing, dropped);
+  assert.equal(gate('worksheet', short, catalogue, { baseDir: base, areas: ['A'] }).ok, true, 'other areas unaffected');
+
+  // A screenshot that doesn't exist fails the submission gate.
+  const missingFile = structuredClone(pack);
+  missingFile.product.journeys[0].evidence[0].path = 'evidence/nope.png';
+  const ev = gate('submission', missingFile, catalogue, { baseDir: base }).checks.find((c) => c.name === 'Evidence files that exist');
+  assert.deepEqual(ev.missing, ['evidence/nope.png']);
+
+  // An open High that isn't a blocker fails the review gate.
+  const noBlocker = structuredClone(pack);
+  noBlocker.verdict.blockers = noBlocker.verdict.blockers.filter((b) => !b.refs.includes('ARC-11'));
+  const bl = gate('review', noBlocker, catalogue, { baseDir: base }).checks.find((c) => c.name.startsWith('Open Critical'));
+  assert.deepEqual(bl.missing, ['ARC-11']);
+});
+
+test('status and merge: worksheet split across lenses', () => {
+  const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  const rows = pack.worksheet;
+  const empty = { ...pack, worksheet: [] };
+  const before = worksheetStatus(empty, catalogue);
+  assert.equal(before.reduce((n, a) => n + a.missing.length, 0), 94);
+  const security = rows.filter((r) => r.id.startsWith('S-'));
+  const rest = rows.filter((r) => !r.id.startsWith('S-'));
+  const merged = mergeWorksheet(structuredClone(empty), [rest, security]);
+  assert.equal(merged.worksheet.length, rows.length);
+  assert.deepEqual(merged.worksheet.map((r) => r.id), rows.map((r) => r.id), 'merged rows come back in standard order');
+  assert.equal(worksheetStatus(merged, catalogue).every((a) => a.missing.length === 0), true);
+  // A later file replaces an earlier row for the same criterion.
+  const again = mergeWorksheet(structuredClone(merged), [[{ id: 'S-01', result: 'cannot-verify', needed: 'x' }]]);
+  assert.equal(again.worksheet.find((r) => r.id === 'S-01').result, 'cannot-verify');
 });
 
 test('the generated criteria list is up to date', () => {

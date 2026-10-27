@@ -526,8 +526,8 @@
     { "id": "U-01", "result": "meets", "grade": "B", "evidence": "Criteria v1.0 agreed before tests were written; v1.1 after round 1, with each change explained (`acceptance/criteria.md`)." },
     { "id": "U-02", "result": "meets", "grade": "A", "evidence": "All 10 Must criteria pass 3 of 3 runs (AC-07 through the race test); 0 flaky." },
     { "id": "U-03", "result": "meets", "grade": "A", "evidence": "Screenshots for 10 of 13 criteria; the other three attach the requests and answers." },
-    { "id": "U-04", "result": "meets", "grade": "B", "evidence": "This page opens with the verdict, its reason and the blockers." },
-    { "id": "U-05", "result": "meets", "grade": "B", "evidence": "Each result has a plain-language impact; numbers carry units and targets; terms are in §16." },
+    { "id": "U-04", "result": "cannot-verify", "evidence": "The page opens with the verdict, its reason and the blockers, but the reviewer wrote the page, so that is self-assessment.", "needed": "A reading test: someone who didn't write the page answers \"can we launch, and what first?\" from the first screen." },
+    { "id": "U-05", "result": "cannot-verify", "evidence": "Results have plain-language impacts, units and targets, and a glossary, judged only by the page's own author.", "needed": "A reading test with the owner, listing every term they didn't understand." },
     { "id": "U-06", "result": "meets", "grade": "B", "evidence": "Each criterion carries its evidence; §15 lists what wasn't checked." },
     { "id": "U-07", "result": "meets", "grade": "B", "evidence": "Commit `fa296a2`, dates, tool versions (Gitleaks 8.28.0, OSV-Scanner 2.2.3, Semgrep 1.181.0, Playwright 1.56.1, k6 1.3.0 in CI) and the reviewer are recorded." },
     { "id": "U-08", "result": "meets", "grade": "A", "evidence": "axe (WCAG 2.1 A/AA) on the sale page: no serious or critical violations (AC-09)." }

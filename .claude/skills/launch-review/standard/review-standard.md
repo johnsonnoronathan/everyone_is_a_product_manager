@@ -130,19 +130,35 @@ Bugs that came back once will come back again unless the reason they happen is f
 5. **Teach the agents.** Add a one-line rule to the agent instruction file pointing at the control, so the next AI-written change doesn't repeat the mistake.
 6. **Register what's still open** with severity, owner and date. At the next review, compare the counts per class.
 
-## 6. Tools
+## 6. Quality gates: software counts
+
+An AI reviewer (or a tired person) that says "all 94 criteria checked" may have checked 92. So counting is done by software, at the end of each stage, and a stage isn't finished until its gate passes:
+
+| Gate | When | It counts |
+|---|---|---|
+| `gate submission` | author, before handing in; reviewer, before starting | checker errors (must be 0), demo journeys with evidence, evidence files that really exist |
+| `gate worksheet --areas …` | reviewer, after each part of the review | per area: mandatory criteria with a result, and exactly which are missing |
+| `gate review` | reviewer, before signing | all of the above for every area, open Critical and High findings listed as blockers, Must acceptance criteria with a result, and a verdict the results allow |
+
+Each gate prints expected against found, lists what's missing, and exits with an error if anything is. Numbers in the report are copied from `status` or a gate, never counted by hand. The skills (`prepare-review`, `launch-review`) run the gates themselves.
+
+## 7. Tools
 
 ```bash
 S=.claude/skills/launch-review
 node $S/scripts/review-pack.mjs template review/review-pack.json --tier 2 --features accounts,money,aiAssisted
-node $S/scripts/review-pack.mjs validate review/review-pack.json --stage submission   # author, before handing in
-node $S/scripts/review-pack.mjs validate review/review-pack.json --stage review       # reviewer, before signing
+node $S/scripts/review-pack.mjs gate submission review/review-pack.json            # author, before handing in
+node $S/scripts/review-pack.mjs merge launch-review/review-pack.json launch-review/worksheet/*.json
+node $S/scripts/review-pack.mjs gate worksheet launch-review/review-pack.json --areas S,A,D
+node $S/scripts/review-pack.mjs status launch-review/review-pack.json              # results so far, per area
+node $S/scripts/review-pack.mjs gate review launch-review/review-pack.json         # reviewer, before signing
 node $S/scripts/review-pack.mjs render review/review-pack.json review/index.html
 node $S/scripts/history-scan.mjs . review/history [--since 2025-01-01] [--issues issues.json]
 ```
+`validate --stage submission|review` prints the checker's messages without the counts.
 
 A complete example is [`demo/flash-sale/review/`](../../../../demo/flash-sale/review/) in this repository.
 
-## 7. Changing the standard
+## 8. Changing the standard
 
 The standard is versioned (`standard` in `criteria.json` and in each pack). Add a criterion when a real problem escaped a review that followed the standard; remove one only when it never applies. Each change goes in the changelog.

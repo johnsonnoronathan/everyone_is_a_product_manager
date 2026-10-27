@@ -189,7 +189,7 @@ dialog .close { font: 500 13px var(--body); border: 1px solid var(--line); backg
     <h1>Flash-sale shop (demo, fixed version)</h1>
     <p class="meta"><span>Commit <code>fa296a2</code></span><span>Submitted 2026-10-17 by The demo team (this repository)</span><span>Reviewed 2026-10-17; harness and quality history added 2026-10-27 by Claude Code (launch-review skill), in sessions that had not written the code and never saw the answer key</span><span><code>johnsonnoronathan/everyone_is_a_product_manager</code>, folder <code>demo/flash-sale/fixed</code></span></p>
   </header>
-  <div class="layout"><nav class="toc" aria-label="Sections"><p class="toc-title">Contents</p><ol><li><a href="#verdict">Verdict</a></li><li><a href="#product">Product</a></li><li><a href="#demo">Demo</a></li><li><a href="#run">How to run it<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#requirements">Requirements</a></li><li><a href="#architecture">Architecture<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#rules">Business rules<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#harness">Harness<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#performance">Performance<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#security">Security<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#operations">Operations<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#history">Quality history<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#acceptance">Acceptance<i class="dot d-meets" aria-hidden="true"></i></a></li><li><a href="#findings">Findings</a></li><li><a href="#limits">Not checked</a></li><li><a href="#glossary">Glossary</a></li></ol></nav><main><section id="verdict"><header class="sec-head"><span class="sec-num">§1</span><h2>Verdict</h2></header>
+  <div class="layout"><nav class="toc" aria-label="Sections"><p class="toc-title">Contents</p><ol><li><a href="#verdict">Verdict</a></li><li><a href="#product">Product</a></li><li><a href="#demo">Demo</a></li><li><a href="#run">How to run it<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#requirements">Requirements</a></li><li><a href="#architecture">Architecture<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#rules">Business rules<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#harness">Harness<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#performance">Performance<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#security">Security<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#operations">Operations<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#history">Quality history<i class="dot d-fails" aria-hidden="true"></i></a></li><li><a href="#acceptance">Acceptance<i class="dot d-unknown" aria-hidden="true"></i></a></li><li><a href="#findings">Findings</a></li><li><a href="#limits">Not checked</a></li><li><a href="#glossary">Glossary</a></li></ol></nav><main><section id="verdict"><header class="sec-head"><span class="sec-num">§1</span><h2>Verdict</h2></header>
     
     <div class="verdict-grid">
       <div class="stamp nogo"><span class="stamp-label">Verdict</span><span class="stamp-text">NO-GO</span><span class="stamp-meta">Tier 3 · fa296a2</span></div>
@@ -232,8 +232,8 @@ dialog .close { font: 500 13px var(--body); border: 1px solid var(--line); backg
       <span class="score-n"><b class="t-meets">5</b> · <b class="t-fails">4</b> · <b class="t-unknown">0</b></span>
     </a><a class="score-row" href="#acceptance">
       <span class="score-name">Acceptance and report</span>
-      <span class="bar" role="img" aria-label="8 meet, 0 do not meet, 0 cannot be verified, 0 without a result, 0 not applicable, out of 8"><span class="seg k-meets" style="flex-grow:8" title="8 meet"></span></span>
-      <span class="score-n"><b class="t-meets">8</b> · <b class="t-fails">0</b> · <b class="t-unknown">0</b></span>
+      <span class="bar" role="img" aria-label="6 meet, 0 do not meet, 2 cannot be verified, 0 without a result, 0 not applicable, out of 8"><span class="seg k-meets" style="flex-grow:6" title="6 meet"></span><span class="seg k-cannot-verify" style="flex-grow:2" title="2 cannot be verified"></span></span>
+      <span class="score-n"><b class="t-meets">6</b> · <b class="t-fails">0</b> · <b class="t-unknown">2</b></span>
     </a><p class="legend"><span><i class="k-meets"></i>Meets</span><span><i class="k-does-not-meet"></i>Does not meet</span><span><i class="k-cannot-verify"></i>Cannot verify or no result</span><span><i class="k-not-applicable"></i>Not applicable</span></p></div>
     <p class="toolbar"><button type="button" id="focus-toggle" aria-pressed="false">Show only what needs attention</button></p>
     <p class="signoff">Not signed yet. Sign-off: name, date and commit <code>fa296a2</code>.</p></section>
@@ -871,16 +871,16 @@ dialog .close { font: 500 13px var(--body); border: 1px solid var(--line); backg
       <div class="crit-body"><p class="crit-title">Evidence can be seen <span class="tag">Mandatory</span></p>
         <p class="crit-std">User-visible behaviour has screenshots or recordings attached to each result.</p><p><span class="lbl">Evidence</span> Screenshots for 10 of 13 criteria; the other three attach the requests and answers.</p></div>
       <div class="crit-result"><span class="chip r-meets">Meets</span><span class="grade" title="Evidence grade">Grade A</span></div>
-    </li><li class="crit row-meets" id="c-U-04">
+    </li><li class="crit row-cannot-verify" id="c-U-04">
       <div class="crit-id">U-04</div>
       <div class="crit-body"><p class="crit-title">Verdict first, in plain words <span class="tag">Mandatory</span></p>
-        <p class="crit-std">The first screen of the report gives the verdict, the reason and the blockers in plain language.</p><p><span class="lbl">Evidence</span> This page opens with the verdict, its reason and the blockers.</p></div>
-      <div class="crit-result"><span class="chip r-meets">Meets</span><span class="grade" title="Evidence grade">Grade B</span></div>
-    </li><li class="crit row-meets" id="c-U-05">
+        <p class="crit-std">The first screen of the report gives the verdict, the reason and the blockers in plain language.</p><p><span class="lbl">Evidence</span> The page opens with the verdict, its reason and the blockers, but the reviewer wrote the page, so that is self-assessment.</p><p><span class="lbl">Needed to verify</span> A reading test: someone who didn&#39;t write the page answers &quot;can we launch, and what first?&quot; from the first screen.</p></div>
+      <div class="crit-result"><span class="chip r-cannot-verify">Cannot verify</span></div>
+    </li><li class="crit row-cannot-verify" id="c-U-05">
       <div class="crit-id">U-05</div>
       <div class="crit-body"><p class="crit-title">Every result is readable <span class="tag">Mandatory</span></p>
-        <p class="crit-std">Each result has a plain-language impact. Numbers have units and the target beside them. Technical terms are in a glossary.</p><p><span class="lbl">Evidence</span> Each result has a plain-language impact; numbers carry units and targets; terms are in §16.</p></div>
-      <div class="crit-result"><span class="chip r-meets">Meets</span><span class="grade" title="Evidence grade">Grade B</span></div>
+        <p class="crit-std">Each result has a plain-language impact. Numbers have units and the target beside them. Technical terms are in a glossary.</p><p><span class="lbl">Evidence</span> Results have plain-language impacts, units and targets, and a glossary, judged only by the page&#39;s own author.</p><p><span class="lbl">Needed to verify</span> A reading test with the owner, listing every term they didn&#39;t understand.</p></div>
+      <div class="crit-result"><span class="chip r-cannot-verify">Cannot verify</span></div>
     </li><li class="crit row-meets" id="c-U-06">
       <div class="crit-id">U-06</div>
       <div class="crit-body"><p class="crit-title">Every claim links its evidence <span class="tag">Mandatory</span></p>
