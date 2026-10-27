@@ -11,6 +11,28 @@ A one-page sneaker drop (100 pairs, one per customer) built twice:
 
 Both share `shared/` (frontend, sample data, and simulated infrastructure: a database layer that behaves like a hosted Postgres with network latency and a 10-connection pool, and a fake payment provider that occasionally hangs, like real ones on Black Friday).
 
+## Review
+
+The `fixed/` version, handed in and judged under the [review standard](../../.claude/skills/launch-review/standard/review-standard.md). Its verdict is NO-GO, and the page says why.
+
+**What it is:** a one-page flash sale for 100 pairs of sneakers, one per customer, opening at midnight. Status: demo; it runs locally against simulated payments and email.
+
+**Review page:** [`review/index.html`](review/index.html) (download and open it in a browser); the record behind it is [`review/review-pack.json`](review/review-pack.json). Staging: none.
+
+**Quick start** (Node.js 22.13 or later, nothing to install): `node demo/flash-sale/run.mjs fixed`, then open http://127.0.0.1:3000.
+
+**Test access:** type any email into the sign-in box (test sign-in). Admin calls use the header `x-admin-token: demo-admin-token`. Reset test data with `POST /api/admin/reset` (test routes only). Payments go to a local simulator, and email is simulated.
+
+**Tests:** `cd demo/flash-sale/acceptance && npm ci && npx playwright install chromium && VARIANT=fixed npx playwright test --repeat-each=3` runs the 13 agreed acceptance criteria in a real browser; the race and load tests are in [`.claude/skills/peak-traffic-test`](../../.claude/skills/peak-traffic-test/SKILL.md).
+
+**Settings:** every setting is listed on the review page under How to run it.
+
+**Architecture:** one Node.js process with no packages, a database (SQLite standing in for hosted Postgres), a payment-provider simulator, and background jobs that settle unknown payments and send queued emails. Details: the review page's Architecture section.
+
+**Known problems:** the known problems register on the review page, under Quality history.
+
+**For AI agents:** none yet; the review lists this as a problem (HAR-01).
+
 ## Run it
 
 Requires Node.js ≥ 22.13 (uses the built-in `node:sqlite`).

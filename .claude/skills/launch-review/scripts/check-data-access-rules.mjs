@@ -50,7 +50,7 @@ export function checkSql(files, root) {
         rlsEnabled.delete(key);
         rlsDisabled.add(key);
         findings.push({
-          severity: 'Critical', file: rel, line: lineOf(sql, m.index), table: key,
+          severity: 'Critical', rule: 'rls-disabled', file: rel, line: lineOf(sql, m.index), table: key,
           issue: `Row Level Security is switched OFF for ${key}. Anyone with the public (anon) key can read and change every row.`,
         });
       }
@@ -67,12 +67,12 @@ export function checkSql(files, root) {
       const where = { file: path.relative(root, file), line: lineOf(sql, sql.indexOf(statement.trim())), table: `${schema}.${table}` };
       if (command !== 'select' && (usingTrue || checkTrue)) {
         findings.push({
-          severity: 'Critical', ...where,
+          severity: 'Critical', rule: 'policy-allows-any-row', ...where,
           issue: `Policy ${policy[1]} lets ${roles} ${command.toUpperCase()} any row of ${schema}.${table} (condition is "true"). Restrict it to the row owner, e.g. USING (auth.uid() = user_id).`,
         });
       } else if (command === 'select' && usingTrue && /\b(anon|public)\b/.test(roles)) {
         findings.push({
-          severity: 'Review', ...where,
+          severity: 'Review', rule: 'public-read-policy', ...where,
           issue: `${schema}.${table} is readable by everyone, including logged-out visitors. Fine for public catalogue data; a data leak if it holds personal or order data.`,
         });
       }
@@ -81,7 +81,7 @@ export function checkSql(files, root) {
   for (const [key, where] of tables) {
     if (key.startsWith('public.') && !rlsEnabled.has(key) && !rlsDisabled.has(key)) {
       findings.push({
-        severity: 'Critical', file: where.file, line: where.line, table: key,
+        severity: 'Critical', rule: 'table-without-rls', file: where.file, line: where.line, table: key,
         issue: `Table ${key} is created without "ENABLE ROW LEVEL SECURITY". On Supabase, tables in the public schema are reachable with the public anon key, so anyone can read/modify it unless RLS is on.`,
       });
     }
@@ -100,18 +100,18 @@ export function checkFirebase(files, root) {
         const ops = m[1].trim();
         const readOnly = /^(read|get|list)(\s*,\s*(read|get|list))*$/.test(ops);
         findings.push({
-          severity: readOnly ? 'Review' : 'Critical', file: rel, line: lineOf(text, m.index),
+          severity: readOnly ? 'Review' : 'Critical', rule: readOnly ? 'firebase-public-read' : 'firebase-public-write', file: rel, line: lineOf(text, m.index),
           issue: readOnly
             ? `Rule "allow ${ops}: if true": anyone on the internet can read this data. Fine for public content only.`
             : `Rule "allow ${ops}: if true" lets anyone on the internet change this data.`,
         });
       }
       for (const m of text.matchAll(/request\.time\s*<\s*timestamp\.date\(/g)) {
-        findings.push({ severity: 'Critical', file: rel, line: lineOf(text, m.index), issue: 'Firebase "test mode" rule: the database is open to everyone until the date in the rule, then closes for everyone.' });
+        findings.push({ severity: 'Critical', rule: 'firebase-test-mode', file: rel, line: lineOf(text, m.index), issue: 'Firebase "test mode" rule: the database is open to everyone until the date in the rule, then closes for everyone.' });
       }
     } else if (name === 'database.rules.json') {
       for (const m of text.matchAll(/"\.(read|write)"\s*:\s*(true|"true")/g)) {
-        findings.push({ severity: 'Critical', file: rel, line: lineOf(text, m.index), issue: `Realtime Database "${m[1]}" is open to everyone.` });
+        findings.push({ severity: 'Critical', rule: 'realtime-db-open', file: rel, line: lineOf(text, m.index), issue: `Realtime Database "${m[1]}" is open to everyone.` });
       }
     }
   }

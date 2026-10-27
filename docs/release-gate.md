@@ -36,12 +36,12 @@ Release when all of these hold:
 - [ ] **Signed:** a named person signs off on a specific commit.
 
 ## How the gate runs
-1. **The author brings a submission pack.** It has four parts: a system map (question 1), the agreed acceptance criteria, how to run the app on staging, and the known limits. Sending back a submission without one is the cheapest rejection there is.
+1. **The author brings a submission pack.** At minimum: a system map (question 1), the agreed acceptance criteria, how to run the app on staging, and the known limits. Sending back a submission without one is the cheapest rejection there is. The [review standard](../.claude/skills/launch-review/standard/review-standard.md) defines the pack exactly, as a one-page demo and review site with a checker that lists what's missing.
 2. **Automated checks run on every submission:** secret scanning, vulnerable dependencies, risky code patterns and tests. They're cheap and repeatable, but they only produce leads.
-3. **An independent review answers the seven questions.** A person judges every Critical and High finding.
+3. **An independent review answers the seven questions**, by filling in every criterion that applies (*meets*, *does not meet*, *cannot verify*, *not applicable*) with graded evidence. A person judges every Critical and High finding.
 4. **Measure** traffic and concurrency where it matters, and run acceptance tests against the agreed criteria.
 5. **Decide and sign** against the definition of ready.
-6. **Learn from escapes.** Every problem that reaches customers anyway becomes a new checklist item, rule or test.
+6. **Learn from escapes and repeats.** Every problem that reaches customers anyway, and every kind of problem that comes back, gets a root cause, an automatic check that catches the next one, and a line in the agent instructions.
 
 ## The evidence behind these lessons
 From the demo ([scorecard](../demo/flash-sale/sample-reports/SCORECARD.md)):

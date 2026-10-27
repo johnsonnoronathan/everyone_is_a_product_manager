@@ -4,6 +4,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const variant = process.env.VARIANT ?? 'fixed';
+// APP_PORT / PAYMENT_PORT let two copies run side by side.
+const port = process.env.APP_PORT ?? '3000';
+const paymentPort = process.env.PAYMENT_PORT ?? '4100';
 
 export default defineConfig({
   testDir: './tests',
@@ -21,7 +24,7 @@ export default defineConfig({
     ['html', { outputFolder: `results/${variant}/html`, open: 'never' }],
   ],
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL: `http://127.0.0.1:${port}`,
     // Evidence for sign-off: a screenshot of every test's end state, full trace on failure.
     screenshot: 'on',
     trace: 'retain-on-failure',
@@ -30,11 +33,11 @@ export default defineConfig({
   projects: [{ name: 'desktop-chrome', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: `node ../run.mjs ${variant}`,
-    url: 'http://127.0.0.1:3000/',
+    url: `http://127.0.0.1:${port}/`,
     reuseExistingServer: false,
     // Payment hangs are off for deterministic runs; AC-08 turns them on explicitly. Short hangs
     // and a fast reconciler keep AC-08 under 15 seconds.
-    env: { PAYMENT_HANG_RATE: '0', PAYMENT_HANG_MS: '6000', RECONCILE_INTERVAL_MS: '1000' },
+    env: { PORT: port, PAYMENT_PORT: paymentPort, PAYMENT_HANG_RATE: '0', PAYMENT_HANG_MS: '6000', RECONCILE_INTERVAL_MS: '1000' },
     stdout: 'ignore',
     stderr: 'pipe',
   },

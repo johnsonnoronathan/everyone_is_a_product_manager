@@ -48,6 +48,8 @@ function collectRuns(report) {
   const runs = [];
   const visit = (suite, titles) => {
     for (const spec of suite.specs ?? []) {
+      // Demo journeys (prepare-review) take screenshots for the review page; they don't test a criterion.
+      if ((spec.tags ?? []).some((t) => t.replace(/^@/, '') === 'journey')) continue;
       const ids = new Set([...(spec.tags ?? []).map((t) => t.replace(/^@/, '')).filter((t) => /^AC-\d+$/.test(t)), ...(spec.title.match(AC_ID) ?? [])]);
       for (const test of spec.tests ?? []) {
         const last = test.results?.[test.results.length - 1];

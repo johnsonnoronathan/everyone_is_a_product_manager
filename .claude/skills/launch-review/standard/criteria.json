@@ -1,0 +1,961 @@
+{
+  "standard": "1.0",
+  "about": "The criteria a project is judged against. Each has a minimum risk tier from which it is mandatory, an optional condition (it applies only to projects with that feature), and the lowest evidence grade that can support a 'meets' result. Grades: A = the reviewer ran, reproduced or measured it; B = the reviewer inspected the thing itself (code, configuration, the document being judged); C = a statement only (documentation, the author's word).",
+  "features": {
+    "aiAssisted": "AI coding agents or assistants write or change the code",
+    "accounts": "users sign in",
+    "personalData": "stores personal data (names, emails, addresses, messages, health, financial)",
+    "money": "takes payments, issues refunds or credits, or holds balances",
+    "limitedStock": "sells or allocates something limited (stock, seats, coupons, slots)",
+    "adminArea": "has admin or staff functions",
+    "browserDatabase": "the browser talks to the database directly (Supabase, Firebase and similar)",
+    "webhooks": "receives webhooks from other services",
+    "uploads": "accepts file uploads",
+    "ai": "calls an AI model at runtime",
+    "launchSpike": "expects a launch, promotion or other traffic spike"
+  },
+  "areas": [
+    {
+      "code": "R",
+      "name": "Reviewability",
+      "question": "Can a reviewer start work from the README alone?",
+      "section": "run"
+    },
+    {
+      "code": "H",
+      "name": "Harness",
+      "question": "Will the next change, by a person or an AI agent, keep the project correct?",
+      "section": "harness"
+    },
+    {
+      "code": "A",
+      "name": "Architecture",
+      "question": "Is the structure sound for the agreed requirements?",
+      "section": "architecture"
+    },
+    {
+      "code": "D",
+      "name": "Data and business rules",
+      "question": "Can the data become wrong?",
+      "section": "rules"
+    },
+    {
+      "code": "S",
+      "name": "Security",
+      "question": "Who can do what, and can anything leak?",
+      "section": "security"
+    },
+    {
+      "code": "P",
+      "name": "Performance",
+      "question": "Will it hold the expected traffic and stay correct?",
+      "section": "performance"
+    },
+    {
+      "code": "O",
+      "name": "Operations",
+      "question": "Will we see problems, and can we recover?",
+      "section": "operations"
+    },
+    {
+      "code": "Q",
+      "name": "Quality history",
+      "question": "What has gone wrong before, and is it fixed for good?",
+      "section": "history"
+    },
+    {
+      "code": "U",
+      "name": "Acceptance and report",
+      "question": "Does it do what we agreed, and can the owner understand the result?",
+      "section": "acceptance"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "R-01",
+      "title": "Purpose is stated",
+      "standard": "The README says in plain words what the product does, who uses it and which user journeys matter most.",
+      "evidence": "The README.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "R-02",
+      "title": "Runs from a clean checkout",
+      "standard": "Following only the README, a reviewer gets the app running locally or on a staging copy within 30 minutes. No undocumented steps.",
+      "evidence": "The reviewer's own run: commands and output.",
+      "minGrade": "A",
+      "tier": 1
+    },
+    {
+      "id": "R-03",
+      "title": "Review page is complete",
+      "standard": "A review page in this standard's format exists, is linked from the README, and passes the validator for the submission stage.",
+      "evidence": "Validator output.",
+      "minGrade": "A",
+      "tier": 1
+    },
+    {
+      "id": "R-04",
+      "title": "Every setting is documented",
+      "standard": "Every setting the app reads is listed with its purpose, whether it is secret, an example value and whether production needs it.",
+      "evidence": "The settings table compared with a search of the code for every setting it reads.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "R-05",
+      "title": "Test access is ready",
+      "standard": "Test accounts for every role and a way to reset test data are documented. Payments, email and other side effects run in test mode.",
+      "evidence": "The reviewer used the accounts and the reset.",
+      "minGrade": "A",
+      "tier": 2,
+      "when": [
+        "accounts",
+        "money"
+      ]
+    },
+    {
+      "id": "R-06",
+      "title": "A staging copy exists",
+      "standard": "A staging environment, separate from production with its own database and keys, is available to the reviewer.",
+      "evidence": "Staging address and its configuration.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "R-07",
+      "title": "Requirements are agreed",
+      "standard": "The requirements the review judges against are written down with numbers (traffic, response times, acceptable data loss, recovery time) and agreed by a named person.",
+      "evidence": "The requirements section, with who agreed and when.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "R-08",
+      "title": "Known limits are declared",
+      "standard": "The author lists known problems, limitations and what is out of scope.",
+      "evidence": "Known problems register and out-of-scope list.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "R-09",
+      "title": "Versions are pinned",
+      "standard": "Runtime and tool versions are stated, and dependency lockfiles are committed.",
+      "evidence": "README, version files, lockfiles.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "H-01",
+      "title": "Agent instructions exist",
+      "standard": "An instruction file at the root (AGENTS.md, CLAUDE.md or equivalent) tells coding agents how to set up, build, test and run the project.",
+      "evidence": "The file.",
+      "minGrade": "B",
+      "tier": 1,
+      "when": [
+        "aiAssisted"
+      ],
+      "source": "agents.md format; Claude Code memory files"
+    },
+    {
+      "id": "H-02",
+      "title": "Agent instructions are true",
+      "standard": "Every command in the instruction file works as written, and every path and rule it mentions matches the code.",
+      "evidence": "The reviewer ran each command.",
+      "minGrade": "A",
+      "tier": 1,
+      "when": [
+        "aiAssisted"
+      ]
+    },
+    {
+      "id": "H-03",
+      "title": "Agents know the rules and boundaries",
+      "standard": "The instruction file states the rules that must never be broken (the business rules, where money and secrets are handled, files never edited by hand such as applied migrations) and the module boundaries.",
+      "evidence": "The file compared with the business rules section.",
+      "minGrade": "B",
+      "tier": 2,
+      "when": [
+        "aiAssisted"
+      ]
+    },
+    {
+      "id": "H-04",
+      "title": "Lessons are recorded for agents",
+      "standard": "Each recurring problem from the quality history appears in the instruction file as a short rule, linked to the test or check that enforces it.",
+      "evidence": "The file compared with the recurring problems.",
+      "minGrade": "B",
+      "tier": 2,
+      "when": [
+        "aiAssisted"
+      ]
+    },
+    {
+      "id": "H-05",
+      "title": "Agent instructions are lean and safe",
+      "standard": "The instruction file is short enough to be read in full every time (details linked out), contains no secrets and doesn't contradict itself or the code.",
+      "evidence": "The file.",
+      "minGrade": "B",
+      "tier": 2,
+      "when": [
+        "aiAssisted"
+      ]
+    },
+    {
+      "id": "H-06",
+      "title": "Every promise has a test",
+      "standard": "Every Must acceptance criterion and every business rule has an automated test.",
+      "evidence": "A table from each criterion and rule to its test.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "H-07",
+      "title": "Tests check outcomes",
+      "standard": "Tests assert the business result (stock, balance, order state, what the user sees, including what should disappear), not only status codes or that a page loaded.",
+      "evidence": "A sample of tests.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "H-08",
+      "title": "Failure paths are tested",
+      "standard": "Tests cover malformed and invalid input, unauthorised access, double submission, restarts, timeouts and slow or failing partners, not only the happy path.",
+      "evidence": "The test list, by failure type.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "H-09",
+      "title": "Tests are reliable",
+      "standard": "The whole suite passes three runs in a row with retries turned off.",
+      "evidence": "Three run logs.",
+      "minGrade": "A",
+      "tier": 2
+    },
+    {
+      "id": "H-10",
+      "title": "Every change goes through CI",
+      "standard": "Tests and checks run automatically on every change, and the main branch accepts only changes that pass.",
+      "evidence": "CI configuration and recent runs, branch protection.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "H-11",
+      "title": "Lint and type checks pass",
+      "standard": "A linter or formatter and, where the language has one, a type checker are configured and pass.",
+      "evidence": "The reviewer's run.",
+      "minGrade": "A",
+      "tier": 2
+    },
+    {
+      "id": "H-12",
+      "title": "Security checks are automated",
+      "standard": "Secret scanning and vulnerable-dependency checks run in CI or before every commit.",
+      "evidence": "CI configuration or hooks, and a recent run.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "H-13",
+      "title": "Changes get an independent review",
+      "standard": "Changes, AI-generated ones included, are reviewed before merging by someone other than their author: a person or a separate agent session.",
+      "evidence": "Recent pull requests and their reviews.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "A-01",
+      "title": "The system map is complete",
+      "standard": "Every entry point (pages, APIs, webhooks, scheduled jobs, admin and test routes, browser-to-database access) is listed with who may call it and what it touches. The reviewer found none missing.",
+      "evidence": "The map compared with the code's routes and jobs.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "A-02",
+      "title": "Responsibilities are clear",
+      "standard": "Each component has one stated job. Business rules live in one place on the server, not repeated in the browser or across services.",
+      "evidence": "Component list and the code behind each rule.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "A-03",
+      "title": "Decisions are recorded",
+      "standard": "Major design choices (database, hosting, payments, where state is kept) are written down with the reason, the alternatives and the known downsides.",
+      "evidence": "Decision records.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "A-04",
+      "title": "Outside calls are bounded",
+      "standard": "Every call to another service has a timeout, limited retries with back-off, and a defined outcome when it fails or doesn't answer.",
+      "evidence": "The code for each outside call.",
+      "minGrade": "B",
+      "tier": 1,
+      "source": "AWS Well-Architected, Reliability pillar"
+    },
+    {
+      "id": "A-05",
+      "title": "Slow work is off the request path",
+      "standard": "Email, file processing, reports and similar work run in the background through a durable queue or outbox, so a slow partner doesn't slow the user.",
+      "evidence": "The code path for each slow task.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "A-06",
+      "title": "Scales out, or states its limit",
+      "standard": "App servers keep nothing in their own memory that must be shared or survive (sessions, counters, rate limits, queues), or the one-server limit is documented and accepted.",
+      "evidence": "In-memory state found in the code, and the decision record.",
+      "minGrade": "B",
+      "tier": 2,
+      "source": "Twelve-Factor App, VI Processes"
+    },
+    {
+      "id": "A-07",
+      "title": "Environments are separated",
+      "standard": "Development, staging and production use separate databases, keys and accounts.",
+      "evidence": "Configuration per environment.",
+      "minGrade": "B",
+      "tier": 1,
+      "source": "Twelve-Factor App, X Dev/prod parity"
+    },
+    {
+      "id": "A-08",
+      "title": "Configuration is safe",
+      "standard": "Settings come from the environment, not the code. Production refuses to start with missing, placeholder or test settings.",
+      "evidence": "A start attempt with bad settings.",
+      "minGrade": "A",
+      "tier": 2,
+      "source": "Twelve-Factor App, III Config"
+    },
+    {
+      "id": "A-09",
+      "title": "Launch settings have one source of truth",
+      "standard": "Values that must be right on the day (opening times, prices, stock, switches) are set in one place, parsed strictly (full date, time and time zone), and the value in force is visible.",
+      "evidence": "Change the setting, restart, and read the value in force.",
+      "minGrade": "A",
+      "tier": 2
+    },
+    {
+      "id": "A-10",
+      "title": "Database changes are versioned",
+      "standard": "Schema changes run through versioned migrations. Nothing deletes data at start-up. Destructive changes have a backup and a plan.",
+      "evidence": "Migrations and start-up code.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "A-11",
+      "title": "Dependencies are real and needed",
+      "standard": "Every dependency exists in the official registry under that exact name, is maintained, and is needed.",
+      "evidence": "Dependency list checked against the registry.",
+      "minGrade": "B",
+      "tier": 1,
+      "source": "OWASP Top 10:2025 A03 Software Supply Chain Failures"
+    },
+    {
+      "id": "A-12",
+      "title": "Partner limits are known",
+      "standard": "Rate limits, quotas and costs of each outside service are known and fit the expected peak.",
+      "evidence": "Provider documentation compared with the target load.",
+      "minGrade": "B",
+      "tier": 3
+    },
+    {
+      "id": "D-01",
+      "title": "Business rules are written down",
+      "standard": "The business rules are listed in plain words, for example \"never sell more than the stock\", \"one per customer\", \"every paid order has exactly one payment\".",
+      "evidence": "The business rules section.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "D-02",
+      "title": "Rules can't be bypassed",
+      "standard": "Each rule is enforced where it can't be skipped: a database constraint, a transaction or an atomic update. A check followed by a separate write does not count.",
+      "evidence": "Schema and code for each rule.",
+      "minGrade": "B",
+      "tier": 1,
+      "source": "OWASP Top 10:2025 A06 Insecure Design"
+    },
+    {
+      "id": "D-03",
+      "title": "The server decides prices and permissions",
+      "standard": "Prices, totals, discounts, roles and ownership are worked out on the server from trusted data, never taken from the browser.",
+      "evidence": "The code, and a tampered request.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "D-04",
+      "title": "Money is exact",
+      "standard": "Amounts are stored as whole minor units (cents) or a decimal type. Rounding and currency rules are stated.",
+      "evidence": "Schema and calculations.",
+      "minGrade": "B",
+      "tier": 1,
+      "when": [
+        "money"
+      ]
+    },
+    {
+      "id": "D-05",
+      "title": "Repeats are safe",
+      "standard": "Creating orders, charges and other one-off actions is idempotent: a double click, a retry or a replayed request never creates a second one.",
+      "evidence": "A double-submit and a retry test.",
+      "minGrade": "A",
+      "tier": 1
+    },
+    {
+      "id": "D-06",
+      "title": "Steps that belong together complete together",
+      "standard": "Steps that belong together (reserve, charge, record) all happen, or are undone or completed by a recovery path. Money never moves without a record.",
+      "evidence": "The code path and a test that interrupts it.",
+      "minGrade": "B",
+      "tier": 1,
+      "when": [
+        "money"
+      ]
+    },
+    {
+      "id": "D-07",
+      "title": "Unknown outcomes are settled",
+      "standard": "When a payment or other outside action times out, the outcome is treated as unknown, not failed, and a background job settles it with the provider.",
+      "evidence": "A slow-partner test.",
+      "minGrade": "A",
+      "tier": 2,
+      "when": [
+        "money"
+      ]
+    },
+    {
+      "id": "D-08",
+      "title": "Input is validated at the edge",
+      "standard": "Every input is checked for type, range, length and format, and rejected rather than silently corrected. Malformed requests get a 4xx answer, never a crash.",
+      "evidence": "Malformed requests sent by the reviewer.",
+      "minGrade": "A",
+      "tier": 1,
+      "source": "OWASP Top 10:2025 A10 Mishandling of Exceptional Conditions"
+    },
+    {
+      "id": "D-09",
+      "title": "Time is handled explicitly",
+      "standard": "Times are stored in UTC. Business times (opening hours, deadlines) carry a time zone. Date parsing is strict.",
+      "evidence": "Code, and attempts with ambiguous dates.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "D-10",
+      "title": "Changes leave an audit trail",
+      "standard": "Changes to money, stock and admin settings record who, what and when.",
+      "evidence": "Logs or audit table after an admin change.",
+      "minGrade": "B",
+      "tier": 2,
+      "when": [
+        "money",
+        "adminArea"
+      ]
+    },
+    {
+      "id": "D-11",
+      "title": "Personal data has a lifecycle",
+      "standard": "What personal data is kept, why, for how long, and how it is deleted on request is stated and implemented.",
+      "evidence": "Privacy notes and the deletion path.",
+      "minGrade": "B",
+      "tier": 2,
+      "when": [
+        "personalData"
+      ]
+    },
+    {
+      "id": "D-12",
+      "title": "Records are reconciled",
+      "standard": "A routine check compares records with reality (charges with orders, stock with sales) and alerts on any difference.",
+      "evidence": "The check, run once.",
+      "minGrade": "A",
+      "tier": 3,
+      "when": [
+        "money",
+        "limitedStock"
+      ]
+    },
+    {
+      "id": "D-13",
+      "title": "Real payments work end to end",
+      "standard": "The real payment flow has been exercised with the real provider: a purchase, a decline and a refund in the provider's test mode, and one small real purchase and refund in production before launch.",
+      "evidence": "The provider's records of those transactions, matched to the app's orders.",
+      "minGrade": "A",
+      "tier": 2,
+      "when": [
+        "money"
+      ]
+    },
+    {
+      "id": "S-01",
+      "title": "No secrets are exposed",
+      "standard": "No secrets in the code, git history, logs or anything sent to the browser.",
+      "evidence": "Secret scan of files and history, and of the browser bundle.",
+      "minGrade": "A",
+      "tier": 1,
+      "source": "CWE-798"
+    },
+    {
+      "id": "S-02",
+      "title": "Every entry point checks who is asking",
+      "standard": "Identity and ownership are checked on the server at every entry point. Nobody can read or change another user's data by changing an id.",
+      "evidence": "Requests as another user and as nobody.",
+      "minGrade": "A",
+      "tier": 1,
+      "source": "OWASP Top 10:2025 A01 Broken Access Control"
+    },
+    {
+      "id": "S-03",
+      "title": "Admin and test routes are closed",
+      "standard": "Admin functions need an admin role with personal accounts, not a shared password. Test, debug and seed routes don't exist in production.",
+      "evidence": "Requests to every admin and test route.",
+      "minGrade": "A",
+      "tier": 1
+    },
+    {
+      "id": "S-04",
+      "title": "Database rules deny by default",
+      "standard": "Where the browser talks to the database directly, access rules deny by default and are tested for each table.",
+      "evidence": "Rules file and test queries with the public key.",
+      "minGrade": "A",
+      "tier": 1,
+      "when": [
+        "browserDatabase"
+      ]
+    },
+    {
+      "id": "S-05",
+      "title": "No injection",
+      "standard": "Database queries are parameterised. No shell command, template or HTML is built from user input without encoding.",
+      "evidence": "Code scan and review.",
+      "minGrade": "B",
+      "tier": 1,
+      "source": "OWASP Top 10:2025 A05 Injection"
+    },
+    {
+      "id": "S-06",
+      "title": "Sign-in is done properly",
+      "standard": "Sign-in uses a proven provider or library. Passwords are hashed with a slow algorithm. Session cookies are Secure, HttpOnly and SameSite. Signing out ends the session.",
+      "evidence": "Code and a sign-in session.",
+      "minGrade": "B",
+      "tier": 1,
+      "when": [
+        "accounts"
+      ],
+      "source": "OWASP Top 10:2025 A07 Authentication Failures"
+    },
+    {
+      "id": "S-07",
+      "title": "Abuse is limited",
+      "standard": "Sign-in, sign-up, password reset, checkout and other costly endpoints have rate limits or bot protection.",
+      "evidence": "Repeated requests until the limit applies.",
+      "minGrade": "A",
+      "tier": 2
+    },
+    {
+      "id": "S-08",
+      "title": "Safe defaults on the wire",
+      "standard": "HTTPS everywhere, security headers set, cross-site access (CORS) limited to known sites.",
+      "evidence": "Header check against the running site.",
+      "minGrade": "A",
+      "tier": 2,
+      "source": "OWASP Top 10:2025 A02 Security Misconfiguration"
+    },
+    {
+      "id": "S-09",
+      "title": "Errors don't leak internals",
+      "standard": "Users never see stack traces, SQL or internal paths.",
+      "evidence": "Requests that cause errors.",
+      "minGrade": "A",
+      "tier": 1
+    },
+    {
+      "id": "S-10",
+      "title": "No known exploitable vulnerabilities",
+      "standard": "Dependencies are scanned for known vulnerabilities and every hit is triaged.",
+      "evidence": "Dependency scan output and triage notes.",
+      "minGrade": "A",
+      "tier": 1,
+      "source": "OWASP Top 10:2025 A03 Software Supply Chain Failures"
+    },
+    {
+      "id": "S-11",
+      "title": "Webhooks are verified",
+      "standard": "Incoming webhooks check the sender's signature and ignore replays.",
+      "evidence": "A forged and a replayed webhook.",
+      "minGrade": "B",
+      "tier": 2,
+      "when": [
+        "webhooks"
+      ]
+    },
+    {
+      "id": "S-12",
+      "title": "Uploads are contained",
+      "standard": "Uploaded files are checked for type and size, stored outside the web root and served safely.",
+      "evidence": "Upload attempts with bad files.",
+      "minGrade": "B",
+      "tier": 2,
+      "when": [
+        "uploads"
+      ]
+    },
+    {
+      "id": "S-13",
+      "title": "AI features are fenced",
+      "standard": "Features that call an AI model resist prompt injection, can't reveal other users' data, and have cost and rate limits.",
+      "evidence": "Injection attempts and the limits in code.",
+      "minGrade": "B",
+      "tier": 2,
+      "when": [
+        "ai"
+      ],
+      "source": "OWASP Top 10 for LLM Applications (2025)"
+    },
+    {
+      "id": "S-14",
+      "title": "Personal data is protected",
+      "standard": "Personal data is kept to what is needed, travels only over encrypted connections, and stays out of logs and error reports.",
+      "evidence": "Logs from a test run, and the data model.",
+      "minGrade": "B",
+      "tier": 2,
+      "when": [
+        "personalData"
+      ]
+    },
+    {
+      "id": "S-15",
+      "title": "An independent security test is booked",
+      "standard": "An independent penetration test is done, or booked before or soon after launch.",
+      "evidence": "Test report or booking.",
+      "minGrade": "B",
+      "tier": 3
+    },
+    {
+      "id": "P-01",
+      "title": "The traffic target is agreed",
+      "standard": "The target load is worked out from business numbers (visitors, time window, peak factor) and agreed: requests per second per endpoint and response-time budgets.",
+      "evidence": "The worked target and who agreed it.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "P-02",
+      "title": "Load tested at and above target",
+      "standard": "A stepped load test reaches at least 150% of target on a production-like setup, with results per step (rate achieved, p95 response time, errors).",
+      "evidence": "Load test results.",
+      "minGrade": "A",
+      "tier": 2
+    },
+    {
+      "id": "P-03",
+      "title": "Load tests are repeated and kept",
+      "standard": "The load test was run at least twice, and every run is kept, failures included.",
+      "evidence": "All run results.",
+      "minGrade": "A",
+      "tier": 2
+    },
+    {
+      "id": "P-04",
+      "title": "Limited things survive a rush",
+      "standard": "Stock, seats, coupons and balances survive many simultaneous buyers: never oversold, nobody charged twice.",
+      "evidence": "A race test result.",
+      "minGrade": "A",
+      "tier": 1,
+      "when": [
+        "limitedStock",
+        "money"
+      ]
+    },
+    {
+      "id": "P-05",
+      "title": "Slow partners are tested",
+      "standard": "Behaviour is measured with the slowest realistic partner (payment, email, AI): responses of 3 to 10 seconds and time-outs cause no double actions and no pile-up.",
+      "evidence": "A slow-partner test result.",
+      "minGrade": "A",
+      "tier": 2,
+      "when": [
+        "money",
+        "ai"
+      ]
+    },
+    {
+      "id": "P-06",
+      "title": "Hot paths are efficient",
+      "standard": "Database queries on the busiest paths use indexes and no query-per-item loops. Hot reads are cached with a stated freshness.",
+      "evidence": "Query plans or code review of the hot paths.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "P-07",
+      "title": "Resources are bounded",
+      "standard": "Connection pools, queues and request bodies have limits and time-outs. Work fails fast instead of waiting forever.",
+      "evidence": "Configuration and code.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "P-08",
+      "title": "Overload is graceful",
+      "standard": "Beyond capacity, the app sheds load (a queue page, 'try again', 429 or 503) instead of crashing or slowing everyone down.",
+      "evidence": "A test beyond capacity.",
+      "minGrade": "A",
+      "tier": 3
+    },
+    {
+      "id": "P-09",
+      "title": "Pages are fast for people",
+      "standard": "Key pages meet the Core Web Vitals 'good' thresholds on a mid-range phone.",
+      "evidence": "Lighthouse or field data.",
+      "minGrade": "A",
+      "tier": 3,
+      "source": "web.dev Core Web Vitals"
+    },
+    {
+      "id": "P-10",
+      "title": "Scaling is planned",
+      "standard": "It is written down what to scale first, how quickly it can be scaled, and what peak costs.",
+      "evidence": "The capacity plan.",
+      "minGrade": "B",
+      "tier": 3
+    },
+    {
+      "id": "O-01",
+      "title": "Health checks are honest",
+      "standard": "A liveness check (the process is up) and a readiness check (its dependencies answer) exist and expose nothing internal.",
+      "evidence": "Calls to both, with a dependency down.",
+      "minGrade": "A",
+      "tier": 2,
+      "source": "Google SRE: production readiness"
+    },
+    {
+      "id": "O-02",
+      "title": "Restarts and deploys are safe",
+      "standard": "On shutdown the app finishes the requests in progress. A deploy or restart drops no requests and loses no data.",
+      "evidence": "A restart under load.",
+      "minGrade": "A",
+      "tier": 2,
+      "source": "Twelve-Factor App, IX Disposability"
+    },
+    {
+      "id": "O-03",
+      "title": "Backups restore",
+      "standard": "Backups run automatically and a restore has been tried. Possible data loss is within the agreed limit.",
+      "evidence": "Restore log.",
+      "minGrade": "A",
+      "tier": 1
+    },
+    {
+      "id": "O-04",
+      "title": "Rollback works",
+      "standard": "Going back to the previous release has been tried against the current database.",
+      "evidence": "Rollback log.",
+      "minGrade": "A",
+      "tier": 2
+    },
+    {
+      "id": "O-05",
+      "title": "Problems reach a person",
+      "standard": "Errors, response times and capacity are monitored, and alerts reach a named person who can act.",
+      "evidence": "A test alert, received.",
+      "minGrade": "A",
+      "tier": 2,
+      "source": "OWASP Top 10:2025 A09 Security Logging and Alerting Failures"
+    },
+    {
+      "id": "O-06",
+      "title": "Logs are useful and clean",
+      "standard": "Logs are structured, carry a request id, and contain no secrets or personal data.",
+      "evidence": "Logs from a test run.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "O-07",
+      "title": "The runbook has been tried",
+      "standard": "A launch and incident runbook exists, and every step was tried once with tools that exist.",
+      "evidence": "The runbook and a rehearsal log.",
+      "minGrade": "A",
+      "tier": 2
+    },
+    {
+      "id": "O-08",
+      "title": "Risky features can be paused",
+      "standard": "Checkout, sign-up or a promotion can be paused without a deploy and without losing data.",
+      "evidence": "Pause and resume, then compare data.",
+      "minGrade": "A",
+      "tier": 2,
+      "when": [
+        "launchSpike",
+        "money"
+      ]
+    },
+    {
+      "id": "O-09",
+      "title": "Server settings fit the platform",
+      "standard": "Keep-alive and time-out settings fit the load balancer, and request size limits are set.",
+      "evidence": "Server and load balancer settings.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "O-10",
+      "title": "People are ready",
+      "standard": "An on-call contact, an escalation path and a way to tell customers about problems are arranged for launch.",
+      "evidence": "The rota and contact list.",
+      "minGrade": "B",
+      "tier": 3
+    },
+    {
+      "id": "Q-01",
+      "title": "Defect history is collected",
+      "standard": "Defects from git history (fix commits, reverts), the issue tracker, incidents and earlier reviews are collected for the period under review.",
+      "evidence": "History scan output and the sources used.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "Q-02",
+      "title": "Recurring problems are identified",
+      "standard": "Defects are grouped into problem classes, and every class with two or more occurrences is listed.",
+      "evidence": "The problem classes with their occurrences.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "Q-03",
+      "title": "Root causes are named",
+      "standard": "Each recurring class has a root cause that explains why it keeps happening (a design or process gap, not 'a typo'), found by reading the actual changes.",
+      "evidence": "Root cause per class, with the commits or reports read.",
+      "minGrade": "B",
+      "tier": 1,
+      "source": "Google SRE: postmortem culture"
+    },
+    {
+      "id": "Q-04",
+      "title": "Controls prevent a repeat",
+      "standard": "Each recurring class has a control that catches the next occurrence automatically: a test, a code-scanning rule, a database constraint, a type, a CI gate, or an agent rule backed by one of these.",
+      "evidence": "The control, run against a known example.",
+      "minGrade": "A",
+      "tier": 1
+    },
+    {
+      "id": "Q-05",
+      "title": "Fixes come with regression tests",
+      "standard": "Each bug fix adds a test that fails without the fix.",
+      "evidence": "A sample of fix commits.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "Q-06",
+      "title": "Hotspots are examined",
+      "standard": "Files with the most fixes were reviewed in depth, and a refactor or extra tests are planned where needed.",
+      "evidence": "Hotspot list and notes.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "Q-07",
+      "title": "Known problems are registered",
+      "standard": "Every open known problem is listed with severity, owner and due date.",
+      "evidence": "The register.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "Q-08",
+      "title": "Fixes of fixes are explained",
+      "standard": "Reverts and repeated fixes in the same place are explained, and their cause is covered by a control.",
+      "evidence": "The reverts and repeat fixes, with notes.",
+      "minGrade": "B",
+      "tier": 2
+    },
+    {
+      "id": "Q-09",
+      "title": "The trend is measured",
+      "standard": "Defects per problem class are compared with the previous review, to show the controls work.",
+      "evidence": "Counts from both reviews.",
+      "minGrade": "A",
+      "tier": 3,
+      "source": "DORA: change failure rate"
+    },
+    {
+      "id": "U-01",
+      "title": "Criteria are agreed first",
+      "standard": "Acceptance criteria are numbered, versioned and agreed by the product owner before testing. Changes are approved again.",
+      "evidence": "The criteria file and its approvals.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "U-02",
+      "title": "Must criteria pass reliably",
+      "standard": "Every Must criterion passes three runs in a row with no retries.",
+      "evidence": "The acceptance run.",
+      "minGrade": "A",
+      "tier": 1
+    },
+    {
+      "id": "U-03",
+      "title": "Evidence can be seen",
+      "standard": "User-visible behaviour has screenshots or recordings attached to each result.",
+      "evidence": "The attachments.",
+      "minGrade": "A",
+      "tier": 1
+    },
+    {
+      "id": "U-04",
+      "title": "Verdict first, in plain words",
+      "standard": "The first screen of the report gives the verdict, the reason and the blockers in plain language.",
+      "evidence": "The report.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "U-05",
+      "title": "Every result is readable",
+      "standard": "Each result has a plain-language impact. Numbers have units and the target beside them. Technical terms are in a glossary.",
+      "evidence": "The report.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "U-06",
+      "title": "Every claim links its evidence",
+      "standard": "Each result links to its evidence, and whatever wasn't checked is listed.",
+      "evidence": "The report.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "U-07",
+      "title": "The review can be repeated",
+      "standard": "The report records the commit, date, tool versions and reviewer, so the review can be repeated.",
+      "evidence": "The report.",
+      "minGrade": "B",
+      "tier": 1
+    },
+    {
+      "id": "U-08",
+      "title": "Key pages are accessible",
+      "standard": "Key pages have no serious or critical accessibility violations in automated WCAG 2.1 AA checks.",
+      "evidence": "Accessibility scan output.",
+      "minGrade": "A",
+      "tier": 2,
+      "source": "WCAG 2.1"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ A load test without this is indistinguishable from an attack. The skills ask for
 - Run the intake (`launch-review` Phase 0) together and agree the **risk tier**. It decides what blocks launch.
 - Say up front what the result is and isn't. The result is evidence-backed findings and a GO / GO WITH CONDITIONS / NO-GO verdict, plus a list of what wasn't checked. It is **not** a guarantee of security, and not a compliance certification (GDPR, PCI DSS, HIPAA: you flag, you don't certify). For tier 3 apps, recommend an independent penetration test as well.
 - Agree acceptance criteria with the product owner **before** anyone writes tests, and get the "v1.0 agreed" line in writing.
+- Send the client §1 of the [review standard](../.claude/skills/launch-review/standard/review-standard.md): what to hand in (README minimum and review pack). A pack that fails the submission check goes back with the page listing what's missing. That is your first report, and it costs you almost nothing.
 
 ## 3. Run the review
 Ask Claude for a launch review. It runs the scanners, reviews every entry point, verifies Critical and High findings, and calls `peak-traffic-test` and `acceptance-test` where they apply. Before the report goes out, read it yourself: you are signing it.

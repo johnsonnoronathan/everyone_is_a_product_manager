@@ -5,44 +5,42 @@
 [![CI](https://github.com/johnsonnoronathan/everyone_is_a_product_manager/actions/workflows/ci.yml/badge.svg)](https://github.com/johnsonnoronathan/everyone_is_a_product_manager/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-AI lets anyone build a web app in a weekend. It doesn't tell you whether that app leaks customer data, charges the wrong price, sells stock it doesn't have, or falls over when the promotion email goes out. These skills run the check a careful engineering team would run before launch, and report back in plain language, with evidence.
+AI lets anyone build a web app in a weekend. It doesn't tell you whether that app leaks customer data, charges the wrong price, sells (or books) more than you have, or falls over when the promotion email goes out. These checks do what a careful engineering team would do before launch, and report back in plain language, with evidence.
 
-| Skill | Answers | You get |
-|---|---|---|
-| [`launch-review`](.claude/skills/launch-review/SKILL.md) | *Can we go live? What must be fixed first?* Security (OWASP Top 10:2025), architecture, performance, operations | A **GO / GO WITH CONDITIONS / NO-GO** report. Every finding comes with evidence, a plain-language impact and a fix, plus what was *not* checked |
-| [`peak-traffic-test`](.claude/skills/peak-traffic-test/SKILL.md) | *Will it survive the flash sale / Black Friday / launch spike, and stay correct?* | A target load worked out from your business numbers, a stepped k6 load test, and an "oversell race" (1,000 buyers, 100 items) |
-| [`acceptance-test`](.claude/skills/acceptance-test/SKILL.md) | *Does it do what we agreed?* | Numbered acceptance criteria agreed **before** testing, Playwright tests run 3× (flaky ≠ pass), and a criteria-by-criteria evidence table with screenshots for sign-off |
+They work for any web app: a shop, a booking system for classes or appointments, a membership site, an internal tool. The examples here are a sneaker shop, where "selling more than you have" means overselling; in a booking app it means an overbooked class or a double-booked appointment.
 
-The skills hand work to each other: `launch-review` calls on the other two and folds their results into one verdict.
+## What you need
 
-## The core idea
+- **[Claude Code](https://code.claude.com/docs/en/overview)**, Anthropic's coding assistant ([how to install it](https://code.claude.com/docs/en/setup)). It needs a paid Claude plan or an Anthropic API account. The checks are packaged as Claude Code *skills*: instructions and scripts it follows when you ask for a review.
+- **Your app's code in a folder on your computer.** If you built it in an online builder, export it first (most can export to GitHub, and you can download it from there).
+- **Ideally, a test copy of the app (staging)** with test payments. If you only have the live site, the review still works on the code and on a copy it starts on your computer; nothing is ever tested against the live site without your permission.
 
-Anyone can now write code with AI, using many different tools and models, so the last check before customers has to work no matter who or what wrote the code:
+## Start here
 
-- **Judge the evidence, not the author or the tool.** "The AI says it's ready" is a claim, not evidence.
-- **Review independently of the author**, and again after every round of fixes, not just re-test.
-- **"Ready" is a written set of evidence signed by a person**, not a feeling.
-
-The one-page version, with the seven questions every review must answer and the definition of ready: **[The release gate](docs/release-gate.md)**.
-
-## Quick start
-
-1. **Install** the skills in Claude Code:
+1. **Install the skills.** Inside Claude Code (type it where you chat with it, not in a terminal):
    ```
    /plugin install launch-readiness --marketplace johnsonnoronathan/everyone_is_a_product_manager
    ```
-   On Claude Code older than 2.1.275, use two steps: `/plugin marketplace add johnsonnoronathan/everyone_is_a_product_manager`, then `/plugin install launch-readiness@everyone-is-a-product-manager`. You can also copy the folders in `.claude/skills/` into your project's `.claude/skills/`.
-2. **Optional tools.** Each skill uses what's installed and reports what it couldn't check:
-   - [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/) for load tests
-   - [Gitleaks](https://github.com/gitleaks/gitleaks), [OSV-Scanner](https://github.com/google/osv-scanner) and [Semgrep](https://semgrep.dev/docs/getting-started/) for automated scans
-   - Node.js ≥ 18
-   - Playwright is installed per project by the acceptance-test skill.
-3. **Ask in plain words**, from your project folder:
-   - *"Review this app before launch."*
-   - *"Will we survive Black Friday? We expect 50,000 visitors in the first 10 minutes."*
-   - *"Help me write acceptance tests for checkout and tell me if it's ready to sign off."*
+   If that fails, your Claude Code is older than 2.1.275 (check with `claude --version` in a terminal). Use two steps instead: `/plugin marketplace add johnsonnoronathan/everyone_is_a_product_manager`, then `/plugin install launch-readiness@everyone-is-a-product-manager`. Engineers can also copy the folders in `.claude/skills/` into a project's `.claude/skills/`.
+2. **Open Claude Code in your app's folder and ask, in plain words:**
+   - *"Review this app before launch."* This is the one to start with. It runs the other checks itself where they apply.
+   - *"Will we survive the launch? We expect 50,000 visitors in the first 10 minutes."* For traffic only.
+   - *"Help me write acceptance tests for booking and tell me if it's ready to sign off."* For "does it do what we agreed?" only.
+   - *"Prepare my project for review."* When someone else (a consultant, your client's engineers) will review it: see [handing a project in](docs/hand-in-guide.md).
+3. **Read the result.** You get a verdict first (GO, GO WITH CONDITIONS or NO-GO), then what must happen before launch and who should do it, then the evidence. It comes as a report in a `launch-review/` folder and as a one-page review site you open in your browser: here is [an example](demo/flash-sale/review/) (download `index.html` and open it).
 
-   Reports are written to `launch-review/` in your project.
+You can give the result to your client. Do it privately, because it describes how the app could be broken: not in a public repository or a shared ticket.
+
+**Optional tools** make the review more thorough. Without them it still runs and tells you what it couldn't check. In order of value for a non-engineer: [Gitleaks](https://github.com/gitleaks/gitleaks) (finds leaked passwords and keys), [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/) (load tests), [OSV-Scanner](https://github.com/google/osv-scanner) (known security holes in the libraries you use), [Semgrep](https://semgrep.dev/docs/getting-started/) (risky code patterns). The scripts need Node.js 18 or later; Playwright is installed per project when needed. Claude Code can install these for you if you ask.
+
+## The skills
+
+| Skill | Answers | You get |
+|---|---|---|
+| [`launch-review`](.claude/skills/launch-review/SKILL.md) | *Can we go live? What must be fixed first?* Security, architecture, data and business rules, performance, operations, tests and AI-agent instructions, and the history of bugs that keep coming back | A **GO / GO WITH CONDITIONS / NO-GO** verdict and a one-page review site. Every problem comes with evidence, a plain-language impact and a fix, plus what was *not* checked |
+| [`peak-traffic-test`](.claude/skills/peak-traffic-test/SKILL.md) | *Will it survive the sale, the launch email, the schedule opening, and stay correct?* | A target load worked out from your business numbers, a stepped load test, and a "race" test: 1,000 people grabbing the last 100 items or places at once |
+| [`acceptance-test`](.claude/skills/acceptance-test/SKILL.md) | *Does it do what we agreed?* | Numbered acceptance criteria agreed **before** testing, browser tests run 3 times (a test that only sometimes passes counts as a failure), and a criteria-by-criteria table with screenshots for sign-off |
+| [`prepare-review`](.claude/skills/prepare-review/SKILL.md) | *How do I hand my project to a reviewer?* | The README section and review page a reviewer needs, with screenshots of the main journeys, checked complete by software |
 
 ## See it work
 
@@ -65,6 +63,27 @@ What this shows:
 No single check is enough, and fixes need re-review, not just re-testing.
 
 Details, including what we changed in the skills after each run: [scorecard](demo/flash-sale/sample-reports/SCORECARD.md).
+
+## The core idea
+
+Anyone can now write code with AI, using many different tools and models, so the last check before customers has to work no matter who or what wrote the code:
+
+- **Judge the evidence, not the author or the tool.** "The AI says it's ready" is a claim, not evidence.
+- **Review independently of the author**, and again after every round of fixes, not just re-test.
+- **"Ready" is a written set of evidence signed by a person**, not a feeling.
+
+The one-page version, with the seven questions every review must answer and the definition of ready: **[The release gate](docs/release-gate.md)**.
+
+## Handing a project to someone else: the review standard
+
+When one person builds and another reviews (you and a consultant, your team and a client), both work from the same format, so a review never starts from a blank page and every result reads the same. You don't need it to review your own app.
+
+- **The author hands in** a README that lets a stranger run the app, and a review page: what the app does with screenshots of the main journeys, how to run it, the agreed requirements, how it's built and tested, and known problems. The `prepare-review` skill writes both; software checks the hand-in is complete and lists what's missing. Plain-language guide: **[Handing your project in](docs/hand-in-guide.md)**.
+- **The reviewer judges** up to 99 criteria in nine areas (only those that fit the app apply): reviewability, harness (tests, CI, the instructions AI agents follow), architecture, data and business rules, security, performance, operations, quality history, and acceptance. Each gets *meets*, *does not meet*, *cannot verify* or *not applicable*, with graded evidence: something the reviewer ran, something they inspected, or only someone's claim. A claim alone never counts as *meets*.
+- **Software does the counting.** After each stage a script counts what must be there ("expected 13, found 11, missing H-04 and H-09"), and the review can't move on until it matches. A summary written by an AI or a tired person is never trusted for numbers.
+- **What keeps coming back gets fixed for good.** The review reads the git history and issue tracker, groups past bugs into kinds of problem that recur, names the root cause of each, checks that something now catches the next one automatically, and adds a rule to the AI agents' instructions.
+
+[The standard](.claude/skills/launch-review/standard/review-standard.md) · [all 99 criteria](.claude/skills/launch-review/standard/criteria.md) · [example review page](demo/flash-sale/review/)
 
 ## Why the results can be trusted
 
@@ -105,15 +124,27 @@ The skills drive established open-source tools and add what they lack: a plain-l
 
 The checklists draw on the [OWASP Top 10:2025](https://owasp.org/Top10/2025/), the OWASP API Security and LLM Top 10s, the AWS Well-Architected Framework, the Twelve-Factor App and Google SRE production-readiness practice.
 
+## Words used here
+
+| Word | Meaning |
+|---|---|
+| Staging | A test copy of your site with test data, separate from the live one. |
+| Load test | Sending many simulated visitors at the app to see how much it can take. |
+| Requests per second (req/s) | How many page loads or button presses reach the server each second. |
+| Flaky test | A test that sometimes passes and sometimes fails on the same code. Here it counts as a failure. |
+| Race test | Many simulated people trying to get the last items or places at the same moment. |
+| Review page / review pack | The one-page site a review produces, and the data file it's made from. |
+| Agent instructions (`AGENTS.md`, `CLAUDE.md`) | The file an AI coding assistant reads before changing your code. |
+
 ## Repository layout
 
 ```
 .claude/skills/
-  launch-review/        SKILL.md, references (intake, security, architecture, operations, severity, report), scripts, Semgrep rules
+  launch-review/        SKILL.md, references (intake, security, architecture, operations, severity, report), review standard and criteria, scripts (scanners, review pack, history scan), Semgrep rules
   peak-traffic-test/    SKILL.md, references (capacity interview, anti-patterns, report), capacity calculator, k6 scripts, Semgrep rules
   acceptance-test/      SKILL.md, references (writing criteria, Playwright rules), report generator, templates
 .claude-plugin/         marketplace.json: installs the three skills as the "launch-readiness" plugin
-demo/flash-sale/        naive/ and fixed/ apps, simulated infrastructure, acceptance suite, sample reports, answer key
+demo/flash-sale/        naive/ and fixed/ apps, simulated infrastructure, acceptance suite, sample reports, review page, answer key
 docs/                   release-gate.md: the core lessons; running-client-reviews.md: a playbook for paid review engagements
 tests/                  unit tests for the skill scripts, Semgrep rule fixtures
 ```
