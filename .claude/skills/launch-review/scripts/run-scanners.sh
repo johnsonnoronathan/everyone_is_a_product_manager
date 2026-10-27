@@ -86,7 +86,8 @@ if have semgrep; then
     configs+=(--config p/default)
     label="$label + registry p/default (license!)"
   fi
-  semgrep scan --metrics=off --disable-version-check --quiet "${configs[@]}" --json --output "$out/semgrep.json" "$project" >/dev/null 2>&1
+  # The review's own output (launch-review/) and dependencies are not the project's code.
+  semgrep scan --metrics=off --disable-version-check --quiet "${configs[@]}" --exclude launch-review --exclude node_modules --json --output "$out/semgrep.json" "$project" >/dev/null 2>&1
   n=$(count_json "$out/semgrep.json" 'const d=JSON.parse(require("fs").readFileSync(process.argv[1]));if(!Array.isArray(d.results))process.exit(1);console.log(d.results.length)')
   row "Risky code patterns" "semgrep $(semgrep --version 2>/dev/null): $label" "$(status_of "$n")" "$n" "semgrep.json"
 else

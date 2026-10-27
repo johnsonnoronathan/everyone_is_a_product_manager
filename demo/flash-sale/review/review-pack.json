@@ -37,11 +37,12 @@
         ]
       },
       {
-        "text": "Connect the real database, sign-in and card payment, have a reviewer check them, then make one small real purchase and refund.",
+        "text": "Connect the real database, sign-in and card payment, make production refuse to start without them, have a reviewer check them, then make one small real purchase and refund.",
         "who": "Developer, with the providers you choose; you make the test purchase",
         "effort": "One to two weeks, depending on the providers",
         "refs": [
           "INT-01",
+          "ARC-16",
           "S-06",
           "D-13"
         ]
@@ -1162,6 +1163,13 @@
         "owner": "Developer"
       },
       {
+        "id": "ARC-16",
+        "text": "Production starts without a database or payment address, and a restart then loses every order",
+        "severity": "High",
+        "owner": "Developer",
+        "status": "Open"
+      },
+      {
         "id": "ARC-10",
         "text": "A payment that never resolves stays \"confirming\" forever",
         "severity": "Medium",
@@ -1524,6 +1532,18 @@
       "fix": "One source of truth, only full times with a time zone, and show the time in force in the log and the admin answer. Effort: small.",
       "who": "Developer",
       "doneWhen": "A test starts the app twice on the same database with a changed opening time and sees the new time in force; \"Nov 27\", \"1\" and a date without a time zone are refused; both run in CI."
+    },
+    {
+      "id": "ARC-16",
+      "severity": "High",
+      "confidence": "Confirmed (found by an independent test review, 2026-10-27)",
+      "status": "Open",
+      "title": "Production starts without a database or payment address, and a restart then loses every order",
+      "impact": "With no database setting the app keeps orders only in memory, and with no payment address it calls a test address on the same machine; production mode starts anyway. A restart during the sale then erases every paid order while the customers stay charged (reproduced: 0 paid orders, 1 charge).",
+      "who": "Developer",
+      "where": "`fixed/server.mjs:70` (database defaults to memory), `:12` (payment address defaults to localhost)",
+      "fix": "In production, refuse to start without a real database connection and a payment address.",
+      "doneWhen": "Starting in production mode without either setting fails, and a restart test with production settings keeps every order."
     },
     {
       "id": "ARC-10",
@@ -2061,9 +2081,9 @@
     },
     {
       "id": "A-05",
-      "result": "does-not-meet",
-      "finding": "ARC-07",
-      "evidence": "Emails go through a durable queue in the database, but sending is simulated, and one failing email would block the rest (ARC-13)."
+      "result": "meets",
+      "grade": "B",
+      "evidence": "Emails are queued in a durable outbox, written in the same transaction as the payment, so a slow email provider can't slow checkout. Sending itself isn't built yet: that is ARC-07, not this criterion. (Corrected 2026-10-27 after an independent test review judged it this way.)"
     },
     {
       "id": "A-06",
@@ -2080,7 +2100,7 @@
       "id": "A-08",
       "result": "does-not-meet",
       "finding": "SEC-04",
-      "evidence": "With `NODE_ENV=production`, start-up refuses demo switches, placeholder secrets and a missing opening time (verified). Without it the demo configuration starts, and no production start command sets it."
+      "evidence": "With `NODE_ENV=production`, start-up refuses demo switches, placeholder secrets and a missing opening time (verified). Without it the demo configuration starts, and no production start command sets it. Production also starts without a database setting or payment address (ARC-16)."
     },
     {
       "id": "A-09",
@@ -2125,9 +2145,10 @@
     },
     {
       "id": "D-04",
-      "result": "meets",
-      "grade": "B",
-      "evidence": "Prices and charges are whole cents throughout."
+      "result": "does-not-meet",
+      "severity": "Low",
+      "evidence": "Amounts are whole cents throughout, but no currency or rounding rule is stated anywhere. (Corrected 2026-10-27: the criterion asks for both.)",
+      "fix": "State the currency (US dollars) and the rounding rule under Business rules."
     },
     {
       "id": "D-05",
@@ -2167,8 +2188,10 @@
     },
     {
       "id": "D-11",
-      "result": "cannot-verify",
-      "needed": "A privacy notice, retention period and deletion path for emails and addresses; none is in the repository."
+      "result": "does-not-meet",
+      "severity": "Medium",
+      "evidence": "Emails and shipping addresses are kept in orders and the email queue, with no stated purpose, retention period or way to delete them on request.",
+      "fix": "Write a privacy notice (what is kept, why, for how long) and build a way to delete a customer's data on request."
     },
     {
       "id": "D-12",
@@ -2178,8 +2201,9 @@
     },
     {
       "id": "D-13",
-      "result": "cannot-verify",
-      "needed": "The real card-payment connection, a purchase, decline and refund in the provider's test mode, and one small real purchase and refund. None of it is in the code yet."
+      "result": "does-not-meet",
+      "finding": "INT-01",
+      "evidence": "Payments have only ever gone to the local simulator; no card is collected, and the charge request carries only an amount and an email."
     },
     {
       "id": "S-01",
@@ -2207,8 +2231,9 @@
     },
     {
       "id": "S-06",
-      "result": "cannot-verify",
-      "needed": "The production sign-in (magic link) integration, which isn't in the repository: token format, email handling, session lifetime, admin two-factor."
+      "result": "does-not-meet",
+      "finding": "INT-01",
+      "evidence": "The only sign-in is a test stub that accepts any email, and it is switched off in production, where `POST /api/login` answers 404. A missing integration does not meet; it isn't merely unverified."
     },
     {
       "id": "S-07",
@@ -2306,9 +2331,9 @@
     },
     {
       "id": "O-01",
-      "result": "meets",
-      "grade": "A",
-      "evidence": "`/healthz` answers without the database; `/readyz` checks the database; both return only `{ok}`."
+      "result": "cannot-verify",
+      "evidence": "`/healthz` answers without the database and `/readyz` checks it; both return only `{ok}`.",
+      "needed": "A call to `/readyz` with the database stopped, showing it reports not ready. (Corrected 2026-10-27: the criterion asks for that test.)"
     },
     {
       "id": "O-02",
@@ -2423,9 +2448,10 @@
     },
     {
       "id": "U-01",
-      "result": "meets",
-      "grade": "B",
-      "evidence": "Criteria v1.0 agreed before tests were written; v1.1 after round 1, with each change explained (`acceptance/criteria.md`)."
+      "result": "does-not-meet",
+      "severity": "Low",
+      "evidence": "The criteria are numbered and versioned, and each change is explained, but neither version records who approved it or when.",
+      "fix": "Record who approved each version of the criteria, and when."
     },
     {
       "id": "U-02",

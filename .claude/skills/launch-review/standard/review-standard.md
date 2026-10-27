@@ -91,6 +91,8 @@ Each row of `worksheet[]` is `{ id, result, grade, evidence, note, needed, sever
 | `cannot-verify` | There isn't enough to judge. This is a result, not a gap in the report. | `needed`: what would let the reviewer verify it (access, a test run, a document). |
 | `not-applicable` | The criterion doesn't fit this product. | `note`: why. |
 
+**Absent or out of reach?** When something the criterion needs should be in what was handed in (code, configuration, a document, a test) and isn't, or the reviewer showed it failing, the result is *does not meet*. Use *cannot verify* only when it would live somewhere the reviewer couldn't look: production infrastructure, a provider's dashboard, a person's diary. A missing sign-in or payment integration does not meet; an unseen backup cannot be verified.
+
 **Evidence grades.** Documentation describes intent, code shows what should happen, and only a running system shows what does. So evidence is graded:
 
 | Grade | The reviewer… | Examples |

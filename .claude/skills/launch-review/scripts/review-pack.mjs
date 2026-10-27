@@ -874,6 +874,9 @@ export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme } = 
     const paths = evidencePaths(pack);
     const present = paths.filter((p) => existsSync(resolve(baseDir, p)));
     add('Evidence files that exist', paths.length, present.length, paths.filter((p) => !existsSync(resolve(baseDir, p))));
+  }
+  if (stage === 'submission') {
+    // The README is the author's to complete. At hand-in it is checked here; in a review it is judged as criteria R-01 to R-09.
     const readmePath = readme || resolve(baseDir, '..', 'README.md');
     if (!existsSync(readmePath)) add('README items (standard §1.1)', README_ITEMS.length, 0, [`no README at ${readmePath}`]);
     else {

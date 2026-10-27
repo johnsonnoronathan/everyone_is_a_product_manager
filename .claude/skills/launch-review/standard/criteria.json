@@ -222,7 +222,7 @@
     {
       "id": "H-08",
       "title": "Failure paths are tested",
-      "standard": "Tests cover invalid input, unauthorised access, double submission, timeouts and slow or failing partners, not only the happy path.",
+      "standard": "Tests cover malformed and invalid input, unauthorised access, double submission, restarts, timeouts and slow or failing partners, not only the happy path.",
       "evidence": "The test list, by failure type.",
       "minGrade": "B",
       "tier": 2
