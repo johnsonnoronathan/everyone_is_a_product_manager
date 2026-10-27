@@ -23,7 +23,13 @@ You are doing a pre-launch review for someone who may not be an engineer: often 
 ## Workflow
 
 ### Phase 0: Scope (≈5 min with the user)
-Run the intake in `references/intake.md`. Infer what you can from the code first and ask only what's left. If the author handed in a **submission pack** (system map, agreed acceptance criteria, how to run it on staging, known limits; see `docs/release-gate.md` in this project's repository), start from it but verify it: it's the author's claim, not evidence. Write `launch-review/00-scope.md` with the risk tier, and confirm it with the user before going deep.
+Run the intake in `references/intake.md`. Infer what you can from the code first and ask only what's left. Write `launch-review/00-scope.md` with the risk tier, and confirm it with the user before going deep.
+
+**Review pack.** Reviews follow `standard/review-standard.md`: the author hands in `review/review-pack.json` (README minimum, demo journeys with screenshots, how to run it, requirements, architecture, business rules, harness, known problems, acceptance criteria). If one exists, check it first:
+```bash
+node <skill-dir>/scripts/review-pack.mjs validate review/review-pack.json --stage submission
+```
+If it fails, stop: render the page (`review-pack.mjs render`) and hand it back. Its first section lists exactly what is missing, and that is the first report. If there is no pack, offer `review-pack.mjs template` to the author, or build one yourself from the code and label it as yours. Either way the pack is the author's claim, not evidence: verify it.
 
 ### Phase 1: Map the system
 Write `launch-review/01-system-map.md`:
@@ -48,14 +54,21 @@ Optional deeper tools (see `references/tooling.md`): OWASP ZAP baseline (passive
 
 Scanner output is a list of **leads**: triage every hit by reading the code. Drop false positives and say why in one line in the appendix.
 
-### Phase 3: Expert review (four lenses)
+**Quality history.** Find what keeps going wrong before reviewing the code, so the review knows where to look:
+```bash
+node <skill-dir>/scripts/history-scan.mjs <project-dir> launch-review/history [--since <date>] [--issues issues.json]
+```
+Add the issue tracker if you can (`gh issue list --state all --limit 1000 --json number,title,body,labels,state,createdAt,closedAt > issues.json`), plus incident notes and earlier review reports. The scan's classes come from keywords: for every class with two or more occurrences, read the actual changes, then name the **root cause** (why it keeps happening: a design or process gap, not the last bug), the **control** that would catch the next one automatically (and whether it exists and runs), and a one-line **agent rule** for the instruction file. Method: `standard/review-standard.md` §5. The hotspot files get the closest reading in Phase 3.
+
+### Phase 3: Expert review (five lenses)
 Review the code path behind every entry point in the system map against:
 - **Security**: `references/security.md` (OWASP Top 10:2025, API and LLM risks, platform pitfalls for Supabase/Firebase/Next.js/Stripe…)
 - **Architecture & data integrity**: `references/architecture.md`
 - **Performance & scale**: use the `peak-traffic-test` skill if there's a launch, promotion or any expected spike; otherwise its `references/anti-patterns.md` for a static pass.
 - **Operations & launch readiness**: `references/operations.md`
+- **Harness**: what keeps the *next* change correct. Read the agent instruction file (`AGENTS.md`, `CLAUDE.md` or equivalent) and run every command in it; check that it states the business rules and the lessons from the quality history. Map each Must acceptance criterion and business rule to its test; check that tests assert outcomes and failure paths, run in CI, and pass three times in a row. Criteria H-01 to H-13 in `standard/criteria.md`.
 
-If the Agent tool is available, run the four lenses as parallel subagents (one message, four calls). Give each: the scope file, the system map, the relevant scan outputs, its checklist path, the finding format below, and the instruction "report only what you can point to in code or output; list what you could not check". Each writes `launch-review/findings/<lens>.md`. Otherwise do them one after another.
+If the Agent tool is available, run the five lenses as parallel subagents (one message, five calls). Give each: the scope file, the system map, the relevant scan and history outputs, its checklist path, the finding format below, and the instruction "report only what you can point to in code or output; list what you could not check". Each writes `launch-review/findings/<lens>.md`. Otherwise do them one after another.
 
 ### Phase 4: Verify (the step that makes the report reliable)
 For every Critical and High finding, take a second, sceptical pass (a fresh subagent if available):
@@ -65,10 +78,19 @@ For every Critical and High finding, take a second, sceptical pass (a fresh suba
 - Merge duplicates: one root cause = one finding, listing all locations.
 
 ### Phase 5: Verdict and report
-Apply `references/severity.md` and write `launch-review/REPORT.md` from `references/report-template.md`: verdict first, then the top actions, findings, coverage and limitations. Record the commit reviewed, date and tool versions so the result is reproducible. Tell the user in chat: the verdict, the blockers, and the report path.
+Apply `references/severity.md` and write `launch-review/REPORT.md` from `references/report-template.md`: verdict first, then the top actions, findings, coverage and limitations. Record the commit reviewed, date and tool versions so the result is reproducible.
+
+Then fill in the review pack's reviewer sections (`launch-review/review-pack.json`, starting from the author's pack or the template): a **worksheet** result for every mandatory criterion in `standard/criteria.json` (*meets* with evidence of at least the criterion's grade, *does not meet* with severity or finding, *cannot verify* with what's needed, or *not applicable* with why), the verdict, findings, quality history, not-checked list and glossary. Grade C evidence (documentation, the author's word, an AI summary) never supports *meets*. Validate and render:
+```bash
+node <skill-dir>/scripts/review-pack.mjs validate launch-review/review-pack.json --stage review
+node <skill-dir>/scripts/review-pack.mjs render launch-review/review-pack.json launch-review/review.html
+```
+The validator refuses a verdict more favourable than the worksheet allows. Tell the user in chat: the verdict, the blockers, and the paths of the report and the page.
 
 ### Phase 6: Fix and re-verify
 Offer to fix blockers in priority order. After each fix, re-run the evidence (the reproduction, scanner, or test) and update the finding to **Fixed: verified on <date>, commit <sha>**. Never delete findings; change their status. Re-issue the verdict when blockers are closed.
+
+For each recurring problem class, a fix isn't finished until its control exists and has been shown to catch a past example, and the agent instruction file carries the one-line rule pointing at it. Otherwise the next AI-written change brings the problem back.
 
 For user-facing behaviour ("does checkout do what we agreed?") hand over to the `acceptance-test` skill; for traffic, to `peak-traffic-test`. Their results feed the same report.
 
@@ -82,4 +104,4 @@ For user-facing behaviour ("does checkout do what we agreed?") hand over to the 
 - **Fix:** Look the order up by id AND the signed-in customer (`WHERE id = ? AND customer_id = ?`); return 404 otherwise. Effort: S
 - **Reference:** OWASP A01:2025 Broken Access Control · CWE-639
 ```
-Prefixes: `SEC` security, `ARC` architecture/data integrity, `PERF` performance, `OPS` operations. Effort: S (< 2 h), M (≤ 1 day), L (> 1 day). Only cite a standard/CWE you're sure of.
+Prefixes: `SEC` security, `ARC` architecture/data integrity, `PERF` performance, `OPS` operations, `HAR` harness, `HIS` quality history. Effort: S (< 2 h), M (≤ 1 day), L (> 1 day). Only cite a standard/CWE you're sure of.

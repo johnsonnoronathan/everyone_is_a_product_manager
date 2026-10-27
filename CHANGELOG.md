@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+### Review standard
+- **A fixed format for handing projects in and judging them** (`launch-review/standard/review-standard.md`):
+  - a README minimum (nine items);
+  - a review pack (`review-pack.json`) that renders as a one-page demo and review site with 16 sections in a fixed order;
+  - four results (meets, does not meet, cannot verify, not applicable);
+  - evidence grades (measured, inspected, claim only);
+  - verdict rules.
+- **98 criteria in nine areas** (`standard/criteria.json`, listed in `criteria.md`): reviewability, harness (tests, CI, agent instructions such as `AGENTS.md`), architecture, data and business rules, security, performance, operations, quality history, acceptance and report.
+- **`review-pack.mjs`:**
+  - creates a template;
+  - checks a submission or a review (it refuses a verdict more favourable than the results allow);
+  - renders a self-contained page that works offline.
+- **`history-scan.mjs`:** reads git history (and optionally an issue export) and reports:
+  - fix commits, reverts and bundled fixes;
+  - recurring problem classes and code hotspots;
+  - the share of AI-co-authored commits.
+
+### Skills
+- `launch-review`:
+  - checks the author's review pack first, and hands back an incomplete one with the missing items listed;
+  - reviews the quality history: root cause, automatic control and agent rule for each recurring problem;
+  - has a fifth lens, the harness;
+  - fills in the worksheet and renders the review page alongside `REPORT.md`.
+
+### Demo
+- `demo/flash-sale/review/`: the fixed version handed in and judged under the standard. All 94 criteria that apply have a result. It records six kinds of problem that came back across three reviews, five problems introduced by fixes, and the verdict NO-GO.
+
 ## 0.1.0 (2026-10-26): first public release
 
 ### Core lessons

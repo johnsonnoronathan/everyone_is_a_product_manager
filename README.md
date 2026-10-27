@@ -25,6 +25,15 @@ Anyone can now write code with AI, using many different tools and models, so the
 
 The one-page version, with the seven questions every review must answer and the definition of ready: **[The release gate](docs/release-gate.md)**.
 
+## The review standard
+
+Every project is handed in and judged in the same format, so a review never starts from a blank page:
+- **What the author hands in:** a README with nine required items, and a review pack (`review/review-pack.json`) that renders as one web page. The page covers the demo (main user journeys with screenshots), how to run it, the agreed requirements, architecture, business rules, tests and agent instructions, and known problems. A checker refuses an incomplete pack and lists what's missing.
+- **How it's judged:** 98 criteria in nine areas: reviewability, harness (tests, CI, `AGENTS.md`), architecture, data and business rules, security, performance, operations, quality history, and acceptance. Each gets *meets*, *does not meet*, *cannot verify* or *not applicable*. Evidence is graded: something the reviewer measured, something they inspected, or only a claim. A claim alone never counts as *meets*.
+- **What keeps coming back:** the review reads the git history and issue tracker and groups past bugs into recurring problems. For each one it names the root cause, checks that something now catches the next one automatically, and adds a rule to the agent instructions.
+
+[The standard](.claude/skills/launch-review/standard/review-standard.md) · [all 98 criteria](.claude/skills/launch-review/standard/criteria.md) · worked example: [`demo/flash-sale/review/`](demo/flash-sale/review/) (download `index.html` and open it in a browser)
+
 ## Quick start
 
 1. **Install** the skills in Claude Code:
@@ -109,11 +118,11 @@ The checklists draw on the [OWASP Top 10:2025](https://owasp.org/Top10/2025/), t
 
 ```
 .claude/skills/
-  launch-review/        SKILL.md, references (intake, security, architecture, operations, severity, report), scripts, Semgrep rules
+  launch-review/        SKILL.md, references (intake, security, architecture, operations, severity, report), review standard and criteria, scripts (scanners, review pack, history scan), Semgrep rules
   peak-traffic-test/    SKILL.md, references (capacity interview, anti-patterns, report), capacity calculator, k6 scripts, Semgrep rules
   acceptance-test/      SKILL.md, references (writing criteria, Playwright rules), report generator, templates
 .claude-plugin/         marketplace.json: installs the three skills as the "launch-readiness" plugin
-demo/flash-sale/        naive/ and fixed/ apps, simulated infrastructure, acceptance suite, sample reports, answer key
+demo/flash-sale/        naive/ and fixed/ apps, simulated infrastructure, acceptance suite, sample reports, review page, answer key
 docs/                   release-gate.md: the core lessons; running-client-reviews.md: a playbook for paid review engagements
 tests/                  unit tests for the skill scripts, Semgrep rule fixtures
 ```

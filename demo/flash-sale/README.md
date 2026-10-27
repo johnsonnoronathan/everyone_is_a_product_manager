@@ -11,6 +11,10 @@ A one-page sneaker drop (100 pairs, one per customer) built twice:
 
 Both share `shared/` (frontend, sample data, and simulated infrastructure: a database layer that behaves like a hosted Postgres with network latency and a 10-connection pool, and a fake payment provider that occasionally hangs, like real ones on Black Friday).
 
+## Review page
+
+[`review/`](review/) is the fixed version handed in and judged under the [review standard](../../.claude/skills/launch-review/standard/review-standard.md). It covers the demo journeys with screenshots, how to run it, requirements, architecture, business rules, harness, performance, quality history and acceptance, with every criterion judged. Download [`review/index.html`](review/index.html) and open it in a browser; the record behind it is [`review/review-pack.json`](review/review-pack.json). Its verdict is NO-GO, and the page says why.
+
 ## Run it
 
 Requires Node.js ≥ 22.13 (uses the built-in `node:sqlite`).
