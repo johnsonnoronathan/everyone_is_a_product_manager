@@ -5,7 +5,7 @@ import { test, expect, devices } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 const ADMIN = { 'x-admin-token': 'demo-admin-token' };
-const PAYMENT_PROVIDER = 'http://127.0.0.1:4100';
+const PAYMENT_PROVIDER = `http://127.0.0.1:${process.env.PAYMENT_PORT ?? '4100'}`;
 let counter = 0;
 const uniqueEmail = (name) => `${name}-${Date.now()}-${counter++}@acceptance.test`;
 const uniqueAddress = () => `${Date.now() % 100000}-${counter++} Acceptance Avenue, Testville`;
