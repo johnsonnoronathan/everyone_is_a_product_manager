@@ -79,6 +79,16 @@ export function verdictCeiling(pack, catalogue) {
       }
     }
   }
+  // An open finding counts too, even when no failing worksheet row points at it: a Critical can't sit beside a GO.
+  const linked = new Set((pack.worksheet || []).filter((r) => r.result === 'does-not-meet' && r.finding).map((r) => r.finding));
+  for (const f of findings) {
+    if (/^fixed/i.test(f.status || '') || linked.has(f.id)) continue;
+    if (f.severity === 'Critical') lower('NO-GO', `${f.id} is an open Critical finding`);
+    else if (f.severity === 'High') {
+      if (tier >= 3 || !f.accepted) lower('NO-GO', `${f.id} is an open High finding${tier >= 3 ? ' (tier 3: never accepted)' : ' and is not risk-accepted'}`);
+      else lower('GO WITH CONDITIONS', `${f.id} is High, risk-accepted by ${f.accepted.by}`);
+    }
+  }
   return { ceiling, reasons };
 }
 
@@ -879,6 +889,7 @@ export function scannerHits(dir) {
     else if (/^osv/.test(name)) for (const r of d.results || []) for (const p of r.packages || []) for (const v of p.vulnerabilities || []) add('osv-scanner', v.id, p.package?.name);
     else if (/^npm-audit/.test(name)) for (const [pkg, v] of Object.entries(d.vulnerabilities || {})) add('npm audit', pkg, v.severity);
     else if (/^trivy/.test(name)) for (const r of d.Results || []) for (const m of r.Misconfigurations || []) add('trivy', m.ID, r.Target);
+    else if (/^data-access-rules/.test(name)) for (const f of d.findings || []) add('data-access-rules', f.rule || `${f.severity}: ${f.issue}`, f.file, f.line);
   }
   return [...hits.values()];
 }

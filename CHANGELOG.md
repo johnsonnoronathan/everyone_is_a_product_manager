@@ -24,7 +24,8 @@
   - the README's nine items and its link to the review page (at hand-in);
   - per area, mandatory criteria with a result (the worksheet can be split per lens and merged with `merge`; `status` shows progress);
   - open Critical and High findings listed as blockers, each blocker with a card, and Must acceptance criteria with a result;
-  - every scanner rule that fired, reported as a finding or dismissed with a reason (new `scans` field).
+  - every scanner rule that fired, reported as a finding or dismissed with a reason (new `scans` field; the database-rules check names a rule for each finding so it is counted too).
+- **The verdict ceiling counts open findings**, not only failing worksheet rows: an open Critical (or an unaccepted High) means NO-GO even if no row points at it.
 - **An owner-first review page:** the verdict comes with a to-do list (who, how big, when), what would happen if the app launched anyway, decisions only the owner can make, and an estimate. Every count on the page is computed from the data, and technical terms are explained where they first appear.
 - **Criterion D-13** "Real payments work end to end", and H-08 now names malformed input and restarts.
 - **`docs/hand-in-guide.md`:** the standard in plain words, for the person handing a project in.

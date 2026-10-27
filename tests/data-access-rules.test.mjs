@@ -11,6 +11,7 @@ test('finds open Supabase tables, permissive policies and open Firebase rules', 
   assert.equal(res.status, 0);
   const { findings, tables } = JSON.parse(fs.readFileSync(out, 'utf8'));
   const summary = findings.map((f) => `${f.severity} ${f.table ?? f.file}`).sort();
+  assert.ok(findings.every((f) => f.rule), 'every finding names its rule, so the review gate can count it');
   assert.deepEqual(summary, [
     'Critical firestore.rules',
     'Critical public.audit_log',

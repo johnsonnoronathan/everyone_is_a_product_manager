@@ -71,6 +71,24 @@ test('verdict ceiling follows the severity rules', () => {
   assert.equal(verdictCeiling(pack, catalogue).ceiling, 'NO-GO', 'tier 3 never accepts a High');
 });
 
+test('an open serious finding limits the verdict even without a failing worksheet row', () => {
+  const finding = { id: 'SEC-01', severity: 'Critical', status: 'Open', title: 't', fix: 'f', who: 'Developer', doneWhen: 'd' };
+  const pack = reviewedPack([], { tier: 3, findings: [finding] });
+  pack.worksheet = allMeet(pack);
+  pack.verdict.blockers = [{ text: 'Fix it', who: 'Developer', refs: ['SEC-01'] }];
+  assert.equal(verdictCeiling(pack, catalogue).ceiling, 'NO-GO');
+  assert.ok(validatePack(pack, catalogue, { stage: 'review' }).some((e) => e.level === 'error' && e.where === 'verdict.decision'), 'GO is refused');
+  assert.equal(gate('review', pack, catalogue, { baseDir: 'demo/flash-sale/review' }).ok, false);
+
+  finding.status = 'Fixed: verified on 2026-10-27';
+  assert.equal(verdictCeiling(pack, catalogue).ceiling, 'GO', 'a fixed finding no longer counts');
+  Object.assign(finding, { status: 'Open', severity: 'High' });
+  pack.project.riskTier = 2;
+  assert.equal(verdictCeiling(pack, catalogue).ceiling, 'NO-GO');
+  finding.accepted = { by: 'Owner', until: '2026-12-01' };
+  assert.equal(verdictCeiling(pack, catalogue).ceiling, 'GO WITH CONDITIONS', 'tier 2 may accept a High in writing');
+});
+
 test('validator rejects a verdict the worksheet does not allow, and weak evidence', () => {
   const pack = reviewedPack([]);
   pack.worksheet = allMeet(pack);
@@ -163,14 +181,17 @@ test('scanner gate: every rule that fired is reported or dismissed', () => {
     ] }));
     writeFileSync(join(dir, 'gitleaks-files.json'), JSON.stringify([{ RuleID: 'generic-api-key', File: 'app/server.mjs', StartLine: 10 }]));
     writeFileSync(join(dir, 'osv.json'), JSON.stringify({ results: [] }));
+    writeFileSync(join(dir, 'data-access-rules.json'), JSON.stringify({ findings: [{ severity: 'Critical', rule: 'firebase-public-write', file: 'firestore.rules', line: 4, issue: 'open' }] }));
     const hits = scannerHits(dir);
-    assert.equal(hits.length, 3, 'grouped by tool and rule');
+    assert.equal(hits.length, 4, 'grouped by tool and rule');
+    assert.deepEqual(hits.find((h) => h.tool === 'data-access-rules').where, ['firestore.rules:4']);
     assert.deepEqual(hits.find((h) => h.rule === 'sync-io-in-request-handler').where, ['app/server.mjs:68', 'app/server.mjs:72']);
 
     const p = structuredClone(pack);
     p.scans.triage = [
       { tool: 'semgrep', rule: 'sql-built-from-strings-js', outcome: 'reported', ref: 'SEC-06' },
       { tool: 'gitleaks', rule: 'generic-api-key', outcome: 'dismissed', reason: 'test fixture' },
+      { tool: 'data-access-rules', rule: 'firebase-public-write', outcome: 'reported', ref: 'SEC-06' },
     ];
     const c = gate('review', p, catalogue, { baseDir: base, scans: dir }).checks.find((x) => x.name.startsWith('Scanner rules'));
     assert.equal(c.ok, false);
