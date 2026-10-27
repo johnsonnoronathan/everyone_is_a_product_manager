@@ -268,7 +268,7 @@ function areaCounts(pack, catalogue, code) {
   }
   return counts;
 }
-const countsText = (n) => `${n.meets} meet · ${n['does-not-meet']} don't · ${n['cannot-verify'] + n.missing} can't be verified`;
+const countsText = (n) => `${n.meets} meet · ${n['does-not-meet']} don't · ${n['cannot-verify'] + n.missing} can't be verified${n['not-applicable'] ? ` · ${n['not-applicable']} don't apply` : ''}`;
 
 function criteriaBlock(pack, catalogue, code) {
   const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
@@ -281,7 +281,8 @@ function criteriaBlock(pack, catalogue, code) {
     const result = r.result || (app === 'off' ? 'not-applicable' : app === 'mandatory' ? 'missing' : 'optional');
     const sev = r.result === 'does-not-meet' ? severityOf(r, findings) : null;
     if (['does-not-meet', 'cannot-verify', 'missing'].includes(result)) {
-      attention.push(`<li><a class="fref" href="#c-${esc(c.id)}">${esc(c.id)}</a> ${esc(c.title)} ${result === 'missing' ? '<span class="chip r-missing">No result</span>' : chip(result)}${sevChip(sev)}${r.finding ? ` ${codeLink(r.finding)}` : ''}</li>`);
+      const what = r.result === 'cannot-verify' ? (r.needed ? `Needed: ${fmt(r.needed)}` : '') : r.finding ? '' : r.fix ? `Fix: ${fmt(r.fix)}` : '';
+      attention.push(`<li><span class="att-head"><a class="fref" href="#c-${esc(c.id)}">${esc(c.id)}</a> ${esc(c.title)} ${result === 'missing' ? '<span class="chip r-missing">No result</span>' : chip(result)}${sevChip(sev)}${r.finding ? ` ${codeLink(r.finding)}` : ''}</span>${what ? `<span class="att-what">${what}</span>` : ''}</li>`);
     }
     const tag = app === 'recommended' ? `<span class="tag">Recommended; required from tier ${c.tier}</span>` : app === 'off' ? '<span class="tag">Doesn\'t apply to this product</span>' : '';
     const notes = [
@@ -386,6 +387,8 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
   const acc = pack.acceptance || {};
   const findings = pack.findings || [];
   const blockerRefs = new Set((v.blockers || []).flatMap((b) => b.refs || []));
+  const conditionWhen = new Map((v.conditions || []).flatMap((c) => (c.refs || []).map((r) => [r, c.when || 'Before launch'])));
+  const findingWhen = (f) => (blockerRefs.has(f.id) ? 'Blocks launch' : conditionWhen.has(f.id) ? `Condition: ${conditionWhen.get(f.id)}` : f.when || (f.severity === 'Low' ? 'Can wait until after launch' : 'Agree a date before launch'));
   const refs = (list) => (list && list.length ? ` <span class="refs-inline">details: ${list.map(codeLink).join(' ')}</span>` : '');
 
   const todoRows = [
@@ -406,8 +409,11 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
       </div>
     </div>
     ${todo ? `<h3>What has to happen</h3>${todo}` : ''}
+    ${filled(v.decisions) ? `<div class="decide"><h3>Decisions only you can make</h3><ul>${v.decisions.map((d) => `<li>${fmt(d.text)}${refs(d.refs)}</li>`).join('')}</ul></div>` : ''}
+    ${v.estimate ? `<p class="estimate"><span class="lbl">When you could launch</span> ${fmt(v.estimate)}</p>` : ''}
     ${filled(v.noticeable) ? `<h3>What customers would notice today</h3>${list(v.noticeable)}` : ''}
     <div class="key"><h3>How to read this page</h3><dl>
+      <dt>Product owner</dt><dd>You: the person this review is for, who decides whether to launch and signs.</dd>
       <dt>Blocker</dt><dd>Launch can't happen until it's done.</dd>
       <dt>Condition</dt><dd>Also required, at the time shown, but not a reason to stop launch on its own.</dd>
       <dt>Cannot verify</dt><dd>The reviewer didn't have what was needed to check it. It is not a pass: each one says what's needed.</dd>
@@ -418,7 +424,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
     </dl></div>
     <h3>Results by area</h3>${scoreboard(pack, catalogue)}
     <p class="signoff">${v.signedBy ? `Signed by <strong>${fmt(v.signedBy)}</strong> on ${fmt(v.signedOn)} for version <code>${esc(p.commit)}</code>.` : `Not signed yet. ${fmt(v.signer || 'The product owner')} signs here, with name, date and the version reviewed (<code>${esc(p.commit || '…')}</code>).`}</p>
-    <p class="details-line">Review details: version <code>${esc(p.commit || '—')}</code>${p.repository ? ` of ${fmt(p.repository)}` : ''} · submitted ${esc(p.date || '—')} by ${fmt(p.author || '—')}${reviewed ? ` · reviewed ${esc(p.reviewedOn || '—')} by ${fmt(p.reviewer || '—')}` : ''}.</p>`;
+    <p class="details-line">Review details: version <code>${esc(p.commit || '—')}</code>${p.repository ? ` of ${fmt(p.repository)}` : ''}${p.versionNote ? ` (${fmt(p.versionNote)})` : ''} · submitted ${esc(p.date || '—')} by ${fmt(p.author || '—')}${reviewed ? ` · reviewed ${esc(p.reviewedOn || '—')} by ${fmt(p.reviewer || '—')}` : ''}.</p>`;
 
   const sevOrder = (f) => (blockerRefs.has(f.id) ? 0 : 1) * 10 + Math.max(0, ['Critical', 'High', 'Medium', 'Low'].indexOf(f.severity));
   const open = findings.filter((f) => !/^fixed/i.test(f.status || '')).sort((a, b) => sevOrder(a) - sevOrder(b));
@@ -426,7 +432,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
   const findingsBody = findings.length ? `
     <p class="lede">${open.length} open problem${open.length === 1 ? '' : 's'}, blockers first, then by severity.${done.length ? ` ${done.length} more already fixed and verified are listed at the end.` : ''}</p>
     <ul class="findings">${open.map((f) => `<li id="f-${esc(f.id)}" class="finding${blockerRefs.has(f.id) ? ' is-blocker' : ''}">
-      <div class="f-head"><span class="crit-id">${esc(f.id)}</span>${sevChip(f.severity)}${blockerRefs.has(f.id) ? '<span class="pill pill-block">Blocks launch</span>' : ''}<span class="f-status">${fmt(f.status || 'Open')}${f.confidence ? ` · ${fmt(f.confidence)}` : ''}</span></div>
+      <div class="f-head"><span class="crit-id">${esc(f.id)}</span>${sevChip(f.severity)}<span class="pill${blockerRefs.has(f.id) ? ' pill-block' : ''}">${esc(findingWhen(f))}</span><span class="f-status">${fmt(f.status || 'Open')}${f.confidence ? ` · ${fmt(f.confidence)}` : ''}</span></div>
       <p class="f-title">${fmt(f.title)}</p>
       <dl class="f-grid">
         ${f.impact ? `<dt>Impact</dt><dd>${fmt(f.impact)}</dd>` : ''}
@@ -434,6 +440,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
         ${f.where ? `<dt>Where</dt><dd>${fmt(f.where)}</dd>` : ''}
         ${f.fix ? `<dt>Fix</dt><dd>${fmt(f.fix)}</dd>` : ''}
         ${f.doneWhen ? `<dt>Done when</dt><dd>${fmt(f.doneWhen)}</dd>` : ''}
+        ${filled(f.dependsOn) ? `<dt>Depends on</dt><dd>${f.dependsOn.map((x) => (/^[A-Z]+-\d+$/.test(x) ? codeLink(x) : fmt(x))).join(' · ')}</dd>` : ''}
       </dl>
     </li>`).join('')}</ul>
     ${done.length ? `<h3>Already fixed and verified</h3><ul class="done">${done.map((f) => `<li id="f-${esc(f.id)}"><span class="crit-id">${esc(f.id)}</span> ${fmt(f.title)} <span class="dim">${fmt(f.status)}</span></li>`).join('')}</ul>` : ''}` : '<p class="dim">No problems recorded.</p>';
@@ -488,11 +495,22 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
 
   const histBody = `${notes('Q')}
     ${hist.period ? `<p><span class="lbl">Period</span> ${fmt(hist.period)}</p>` : ''}${filled(hist.sources) ? `<p><span class="lbl">Sources</span></p>${list(hist.sources)}` : ''}
-    ${filled(hist.stats) ? `<div class="stats">${hist.stats.map((s) => `<div class="stat"><span class="stat-v">${fmt(s.value)}</span><span class="stat-l">${fmt(s.label)}</span></div>`).join('')}</div>` : ''}
+    ${(() => {
+      const classes = hist.classes || [];
+      const occ = classes.flatMap((c) => c.occurrences || []);
+      const computed = classes.length ? [
+        { value: String(classes.length), label: 'Kinds of problem that came back' },
+        { value: String(occ.filter((o) => o.byFix).length), label: 'Problems introduced by a fix' },
+        { value: `${classes.filter((c) => c.status === 'controlled').length} / ${classes.filter((c) => c.status === 'partly controlled').length} / ${classes.filter((c) => !['controlled', 'partly controlled'].includes(c.status)).length}`, label: 'Kinds caught automatically / partly / not at all' },
+        { value: String((hist.known || []).length), label: 'Problems open now' },
+      ] : [];
+      const all = [...computed, ...(hist.stats || [])];
+      return all.length ? `<div class="stats">${all.map((s) => `<div class="stat"><span class="stat-v">${fmt(s.value)}</span><span class="stat-l">${fmt(s.label)}</span></div>`).join('')}</div>` : '';
+    })()}
     ${filled(hist.classes) ? `<h3>Problems that came back (${hist.classes.length} kinds)</h3><div class="classes">${hist.classes.map((c) => `<article class="pclass">
         <header><h4>${fmt(c.name)}</h4><span class="chip ${c.status === 'controlled' ? 'r-meets' : c.status === 'partly controlled' ? 'r-cannot-verify' : 'r-does-not-meet'}">${esc({ controlled: 'Caught automatically', 'partly controlled': 'Partly caught automatically', open: 'Not caught automatically' }[c.status] || c.status || 'Not caught automatically')}</span></header>
         <p class="occ-n">Seen ${(c.occurrences || []).length} times</p>
-        <ul class="occ">${(c.occurrences || []).map((o) => `<li><span class="oref">${fmt(o.ref)}</span> ${fmt(o.text)}</li>`).join('')}</ul>
+        <ul class="occ">${(c.occurrences || []).map((o) => `<li><span class="oref">${fmt(o.ref)}</span> ${fmt(o.text)}${o.byFix ? ' <span class="pill">Introduced by a fix</span>' : ''}</li>`).join('')}</ul>
         <p><span class="lbl">Why it keeps happening</span> ${fmt(c.rootCause)}</p>
         <p><span class="lbl">What catches the next one</span> ${fmt(c.control)}</p>
         ${c.controlCheck ? `<p><span class="lbl">Checked</span> ${fmt(c.controlCheck)}</p>` : ''}
@@ -562,6 +580,17 @@ ${fragment ? '' : '<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist
 
 const SCRIPT = `
 (function () {
+  function reveal(hash) {
+    var el = hash && hash.length > 1 && document.getElementById(hash.slice(1));
+    var d = el && el.closest && el.closest('details');
+    if (d) d.open = true;
+  }
+  reveal(location.hash);
+  window.addEventListener('hashchange', function () { reveal(location.hash); });
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest && ev.target.closest('a[href^="#"]');
+    if (a) reveal(a.getAttribute('href'));
+  });
   var dlg = document.getElementById('zoom-dialog');
   document.addEventListener('click', function (ev) {
     var z = ev.target.closest && ev.target.closest('.zoom');
@@ -736,7 +765,12 @@ dialog .close { font: 500 13px var(--body); border: 1px solid var(--line); backg
 .key dl { display: grid; grid-template-columns: minmax(110px, 150px) minmax(0, 1fr); gap: 5px 14px; margin: 0; font-size: 13.5px; }
 .key dt { font-weight: 600; } .key dd { margin: 0; color: var(--muted); }
 .attention { list-style: none; padding: 0; display: grid; gap: 6px; font-size: 14px; }
-.attention li { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.attention li { display: grid; gap: 3px; }
+.att-head { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.att-what { color: var(--muted); font-size: 13.5px; padding-left: 2px; }
+.decide { border: 1px solid var(--accent); border-radius: 6px; padding: 12px 14px; display: grid; gap: 6px; }
+.decide ul { gap: 6px; }
+.estimate { font-size: 15px; }
 details summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 6px 0; }
 details[open] summary { margin-bottom: 4px; }
 .f-grid { display: grid; grid-template-columns: minmax(80px, 100px) minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 14px; }
@@ -843,6 +877,10 @@ export function gate(stage, pack, catalogue, { baseDir = '.', areas } = {}) {
     const blockers = new Set((pack.verdict?.blockers || []).flatMap((b) => b.refs || []));
     const serious = (pack.findings || []).filter((f) => ['Critical', 'High'].includes(f.severity) && !/^fixed/i.test(f.status || ''));
     add('Open Critical and High findings listed as blockers', serious.length, serious.filter((f) => blockers.has(f.id)).length, serious.filter((f) => !blockers.has(f.id)).map((f) => f.id));
+    const ids = new Set((pack.findings || []).map((f) => f.id));
+    const bl = pack.verdict?.blockers || [];
+    const carded = bl.filter((b) => (b.refs || []).some((r) => ids.has(r)));
+    add('Blockers with a card in What to fix', bl.length, carded.length, bl.filter((b) => !carded.includes(b)).map((b) => (b.text || '').slice(0, 60)));
     const must = (pack.acceptance?.rows || []).filter((r) => r.priority === 'Must');
     const judged = must.filter((r) => ['pass', 'fail', 'flaky', 'external'].includes(r.status));
     add('Must acceptance criteria with a result', must.length, judged.length, must.filter((r) => !judged.includes(r)).map((r) => r.id));

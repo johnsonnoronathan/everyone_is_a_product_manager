@@ -20,14 +20,15 @@
       "launchSpike"
     ],
     "reviewer": "Claude Code (launch-review skill), in sessions that hadn't written the code",
-    "reviewedOn": "2026-10-17; tests, AI-agent instructions and quality history added 2026-10-27"
+    "reviewedOn": "2026-10-17; extended 2026-10-27 with checks of the tests, the AI-coding instructions and past problems",
+    "versionNote": "the app's code hasn't changed since; later commits touch only documentation and tests"
   },
   "verdict": {
     "decision": "NO-GO",
-    "reason": "Don't launch yet. Four things block it. The most serious: the opening time can silently be wrong, so the sale could open hours early or stay shut at midnight (ARC-11). And real card payments have never been tried, because the real payment and sign-in connections aren't in the code. Of the 23 problems the previous review found, 16 are fixed and verified; the other 7 are partly fixed or need a condition met.",
+    "reason": "Don't launch yet: four things block it. The most serious is that the opening time can silently be wrong, so the sale could open hours early or stay shut at midnight. And the shop has never taken a real card payment: the connections to the real payment provider, sign-in and database aren't built yet. The previous review found 23 problems; 16 are now fixed and verified, and 7 are still open in some form (partly fixed, accepted as a risk, or waiting on a condition). Together with the new problems this review found, the open ones are listed under What to fix.",
     "blockers": [
       {
-        "text": "Make the opening time impossible to set wrong: one place where it's set, only full times with a time zone, and the time in force shown on the admin screen and in the log.",
+        "text": "Make the opening time impossible to set wrong: one place where it's set, only full times with a time zone, and the time in force shown in the admin answer and in the log.",
         "who": "Developer",
         "effort": "Small: a few hours",
         "refs": [
@@ -36,20 +37,22 @@
         ]
       },
       {
-        "text": "Connect the real sign-in and card payment, have them reviewed, then make one small real purchase and refund.",
-        "who": "Developer, with the payment provider; product owner makes the test purchase",
-        "effort": "Medium to large: depends on the provider",
+        "text": "Connect the real database, sign-in and card payment, have a reviewer check them, then make one small real purchase and refund.",
+        "who": "Developer, with the providers you choose; you make the test purchase",
+        "effort": "One to two weeks, depending on the providers",
         "refs": [
+          "INT-01",
           "S-06",
           "D-13"
         ]
       },
       {
         "text": "Show that backups can be restored, that an alert reaches a named person, and who is on call on launch night.",
-        "who": "Hosting provider or developer; product owner names the on-call person",
-        "effort": "Medium: about a day",
+        "who": "Hosting provider or developer; you name the on-call person",
+        "effort": "About a day, once recovery targets are agreed",
         "why": "Required for a high-risk launch (risk tier 3).",
         "refs": [
+          "OPS-04",
           "O-03",
           "O-05",
           "O-10"
@@ -68,12 +71,12 @@
     ],
     "conditions": [
       {
-        "text": "Decide whether to launch without confirmation emails, or connect the email provider first.",
-        "who": "Product owner",
-        "effort": "Decision; connecting email is about a day",
+        "text": "Set up a test copy of the shop (staging) with its own database, keys and test payments, so the runbook and the real payment can be rehearsed safely.",
+        "who": "Hosting provider or developer",
+        "effort": "About a day",
         "when": "Before launch",
         "refs": [
-          "ARC-07"
+          "R-06"
         ]
       },
       {
@@ -136,7 +139,51 @@
       "If the page goes live more than about 25 days before the sale, it reloads itself non-stop (PERF-04).",
       "Shoppers who sign in early and open a new tab are signed out (OPS-03)."
     ],
-    "signer": "The product owner"
+    "signer": "The product owner",
+    "decisions": [
+      {
+        "text": "Choose the payment provider, sign-in provider and email provider (or decide to launch without confirmation emails).",
+        "refs": [
+          "INT-01",
+          "ARC-07"
+        ]
+      },
+      {
+        "text": "Agree how much order data you could afford to lose, and how fast the shop must be back after a failure (for example: at most 5 minutes of orders, back within 30 minutes).",
+        "refs": [
+          "R-07",
+          "OPS-04"
+        ]
+      },
+      {
+        "text": "Set the sale date. If the sale page goes live more than 25 days before it, the page reloads itself non-stop until PERF-04 is fixed.",
+        "refs": [
+          "PERF-04"
+        ]
+      },
+      {
+        "text": "Decide how long a payment may stay \"confirming\" before the pair goes back on sale and the shopper is told.",
+        "refs": [
+          "ARC-10"
+        ]
+      },
+      {
+        "text": "Accept, in writing and until a date, running only one copy of the app on launch night.",
+        "refs": [
+          "ARC-06"
+        ]
+      },
+      {
+        "text": "Decide whether to remove the page's mentions of an order history and an email, or have them built.",
+        "refs": [
+          "ARC-14"
+        ]
+      },
+      {
+        "text": "Sign this page once the blockers are done."
+      }
+    ],
+    "estimate": "An estimate, not a promise: about two to three weeks of developer work once the providers are chosen, most of it connecting real payments, plus the time to book a security test. Set the sale date after that."
   },
   "product": {
     "users": "Public shoppers (about 3,000 in the first 60 seconds), the small team running the sale, and admins with a shared token.",
@@ -244,8 +291,7 @@
     "outOfScope": [
       "The production identity provider and card-payment integration: they are not in the repository.",
       "Cloud and load-balancer configuration.",
-      "The simulated database and payment provider themselves.",
-      "The intentionally vulnerable `demo/flash-sale/naive/` version."
+      "The simulated database and payment provider themselves."
     ]
   },
   "run": {
@@ -321,10 +367,10 @@
       },
       {
         "name": "DB_FILE",
-        "purpose": "Database file; in memory by default (production uses hosted Postgres, simulated here)",
+        "purpose": "Demo only: file for the SQLite stand-in database. A real deployment needs a hosted Postgres connection, which isn't built (INT-01).",
         "secret": false,
-        "production": true,
-        "example": "/var/data/sale.db"
+        "production": false,
+        "example": "sale.db"
       },
       {
         "name": "PORT",
@@ -649,7 +695,7 @@
         "kind": "End to end, in a real browser (Playwright)",
         "covers": "13 agreed criteria: 12 in the browser, AC-07 through the race test",
         "command": "VARIANT=fixed npx playwright test --repeat-each=3",
-        "lastRun": "2026-10-17: 36 runs, 12 pass, 0 flaky",
+        "lastRun": "2026-10-17: 12 tests × 3 runs, all passed, none flaky",
         "inCI": true
       },
       {
@@ -791,7 +837,7 @@
       }
     ],
     "race": {
-      "summary": "**Pass.** 1,000 buyers each clicked Buy twice at the same moment, competing for 100 pairs. (The original report said 1,998 refused: the test script counted successful clicks as refused too. That counting bug was found by this page's reading test and fixed; the script now checks that every click is counted exactly once.)",
+      "summary": "**Pass.** 1,000 buyers each clicked Buy twice at the same moment, competing for 100 pairs. (The original report said 1,998 refused: the test script counted successful clicks as refused too. That counting bug was found when a reader of this page checked the numbers, and fixed; the script now checks that every click is counted exactly once.)",
       "rows": [
         {
           "measure": "Clicks sent (1,000 buyers × 2)",
@@ -828,31 +874,19 @@
       ]
     },
     "slowPartner": "With the payment provider answering in about 3 seconds: 40 charges for 40 paid orders, and 60 for 60 in a second run; repeat clicks were refused. The previous version charged 57 times for 39 pairs.",
-    "conclusion": "The expected peak passes in every run, with p95 at or under 5 ms. Headroom above 150% isn't reliably established on this machine: repeat the test on production-sized machines, with the load generator on its own machine, before relying on 2×."
+    "conclusion": "The expected peak passes in every run, with p95 at or under 5 ms. 150% passed in two of three runs, so headroom of 1.5× and above isn't reliably proven on this machine: repeat the test on production-sized machines, with the load generator on its own machine."
   },
   "history": {
     "period": "Three reviews, 2026-10-16 to 2026-10-17, and the git history of `demo/flash-sale/` (10 commits, 2026-10-16 to 2026-10-18).",
     "sources": [
-      "Three review reports on this app: the first version (30 problems), round 1 (23) and round 2 (all 23 re-checked, plus 13 new): `demo/flash-sale/sample-reports/`. Problems are labelled Review 1, 2 and 3 below.",
+      "Three review reports on this app: the first version (30 problems), round 1 (23) and round 2 (all 23 re-checked, plus 13 new): `demo/flash-sale/sample-reports/`. Problems are labelled Review 1, 2 and 3 below. Problem codes restart in each review: \"Review 1 PERF-03\" is not the same problem as PERF-03 under What to fix.",
       "Git history of `demo/flash-sale/`, scanned with `history-scan.mjs`: 10 commits, all with an AI co-author. Five look like fixes, but the two that matter bundle a whole round each (79 and 29 files), so git can't separate individual defects here and the review reports are the defect record.",
       "No issue tracker or incident log exists for the demo."
     ],
     "stats": [
       {
         "value": "66",
-        "label": "Problems found across three reviews"
-      },
-      {
-        "value": "6",
-        "label": "Kinds of problem that came back"
-      },
-      {
-        "value": "5",
-        "label": "Problems introduced by a fix"
-      },
-      {
-        "value": "23",
-        "label": "Still open"
+        "label": "Problems found by the three reviews (before 2026-10-27)"
       },
       {
         "value": "10 of 10",
@@ -869,19 +903,23 @@
         "occurrences": [
           {
             "ref": "Review 1 PERF-03",
-            "text": "No time limit on the payment call: one slow charge holds the request for 30 s."
+            "text": "No time limit on the payment call: one slow charge holds the request for 30 s.",
+            "byFix": false
           },
           {
             "ref": "Review 2 ARC-01",
-            "text": "A time-out was treated as a failure: 57 charges for 39 pairs."
+            "text": "A time-out was treated as a failure: 57 charges for 39 pairs. Introduced by the fix for the missing time limit.",
+            "byFix": true
           },
           {
             "ref": "Review 2 ARC-02",
-            "text": "Database busy right after payment: the shopper is told \"very busy\" and the paid order is stuck."
+            "text": "Database busy right after payment: the shopper is told \"very busy\" and the paid order is stuck.",
+            "byFix": false
           },
           {
             "ref": "Review 3 ARC-10",
-            "text": "An error that retrying can't fix leaves orders \"confirming\" forever."
+            "text": "An error that retrying can't fix leaves orders \"confirming\" forever.",
+            "byFix": false
           }
         ],
         "rootCause": "Every outside call was modelled as success or failure. \"Unknown\" (timed out, but the provider may still have charged) wasn't a state, so each fix moved the problem: no time limit, then a time-out treated as failure, then \"unknown\" with no deadline. The tests' payment stub never completed a charge after the app gave up, so the tests couldn't see it.",
@@ -895,27 +933,33 @@
         "occurrences": [
           {
             "ref": "Review 1 SEC-07",
-            "text": "Malformed JSON crashes the whole site."
+            "text": "Malformed JSON crashes the whole site.",
+            "byFix": false
           },
           {
             "ref": "Review 1",
-            "text": "A malformed Host header crashes the server."
+            "text": "A malformed Host header crashes the server.",
+            "byFix": false
           },
           {
             "ref": "Review 2 SEC-01",
-            "text": "One `GET //` crashes the shop. Introduced by the fix for the Host header."
+            "text": "One `GET //` crashes the shop. Introduced by the fix for the Host header.",
+            "byFix": true
           },
           {
             "ref": "Review 2 SEC-05",
-            "text": "A request body of `null` gives a 500 error."
+            "text": "A request body of `null` gives a 500 error.",
+            "byFix": false
           },
           {
             "ref": "Review 3 ARC-11",
-            "text": "\"Nov 27\" is accepted as 27 November 2001 and opens the sale."
+            "text": "\"Nov 27\" is accepted as 27 November 2001 and opens the sale.",
+            "byFix": false
           },
           {
             "ref": "Review 3 ARC-12",
-            "text": "The address check drops every non-Latin letter, so different addresses collide."
+            "text": "The address check drops every non-Latin letter, so different addresses collide.",
+            "byFix": false
           }
         ],
         "rootCause": "Each handler parses its own input with forgiving built-ins (`new URL`, `JSON.parse`, `new Date`, a regular expression), and each fix patched the one input that failed. There is no single validation layer and no test that sends malformed input.",
@@ -929,31 +973,38 @@
         "occurrences": [
           {
             "ref": "Review 1 ARC-02",
-            "text": "Every start-up recreates the database and deletes all orders."
+            "text": "Every start-up recreates the database and deletes all orders.",
+            "byFix": false
           },
           {
             "ref": "Review 1 ARC-04",
-            "text": "Settings and secrets live in the code."
+            "text": "Settings and secrets live in the code.",
+            "byFix": false
           },
           {
             "ref": "Review 2 ARC-05",
-            "text": "Every start still deletes all orders and resets stock."
+            "text": "Every start still deletes all orders and resets stock.",
+            "byFix": false
           },
           {
             "ref": "Review 2 SEC-02",
-            "text": "A one-call \"delete every order\" endpoint ships to production."
+            "text": "A one-call \"delete every order\" endpoint ships to production.",
+            "byFix": false
           },
           {
             "ref": "Review 2 SEC-04",
-            "text": "Test sign-in and demo secrets can reach production."
+            "text": "Test sign-in and demo secrets can reach production.",
+            "byFix": false
           },
           {
             "ref": "Review 3 ARC-11",
-            "text": "Changing `SALE_STARTS_AT` after the first start does nothing, while the log says it did. Introduced by the round-2 fix."
+            "text": "Changing `SALE_STARTS_AT` after the first start does nothing, while the log says it did. Introduced by the round-2 fix.",
+            "byFix": true
           },
           {
             "ref": "Review 3 OPS-09",
-            "text": "Rolling back to the previous release fails against the new database. Introduced by the round-2 migrations."
+            "text": "Rolling back to the previous release fails against the new database. Introduced by the round-2 migrations.",
+            "byFix": true
           }
         ],
         "rootCause": "Start-up, settings and deploy behaviour was never specified or tested. Every test starts a fresh app on an empty in-memory database, so the second start, start-up with old data, and the previous release were invisible.",
@@ -967,27 +1018,33 @@
         "occurrences": [
           {
             "ref": "Review 1 PERF-01",
-            "text": "Stock is read, then written back: 1,962 pairs sold out of 100."
+            "text": "Stock is read, then written back: 1,962 pairs sold out of 100.",
+            "byFix": false
           },
           {
             "ref": "Review 1 PERF-02",
-            "text": "No one-per-customer limit and no repeat-safety: 963 shoppers charged twice."
+            "text": "No one-per-customer limit and no repeat-safety: 963 shoppers charged twice.",
+            "byFix": false
           },
           {
             "ref": "Review 1 ARC-03",
-            "text": "No database constraints for any business rule."
+            "text": "No database constraints for any business rule.",
+            "byFix": false
           },
           {
             "ref": "Review 1 SEC-05",
-            "text": "The price is taken from the browser."
+            "text": "The price is taken from the browser.",
+            "byFix": false
           },
           {
             "ref": "Review 2 SEC-03",
-            "text": "\"One per customer\" is really one per email address."
+            "text": "\"One per customer\" is really one per email address.",
+            "byFix": false
           },
           {
             "ref": "Review 3 SEC-03",
-            "text": "Still easy to get round, and nothing slows bots down."
+            "text": "Still easy to get round, and nothing slows bots down.",
+            "byFix": false
           }
         ],
         "rootCause": "Rules were written as checks inside request handlers, which simultaneous requests and small variations slip past. Once moved into atomic updates and unique indexes they held; the identity behind \"one per customer\" is still weak.",
@@ -1001,23 +1058,28 @@
         "occurrences": [
           {
             "ref": "Review 2 ARC-08",
-            "text": "The page gets stuck when the server is busy or the session has expired."
+            "text": "The page gets stuck when the server is busy or the session has expired.",
+            "byFix": false
           },
           {
             "ref": "Review 2 ARC-09",
-            "text": "Pairs returned after a failed payment are never offered again (found by a test)."
+            "text": "Pairs returned after a failed payment are never offered again (found by a test).",
+            "byFix": false
           },
           {
             "ref": "Review 3 ARC-15",
-            "text": "The sign-in box never disappears; it has been there since the first version."
+            "text": "The sign-in box never disappears; it has been there since the first version.",
+            "byFix": false
           },
           {
             "ref": "Review 3 PERF-04",
-            "text": "A countdown longer than about 25 days reloads the page non-stop. Introduced with the round-2 countdown."
+            "text": "A countdown longer than about 25 days reloads the page non-stop. Introduced by the round-2 countdown.",
+            "byFix": true
           },
           {
             "ref": "Review 3 ARC-14",
-            "text": "The page points to an order history and an email that don't exist."
+            "text": "The page points to an order history and an email that don't exist.",
+            "byFix": false
           }
         ],
         "rootCause": "The acceptance tests check what should appear, never what should disappear or change, and nothing tests the page's timers and error paths. The page was reviewed through the server's eyes.",
@@ -1031,23 +1093,28 @@
         "occurrences": [
           {
             "ref": "Review 1 OPS-01",
-            "text": "No error tracking, uptime monitoring or alerts."
+            "text": "No error tracking, uptime monitoring or alerts.",
+            "byFix": false
           },
           {
             "ref": "Review 1 OPS-02",
-            "text": "No backups or recovery."
+            "text": "No backups or recovery.",
+            "byFix": false
           },
           {
             "ref": "Review 2 OPS-04",
-            "text": "The launch-night safety nets aren't in evidence."
+            "text": "The launch-night safety nets aren't in evidence.",
+            "byFix": false
           },
           {
             "ref": "Review 3 OPS-04",
-            "text": "Still listed in the runbook, still not shown."
+            "text": "Still listed in the runbook, still not shown.",
+            "byFix": false
           },
           {
             "ref": "Review 3 OPS-08",
-            "text": "The runbook relies on tools that don't exist: loading stock, resolving a stuck payment, exporting addresses, comparing charges with orders."
+            "text": "The runbook relies on tools that don't exist: loading stock, resolving a stuck payment, exporting addresses, comparing charges with orders.",
+            "byFix": false
           }
         ],
         "rootCause": "Operations were written down as intentions (a runbook, a checklist) but never rehearsed, so missing tools and broken steps stayed invisible until a reviewer tried them.",
@@ -1080,6 +1147,13 @@
       }
     ],
     "known": [
+      {
+        "id": "INT-01",
+        "text": "The real database, sign-in and card payment aren't connected",
+        "severity": "High",
+        "owner": "Developer, with the providers the product owner chooses",
+        "status": "Open"
+      },
       {
         "id": "ARC-11",
         "text": "The opening time can silently be wrong",
@@ -1417,16 +1491,28 @@
   },
   "areaNotes": {
     "R": "A reviewer can run the app and its tests from the README in minutes. What's missing is a staging copy and any agreed figure for acceptable data loss and recovery time.",
-    "H": "The tests that exist are good: they check outcomes, cover payment failures and double clicks, and pass reliably in CI. What's missing is the layer that keeps the next AI-written change on track: there are no instructions for coding agents, no test sends malformed input or restarts the app (two problems that came back), and nothing lints or type-checks the server.",
+    "H": "The tests that exist check orders, charges and messages, cover payment failures and double clicks, and pass reliably in CI; they don't check what should disappear from the page. What's missing is the layer that keeps the next AI-written change on track: there are no instructions for coding assistants, no test sends malformed input or restarts the app (two problems that came back), and nothing lints or type-checks the server.",
     "A": "A deliberately small design: one process, no packages, every decision on the server. It handles slow payments correctly now. The weak points are the opening time, which can be silently wrong, and a rollback that fails.",
     "D": "Stock, duplicates and the price are enforced by the database and proven by a 1,000-buyer race. The gaps are input that's accepted when it should be refused (the opening time) and payments that can stay \"confirming\" forever.",
     "S": "Access to orders, injection, secrets and error messages are sound, and test-only routes are refused in production. Still open: a shared admin password, a weak one-per-customer identity with no bot protection, and the production sign-in, which isn't in the code to review.",
     "P": "The expected rush passes in every run with a lot of room to spare, the race never oversold, and a slow payment provider no longer causes double charges. Capacity above 150% isn't proven, because everything ran on one laptop-class machine.",
     "O": "Health checks, safe restarts and the pause switch work. Backups, alerts, the on-call rota and the runbook's tools haven't been shown, and the documented rollback fails.",
-    "Q": "Six kinds of problem came back across three reviews, and five problems were introduced by fixes. Two kinds are now caught automatically in CI; one partly; three still depend on a reviewer noticing.",
+    "Q": "The same kinds of problem came back across three reviews, and several problems were introduced by fixes. None is yet caught fully automatically: the counts are in the tiles below.",
     "U": "Every agreed criterion passes three runs in a row, with screenshots. The criteria were agreed before testing and re-approved when they changed."
   },
   "findings": [
+    {
+      "id": "INT-01",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "status": "Open",
+      "title": "The real database, sign-in and card payment aren't connected",
+      "impact": "The code talks only to stand-ins: a local SQLite file instead of the hosted Postgres database, a test sign-in that accepts any email, and a payment simulator. Card details, 3-D Secure, declines and refunds have never been handled, so the first real customer would be the first test.",
+      "who": "Developer, with the providers the product owner chooses",
+      "where": "Database: `shared/db.mjs` (SQLite stand-in). Sign-in: `POST /api/login` test stub. Payment: `fixed/server.mjs:299-310` (calls the simulator).",
+      "fix": "Connect hosted Postgres, the chosen sign-in provider and the chosen payment provider (including the provider's lookup call and refunds); have a reviewer check them; then make a purchase, a decline and a refund in the provider's test mode, and one small real purchase and refund.",
+      "doneWhen": "The race test and acceptance tests pass against staging with the real database and the provider's test mode, and the provider's records match the shop's orders for one real purchase and refund."
+    },
     {
       "id": "ARC-11",
       "severity": "High",
@@ -1449,7 +1535,11 @@
       "fix": "Look the payment up instead of re-sending it, give \"confirming\" a deadline, then release the pair and tell the shopper.",
       "who": "Developer",
       "where": "`fixed/server.mjs:294-387` (charge, settle, reconciler)",
-      "doneWhen": "A test where the provider keeps failing ends with the pair released and the shopper told, within the agreed deadline."
+      "doneWhen": "A test where the provider keeps failing ends with the pair released and the shopper told, within the agreed deadline.",
+      "dependsOn": [
+        "INT-01",
+        "the product owner's deadline for \"confirming\""
+      ]
     },
     {
       "id": "SEC-03",
@@ -1491,7 +1581,7 @@
       "id": "ARC-06",
       "severity": "Medium",
       "confidence": "Confirmed",
-      "status": "Accepted risk",
+      "status": "Accepted risk, not yet signed",
       "title": "Rate limits live in one server",
       "impact": "A second instance would halve the protection.",
       "fix": "Run one instance (runbook), or move limits to a shared store first.",
@@ -1555,7 +1645,7 @@
       "title": "The launch-night safety nets haven't been shown",
       "impact": "Backups, error tracking, alerts and on-call are listed in the runbook but not evidenced.",
       "fix": "Show a tested restore, a received test alert and the rota.",
-      "who": "Hosting provider or developer; product owner names the on-call person",
+      "who": "Hosting provider or developer; product owner names the on-call person and agrees recovery targets",
       "where": "`fixed/RUNBOOK.md:9-10`",
       "doneWhen": "A restore log, a received test alert, and the on-call rota are attached to the review."
     },
@@ -1569,7 +1659,11 @@
       "fix": "Build each tool and try it once.",
       "who": "Developer",
       "where": "`fixed/RUNBOOK.md` steps for loading stock, resolving a stuck payment, exporting addresses and comparing charges with orders",
-      "doneWhen": "Each runbook step names a command that exists, and a rehearsal log shows each one run once."
+      "doneWhen": "Each runbook step names a command that exists, and a rehearsal log shows each one run once.",
+      "dependsOn": [
+        "INT-01 (comparing charges with orders needs the real provider)",
+        "a staging copy to rehearse on"
+      ]
     },
     {
       "id": "OPS-09",
@@ -1673,7 +1767,7 @@
       "confidence": "Confirmed",
       "status": "Open",
       "title": "No instructions for the AI agents that write the code",
-      "impact": "Every new agent session starts without the project's rules and lessons, so the problems under Quality history can return. Five problems so far were introduced by fixes.",
+      "impact": "Every new session of the AI coding assistant starts without the project's rules and lessons, so the problems under Quality history can return. Several problems so far were introduced by fixes.",
       "where": "Repository root: no `AGENTS.md`, `CLAUDE.md` or equivalent",
       "fix": "Add a short AGENTS.md: how to start and test, the seven business rules, where money and secrets are handled, never edit applied migrations, and one rule per recurring problem linked to its test. Effort: small.",
       "who": "Developer",
@@ -1685,19 +1779,22 @@
       "confidence": "Confirmed",
       "status": "Open",
       "title": "Two recurring problems have no test: bad input and restarts",
-      "impact": "Bad input that crashes the app or is quietly accepted has come up 6 times across three reviews, and settings or data lost across restarts 7 times; each time only a reviewer caught it.",
+      "impact": "Bad input that crashed the app or was quietly accepted, and settings or data lost across restarts, came back again and again across three reviews (see the counts under Quality history); each time only a reviewer caught it.",
       "where": "`demo/flash-sale/acceptance/`, `.github/workflows/ci.yml`",
       "fix": "Move the review's malformed-input and restart scripts into the CI suite, and add a lint and type check for the server. Effort: medium.",
       "who": "Developer",
-      "doneWhen": "A malformed-input test and a start-twice test run in CI, and each fails on an earlier broken version."
+      "doneWhen": "A malformed-input test and a start-twice test run in CI, and each fails on an earlier broken version.",
+      "dependsOn": [
+        "ARC-11: its start-twice test is half of this"
+      ]
     },
     {
       "id": "HIS-01",
       "severity": "Medium",
       "confidence": "Confirmed",
       "status": "Open",
-      "title": "Four of six recurring problems have no automatic control",
-      "impact": "They depend on the next reviewer noticing.",
+      "title": "No kind of recurring problem is fully caught automatically yet",
+      "impact": "Each depends, at least partly, on the next reviewer noticing.",
       "where": "Quality history section",
       "fix": "For each kind of recurring problem in Quality history, add an automatic check (test, code-scanning rule or database constraint) and prove it catches a past example.",
       "who": "Developer",
@@ -2289,7 +2386,7 @@
       "id": "Q-04",
       "result": "does-not-meet",
       "finding": "HIS-01",
-      "evidence": "Two kinds of recurring problem are caught automatically in CI (concurrency, through the race test; unknown payment outcomes, through acceptance test AC-08). Bad input is partly covered: code-scanning rules exist but aren't run against the app. Three have no automatic check: restarts and settings, screens, and operations."
+      "evidence": "None of the recurring kinds is fully caught automatically yet. Concurrency and unknown payment outcomes have checks in CI (the race test and acceptance test AC-08) but open problems remain (SEC-03, ARC-10). Bad input is partly covered: code-scanning rules exist but aren't run against the app. Restarts and settings, screens, and operations have no automatic check."
     },
     {
       "id": "Q-05",
@@ -2308,14 +2405,14 @@
       "id": "Q-07",
       "result": "does-not-meet",
       "severity": "Medium",
-      "evidence": "20 open problems are listed with severity; none has an owner or a due date.",
-      "fix": "Give every open problem in the register an owner and a due date."
+      "evidence": "Every open problem is listed with its severity and who fixes it, but none has a due date.",
+      "fix": "Give every open problem in the register a due date."
     },
     {
       "id": "Q-08",
       "result": "does-not-meet",
       "severity": "Low",
-      "evidence": "Five problems were introduced by fixes (SEC-01, ARC-01, ARC-11, OPS-09, PERF-04); each is explained under Quality history, but only ARC-01's cause is now covered by a control.",
+      "evidence": "Five problems were introduced by fixes (marked under Quality history); each is explained, but only one cause (the payment time-out) is now covered by an automatic check.",
       "fix": "Add an automatic check for the causes of SEC-01, ARC-11, OPS-09 and PERF-04 (see Quality history)."
     },
     {
@@ -2350,9 +2447,10 @@
     },
     {
       "id": "U-05",
-      "result": "cannot-verify",
-      "evidence": "The reading test of the earlier layout found many unexplained terms and unlabelled numbers; this layout was rewritten to fix them.",
-      "needed": "A second reading test of this layout with someone who isn't an engineer."
+      "result": "does-not-meet",
+      "severity": "Low",
+      "evidence": "Second reading test (2026-10-27): the owner's confidence rose from 3 to 3.5 of 5 and the to-do list was clear, but readers still found unexplained terms in the developer sections and counts that disagreed.",
+      "fix": "Keep technical detail under What to fix and the evidence sections; have every count on the page computed from the data; run a reading test with the real owner before sign-off."
     },
     {
       "id": "U-06",

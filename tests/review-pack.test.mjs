@@ -134,6 +134,13 @@ test('gates count what is missing instead of trusting a summary', () => {
   const ev = gate('submission', missingFile, catalogue, { baseDir: base }).checks.find((c) => c.name === 'Evidence files that exist');
   assert.deepEqual(ev.missing, ['evidence/nope.png']);
 
+  // A blocker without a card under What to fix fails the review gate.
+  const noCard = structuredClone(pack);
+  noCard.verdict.blockers[0].refs = ['A-09'];
+  const card = gate('review', noCard, catalogue, { baseDir: base }).checks.find((c) => c.name === 'Blockers with a card in What to fix');
+  assert.equal(card.ok, false);
+  assert.equal(card.missing.length, 1);
+
   // An open High that isn't a blocker fails the review gate.
   const noBlocker = structuredClone(pack);
   noBlocker.verdict.blockers = noBlocker.verdict.blockers.filter((b) => !b.refs.includes('ARC-11'));
