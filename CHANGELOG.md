@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (2026-10-28): the inspection report
 
 ### The inspection report
 - **Three questions, answered first and counted by software:**
