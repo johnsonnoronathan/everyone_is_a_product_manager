@@ -189,13 +189,14 @@ export function conclusions(ins) {
   const names = (list) => list.map((k) => k.name.toLowerCase()).join(', ');
   const notRun = p.kinds.filter((k) => k.mandatory && !(k.result === 'pass' || k.result === 'fail'));
   const notLooked = x.areas.filter((a) => !(a.result === 'found' || a.result === 'none-found'));
+  const optionalRun = p.kinds.filter((k) => !k.mandatory && (k.result === 'pass' || k.result === 'fail')).length;
   return {
-    harness: h.answer === 'Yes'
+    harness: h.answer === 'Not applicable' ? 'No harness check is required for this product at its risk tier.' : h.answer === 'Yes'
       ? `The test harness is properly set up: all ${h.total} checks are met${h.uncaught + h.partly ? `, though ${recurringText(h)}` : ''}.`
       : `The test harness is ${h.answer === 'No' ? 'not' : 'only partly'} set up: ${h.notMet} of ${h.total} checks are not met${h.unverified ? ` and ${h.unverified} could not be verified` : ''}${h.uncaught + h.partly ? `, and ${recurringText(h)}` : ''}. Expect the same bugs to return after the next change.`,
-    performance: (p.answer === 'Yes' ? `Every kind of performance test this product needs was run.` : `The performance tests are ${p.answer === 'No' ? 'not' : 'not fully'} comprehensive: ${notRun.length} of ${p.total} kinds this product needs were not run (${names(notRun)}).`)
+    performance: p.answer === 'Not applicable' ? `No performance test is required for this product at its risk tier${p.kinds.length ? `; ${optionalRun} of the ${p.kinds.length} recommended kinds were run` : ''}.` : (p.answer === 'Yes' ? `Every kind of performance test this product needs was run.` : `The performance tests are ${p.answer === 'No' ? 'not' : 'not fully'} comprehensive: ${notRun.length} of ${p.total} kinds this product needs were not run (${names(notRun)}).`)
       + (p.failed ? ` ${p.failed} of the ${p.run} that were run failed (see each).` : p.run ? ` All ${p.run} that were run passed.` : ''),
-    hidden: (x.answer === 'Yes' ? `The review looked in all ${x.total} places where hidden problems usually sit.` : `The review did not look in ${notLooked.length} of ${x.total} places where hidden problems usually sit (${names(notLooked)}); problems may remain there.`)
+    hidden: x.answer === 'Not applicable' ? 'No place for hidden problems is listed in the standard.' : (x.answer === 'Yes' ? `The review looked in all ${x.total} places where hidden problems usually sit.` : `The review did not look in ${notLooked.length} of ${x.total} places where hidden problems usually sit (${names(notLooked)}); problems may remain there.`)
       + (x.found.length ? ` It found ${x.found.length} problem${x.found.length === 1 ? '' : 's'} there.` : ' It found none.'),
   };
 }
@@ -574,7 +575,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
   const probItem = (f) => `<li>${codeLink(f.id)} ${sevChip(f.severity)} ${fmt(f.title || '')}</li>`;
   const qEvidence = ins ? {
     harness: `${ins.harness.met} of ${ins.harness.total} harness checks met${ins.harness.recurring ? `; ${recurringText(ins.harness)}` : ''}.`,
-    performance: `${ins.performance.run} of ${ins.performance.total} kinds of performance test run; ${ins.performance.passed} passed, ${ins.performance.failed} failed.`,
+    performance: ins.performance.total ? `${ins.performance.run} of ${ins.performance.total} kinds of performance test run; ${ins.performance.passed} passed, ${ins.performance.failed} failed.` : 'None required at this risk tier.',
     hidden: `${ins.hidden.examined} of ${ins.hidden.total} places examined; ${ins.hidden.found.length} hidden problem${ins.hidden.found.length === 1 ? '' : 's'} found.`,
   } : {};
   const qTable = ins ? `<div class="table-wrap q-table"><table><thead><tr><th>Question</th><th>Answer</th><th>Evidence</th></tr></thead><tbody>${Object.keys(QUESTIONS).map((k, i) => `<tr><td><a href="#q-${k}">${i + 1}. ${esc(QUESTIONS[k].title)}</a></td><td>${ansChip(ins[k].answer)}</td><td>${esc(qEvidence[k])}</td></tr>`).join('')}</tbody></table></div>` : '';
@@ -1274,7 +1275,7 @@ export function reportMarkdown(pack, catalogue) {
   const keys = Object.keys(QUESTIONS);
   const evidence = {
     harness: `${hz.met} of ${hz.total} harness checks met${hz.recurring ? `; ${recurringText(hz)}` : ''}`,
-    performance: `${pf.run} of ${pf.total} kinds of performance test run; ${pf.passed} passed, ${pf.failed} failed`,
+    performance: pf.total ? `${pf.run} of ${pf.total} kinds of performance test run; ${pf.passed} passed, ${pf.failed} failed` : 'none required at this risk tier',
     hidden: `${hd.examined} of ${hd.total} places examined; ${hd.found.length} hidden problem${hd.found.length === 1 ? '' : 's'} found`,
   };
   const todo = [...(v.blockers || []).map((b) => ({ ...b, kind: 'Blocker', when: 'Before delivery' })), ...(v.conditions || []).map((c) => ({ ...c, kind: 'Condition', when: c.when || 'Before delivery' }))];

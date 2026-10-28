@@ -148,6 +148,16 @@ test('the three questions are counted from the record, not written by hand', () 
   const said = conclusions(ins);
   assert.match(said.performance, /not run \(beyond capacity, long run, page speed on phones, on a production-like setup\)/);
 
+  // Nothing required is said in words, never as "0 of 0".
+  const small = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  small.project.riskTier = 1;
+  small.project.features = [];
+  const none = inspection(small, catalogue);
+  assert.equal(none.performance.answer, 'Not applicable');
+  assert.match(conclusions(none).performance, /^No performance test is required for this product at its risk tier/);
+  const md = reportMarkdown({ ...small, stage: 'review' }, catalogue);
+  assert.ok(!/0 of 0|\(\)/.test(conclusions(none).performance) && !md.includes('0 of 0 kinds'), 'no empty counts');
+
   // The answer follows the counts: drop places and kinds, and Yes becomes Partly or No.
   pack.architecture.hiddenChecks = pack.architecture.hiddenChecks.slice(0, 4);
   assert.equal(inspection(pack, catalogue).hidden.answer, 'No');
