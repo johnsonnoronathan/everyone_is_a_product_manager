@@ -97,6 +97,7 @@ When one person builds and another reviews (you and a consultant, your team and 
 
 ## Why the results can be trusted
 
+- **Yes/no questions, scored by software.** Every checklist item is a few yes/no questions about facts the inspector can see or run ("Is there an automated test of a restart?"). The inspector answers; the software works out each result, its severity and the points, so two inspections that agree on the facts get the same score. `review-pack.mjs compare` counts how often two inspections agree.
 - **Evidence or it doesn't go in.** Every finding cites `file:line`, command output, or a reproduction. Critical and High findings get a second, sceptical verification pass.
 - **Measure instead of guessing.** Capacity comes from a load test against an agreed target, not from reading code. Correctness under concurrency is tested by racing 1,000 buyers for 100 items. Load tests are run more than once, and every run is kept.
 - **Agree first, then test.** Acceptance criteria are signed off *before* tests are written, and tests are never weakened to turn green.

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import {
   loadCatalogue, applicability, validatePack, verdictCeiling, renderPage, templatePack, criteriaMarkdown,
   gate, worksheetStatus, mergeWorksheet, readmeItems, README_ITEMS, scannerHits, personalDataIn,
-  inspection, conclusions, reportMarkdown, SECTION_ORDER,
+  inspection, conclusions, reportMarkdown, SECTION_ORDER, rowOutcome, checklistPoints, comparePacks,
 } from '../.claude/skills/launch-review/scripts/review-pack.mjs';
 
 const catalogue = loadCatalogue();
@@ -67,15 +67,17 @@ function reviewedPack(rows, extra = {}) {
 }
 const allMeet = (pack) => catalogue.criteria
   .filter((c) => applicability(c, pack.project) === 'mandatory')
-  .map((c) => ({ id: c.id, result: 'meets', grade: 'A', evidence: 'run' }));
+  .map((c) => ({ id: c.id, answers: Object.fromEntries(c.checks.map((q) => [q.id, 'yes'])), grade: 'A', evidence: 'run' }));
 
 test('verdict ceiling follows the severity rules', () => {
   let pack = reviewedPack([]);
   pack.worksheet = allMeet(pack);
   assert.equal(verdictCeiling(pack, catalogue).ceiling, 'GO');
 
-  pack.worksheet[0] = { ...pack.worksheet[0], result: 'cannot-verify', needed: 'x' };
-  assert.equal(verdictCeiling(pack, catalogue).ceiling, 'GO WITH CONDITIONS');
+  const first = pack.worksheet[0];
+  first.answers[Object.keys(first.answers)[0]] = 'unknown';
+  first.needed = 'x';
+  assert.equal(verdictCeiling(pack, catalogue).ceiling, 'GO WITH CONDITIONS', 'one question not known: cannot verify');
 
   pack.worksheet[1] = { id: pack.worksheet[1].id, result: 'does-not-meet', severity: 'High', evidence: 'x' };
   assert.equal(verdictCeiling(pack, catalogue).ceiling, 'NO-GO');
@@ -134,7 +136,8 @@ test('the three questions are counted from the record, not written by hand', () 
   const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
   const ins = inspection(pack, catalogue);
   assert.equal(ins.harness.answer, 'No');
-  assert.equal(ins.harness.met, pack.worksheet.filter((r) => r.id.startsWith('H-') && r.result === 'meets').length);
+  assert.equal(ins.harness.met, worksheetStatus(pack, catalogue).find((x) => x.code === 'H').counts.meets);
+  assert.equal(ins.harness.yes, checklistPoints(pack, catalogue).areas.find((a) => a.code === 'H').yes, 'the answer is counted on the questions');
   assert.deepEqual(ins.harness.recommend.map((k) => k.id).sort(), ['integration', 'scan', 'self-check', 'unit', 'visual']);
   assert.equal(ins.harness.recommend.find((k) => k.id === 'unit').verb, 'Add', 'no unit test suite in the project');
   assert.equal(ins.harness.recommend.find((k) => k.id === 'integration').verb, 'Run in CI and extend', 'the review scripts exist but CI does not run them');
@@ -202,6 +205,52 @@ test('the written report follows the inspection order: summary, method, results,
   assert.match(md, /\| Issue tracker or tickets \| No \| None exists/);
 });
 
+test('yes/no questions: the software works out result, severity and points', () => {
+  const c = catalogue.criteria.find((x) => x.id === 'S-03'); // admin role (no = Critical), personal accounts (Medium), test routes (Critical)
+  const [q1, q2, q3] = c.checks.map((q) => q.id);
+  const out = (answers, extra = {}) => rowOutcome({ answers, ...extra }, c);
+  assert.equal(out({ [q1]: 'yes', [q2]: 'yes', [q3]: 'yes' }).result, 'meets');
+  assert.deepEqual([out({ [q1]: 'yes', [q2]: 'no', [q3]: 'yes' }).result, out({ [q1]: 'yes', [q2]: 'no', [q3]: 'yes' }).severity], ['does-not-meet', 'Medium']);
+  assert.equal(out({ [q1]: 'no', [q2]: 'no', [q3]: 'yes' }).severity, 'Critical', 'the most serious no decides');
+  assert.equal(out({ [q1]: 'yes', [q2]: 'unknown', [q3]: 'yes' }).result, 'cannot-verify');
+  assert.equal(out({ [q1]: 'n/a', [q2]: 'n/a', [q3]: 'n/a' }).result, 'not-applicable');
+  assert.equal(out({ [q1]: 'yes' }).result, undefined, 'an unanswered question leaves no result');
+
+  // The reviewer can't overrule the answers: a contradicting result or an unexplained severity is refused.
+  const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  const row = pack.worksheet.find((r) => r.id === 'S-03');
+  const errs = () => validatePack(pack, catalogue, { stage: 'review' }).filter((e) => e.level === 'error' && e.where.includes('S-03'));
+  row.result = 'meets';
+  assert.match(errs()[0].message, /The answers make this "does-not-meet"/);
+  delete row.result;
+  row.severity = 'Low';
+  assert.match(errs()[0].message, /To move it one level for this product, give the reason/);
+  row.severityReason = 'one shared token, but only two admins';
+  assert.equal(errs().length, 0, 'one level with a reason is allowed');
+  row.severity = 'Critical';
+  assert.match(errs()[0].message, /can move one level/, 'two levels is not');
+
+  // Points: unanswered questions count against the total, questions that don't apply are left out.
+  const p0 = checklistPoints(JSON.parse(readFileSync(EXAMPLE, 'utf8')), catalogue);
+  const skip = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  delete skip.worksheet.find((r) => r.id === 'H-06').answers['H-06.2'];
+  const p1 = checklistPoints(skip, catalogue);
+  assert.deepEqual([p1.yes, p1.total], [p0.yes, p0.total], 'skipping a "no" does not raise the score');
+});
+
+test('compare: two inspections agree question by question', () => {
+  const a = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  const b = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  let cmp = comparePacks(a, b, catalogue);
+  assert.equal(cmp.questions.same, cmp.questions.both);
+  assert.equal(cmp.differences.length, 0);
+  b.worksheet.find((r) => r.id === 'H-06').answers['H-06.2'] = 'yes';
+  cmp = comparePacks(a, b, catalogue);
+  assert.equal(cmp.questions.both - cmp.questions.same, 1);
+  assert.deepEqual(cmp.differences.map((d) => [d.id, d.a, d.b]), [['H-06.2', 'no', 'yes']]);
+  assert.equal(cmp.criteria.both - cmp.criteria.same, 1, 'H-06 now meets in the second');
+});
+
 test('render: all sections, escaped text, embedded screenshots, fragment mode', () => {
   const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
   pack.project.summary = 'A <script>alert(1)</script> shop with `code`';
@@ -225,14 +274,15 @@ test('gates count what is missing instead of trusting a summary', () => {
   const base = 'demo/flash-sale/review';
   assert.equal(gate('review', pack, catalogue, { baseDir: base }).ok, true);
 
-  // Drop two security rows: the worksheet gate names exactly those two.
+  // Drop two security rows: the worksheet gate names exactly their questions.
   const dropped = pack.worksheet.filter((r) => r.id.startsWith('S-')).slice(0, 2).map((r) => r.id);
+  const droppedQs = catalogue.criteria.filter((c) => dropped.includes(c.id)).flatMap((c) => c.checks.map((q) => q.id));
   const short = { ...pack, worksheet: pack.worksheet.filter((r) => !dropped.includes(r.id)) };
   const g = gate('worksheet', short, catalogue, { baseDir: base, areas: ['S'] });
   assert.equal(g.ok, false);
   const s = g.checks.find((c) => c.name.startsWith('S:'));
-  assert.equal(s.expected - s.found, 2);
-  assert.deepEqual(s.missing, dropped);
+  assert.equal(s.expected - s.found, droppedQs.length);
+  assert.deepEqual(s.missing, droppedQs);
   assert.equal(gate('worksheet', short, catalogue, { baseDir: base, areas: ['A'] }).ok, true, 'other areas unaffected');
 
   // A screenshot that doesn't exist fails the submission gate.

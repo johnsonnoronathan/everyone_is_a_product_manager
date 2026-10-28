@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Scoring by yes/no questions
+- **Every checklist item is now a few yes/no questions** (208 in all), each about one fact the inspector can see or run, and each saying what a "no" means (Critical, High, Medium or Low). They are listed in `criteria.md`.
+- **The software works out the rest from the answers:**
+  - each item's result: any no, does not meet; any unknown, cannot verify;
+  - its severity: the most serious "no";
+  - the points: one per yes, with unanswered questions counting against the total.
+
+  A result or severity that contradicts the answers is refused; a severity may move one level only with a written reason. Two inspections that agree on the facts therefore get the same results and score.
+- **The harness answer is counted on its questions**, so one failing question costs one point, not the whole item.
+- **`review-pack.mjs compare`** counts how often two inspections agree, question by question, and lists every difference.
+- **The gates count questions answered**, per area. The template lays out every question.
+- **A rule for missing things:** answer no where the missing thing should provide something, and n/a (with why) where the question asks whether it is free of a danger.
+- **The demo's worked example is answered question by question:** 115 of 193 points. Two items changed result, both stricter (the README doesn't name the main journeys; the load test never ran on a production-like setup), and the verdict is unchanged.
+
 ## 0.3.0 (2026-10-28): the inspection report
 
 ### The inspection report

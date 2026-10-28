@@ -5,6 +5,7 @@
 //   node review-pack.mjs gate     <submission|worksheet|review> <pack.json> [--areas S,A] [--readme README.md] [--scans dir]   (counts; exit 1 if anything is missing)
 //   node review-pack.mjs render   <pack.json> <out.html> [--fragment]
 //   node review-pack.mjs report   <pack.json> <REPORT.md>     (the written inspection report, generated from the same record)
+//   node review-pack.mjs compare  <first.json> <second.json> [out.md]   (how far two inspections agree, question by question)
 //   node review-pack.mjs template <out.json> [--tier 1|2|3] [--features money,accounts,...] [--stage review]
 //   node review-pack.mjs status   <pack.json>                  (per area: results so far, mandatory criteria still missing)
 //   node review-pack.mjs merge    <pack.json> <rows.json>...   (add worksheet rows written by each reviewer or lens)
@@ -47,6 +48,70 @@ export function applicability(criterion, project = {}) {
   return criterion.tier <= Number(project.riskTier || 3) ? 'mandatory' : 'recommended';
 }
 
+// ---------- yes/no questions: results, severity and points worked out by software ----------
+// Each criterion is a short list of yes/no questions ("yes" is the good answer), each with the severity a "no" means.
+// The reviewer answers; the software works out the result, the severity and the points, so two reviews of the same
+// project land on the same results whenever they agree on the facts.
+export const ANSWER_VALUES = ['yes', 'no', 'unknown', 'n/a'];
+const RESOLVED = Symbol('resolved');
+
+export function rowOutcome(row = {}, criterion = {}) {
+  const checks = criterion.checks || [];
+  const answers = row.answers || {};
+  const given = checks.map((c) => ({ c, a: answers[c.id] }));
+  const unanswered = given.filter((x) => !ANSWER_VALUES.includes(x.a)).map((x) => x.c.id);
+  const noes = given.filter((x) => x.a === 'no');
+  const counted = given.filter((x) => x.a === 'yes' || x.a === 'no' || x.a === 'unknown');
+  let result;
+  if (row.result === 'not-applicable' && !counted.length) result = 'not-applicable';
+  else if (!row.answers) result = undefined;
+  else if (unanswered.length) result = undefined;
+  else if (noes.length) result = 'does-not-meet';
+  else if (given.some((x) => x.a === 'unknown')) result = 'cannot-verify';
+  else if (!counted.length) result = 'not-applicable';
+  else result = 'meets';
+  const computedSeverity = noes.length ? SEVERITIES[Math.min(...noes.map((x) => SEVERITIES.indexOf(x.c.ifNo)))] : undefined;
+  const severity = result === 'does-not-meet' ? (row.severity && filled(row.severityReason) ? row.severity : computedSeverity) : undefined;
+  return {
+    result, severity, computedSeverity,
+    yes: counted.filter((x) => x.a === 'yes').length, counted: counted.length,
+    unanswered: result === 'not-applicable' ? [] : unanswered, noes: noes.map((x) => x.c.id),
+  };
+}
+
+// The pack as the software reads it: every answered row gets its worked-out result and severity.
+export function resolvePack(pack, catalogue) {
+  if (pack[RESOLVED]) return pack;
+  const byId = new Map(catalogue.criteria.map((c) => [c.id, c]));
+  const worksheet = (pack.worksheet || []).map((r) => {
+    const c = byId.get(r.id);
+    if (!c || !r.answers) return r;
+    const o = rowOutcome(r, c);
+    return { ...r, result: o.result, severity: o.severity };
+  });
+  const out = { ...pack, worksheet };
+  Object.defineProperty(out, RESOLVED, { value: true });
+  return out;
+}
+
+// Points: one per question answered yes, out of every question of the mandatory criteria (unanswered ones count
+// against the total, so skipping a question can't raise the score). Whole criteria marked not applicable are left out.
+export function checklistPoints(pack, catalogue) {
+  const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
+  const areas = catalogue.areas.map((a) => {
+    let yes = 0, total = 0;
+    for (const c of catalogue.criteria.filter((x) => x.id.startsWith(a.code + '-') && applicability(x, pack.project) === 'mandatory')) {
+      const r = rows.get(c.id);
+      const o = rowOutcome(r || {}, c);
+      if (o.result === 'not-applicable') continue;
+      yes += o.yes;
+      total += r?.answers ? o.counted + o.unanswered.length : (c.checks || []).length;
+    }
+    return { code: a.code, name: a.name, yes, total };
+  });
+  return { areas, yes: areas.reduce((n, a) => n + a.yes, 0), total: areas.reduce((n, a) => n + a.total, 0) };
+}
+
 function severityOf(row, findings) {
   if (row.severity) return row.severity;
   const f = row.finding && findings.find((x) => x.id === row.finding);
@@ -55,6 +120,7 @@ function severityOf(row, findings) {
 
 // The most favourable verdict the worksheet allows (rules in severity.md and review-standard.md).
 export function verdictCeiling(pack, catalogue) {
+  pack = resolvePack(pack, catalogue);
   const findings = pack.findings || [];
   const tier = Number(pack.project?.riskTier || 3);
   const reasons = [];
@@ -109,6 +175,7 @@ const answerFor = (done, total) => (total === 0 ? 'Not applicable' : done === to
 const sevRank = (s) => { const i = SEVERITIES.indexOf(s); return i < 0 ? 9 : i; };
 
 export function inspection(pack, catalogue) {
+  pack = resolvePack(pack, catalogue);
   const project = pack.project || {};
   const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
   const findings = new Map((pack.findings || []).map((f) => [f.id, f]));
@@ -122,6 +189,13 @@ export function inspection(pack, catalogue) {
   });
   const met = checks.filter((x) => x.result === 'meets').length;
   const notMet = checks.filter((x) => x.result === 'does-not-meet').length;
+  // The answer is counted on the questions: one point per "yes", out of every question of the mandatory H criteria.
+  const hPoints = checklistPoints(pack, catalogue).areas.find((a) => a.code === 'H') || { yes: 0, total: 0 };
+  const questions = catalogue.criteria.filter((c) => c.id.startsWith('H-') && applicability(c, project) === 'mandatory').flatMap((c) => {
+    const r = rows.get(c.id) || {};
+    if (r.result === 'not-applicable') return [];
+    return (c.checks || []).map((q) => ({ id: q.id, q: q.q, criterion: c.id, answer: r.answers?.[q.id] || (r.answers ? 'missing' : r.result === 'meets' ? 'yes' : 'missing') }));
+  });
   const classes = pack.history?.classes || [];
   const suites = pack.harness?.suites || [];
   const testKinds = (catalogue.testKinds || []).map((k) => ({
@@ -158,7 +232,7 @@ export function inspection(pack, catalogue) {
     .map((id) => findings.get(id) || { id }).sort((a, b) => sevRank(a.severity) - sevRank(b.severity));
 
   return {
-    harness: { answer: answerFor(met, checks.length), met, notMet, unverified: checks.length - met - notMet, total: checks.length, checks, testKinds, recurring: classes.length, uncaught: classes.filter((c) => !['controlled', 'partly controlled'].includes(c.status)).length, partly: classes.filter((c) => c.status === 'partly controlled').length, recommend },
+    harness: { answer: answerFor(hPoints.yes, hPoints.total), yes: hPoints.yes, points: hPoints.total, questions, met, notMet, unverified: checks.length - met - notMet, total: checks.length, checks, testKinds, recurring: classes.length, uncaught: classes.filter((c) => !['controlled', 'partly controlled'].includes(c.status)).length, partly: classes.filter((c) => c.status === 'partly controlled').length, recommend },
     performance: { answer: answerFor(ran.length, due.length), run: ran.length, total: due.length, passed: ran.filter((k) => k.result === 'pass').length, failed: ran.filter((k) => k.result === 'fail').length, kinds: perfKinds },
     hidden: { answer: answerFor(examined.length, areas.length), examined: examined.length, total: areas.length, areas, found },
   };
@@ -192,8 +266,8 @@ export function conclusions(ins) {
   const optionalRun = p.kinds.filter((k) => !k.mandatory && (k.result === 'pass' || k.result === 'fail')).length;
   return {
     harness: h.answer === 'Not applicable' ? 'No harness check is required for this product at its risk tier.' : h.answer === 'Yes'
-      ? `The test harness is properly set up: all ${h.total} checks are met${h.uncaught + h.partly ? `, though ${recurringText(h)}` : ''}.`
-      : `The test harness is ${h.answer === 'No' ? 'not' : 'only partly'} set up: ${h.notMet} of ${h.total} checks are not met${h.unverified ? ` and ${h.unverified} could not be verified` : ''}${h.uncaught + h.partly ? `, and ${recurringText(h)}` : ''}. Expect the same bugs to return after the next change.`,
+      ? `The test harness is properly set up: all ${h.points} harness questions are answered yes${h.uncaught + h.partly ? `, though ${recurringText(h)}` : ''}.`
+      : `The test harness is ${h.answer === 'No' ? 'not' : 'only partly'} set up: ${h.yes} of ${h.points} harness questions are answered yes (${h.met} of ${h.total} checks fully met)${h.uncaught + h.partly ? `, and ${recurringText(h)}` : ''}. Expect the same bugs to return after the next change.`,
     performance: p.answer === 'Not applicable' ? `No performance test is required for this product at its risk tier${p.kinds.length ? `; ${optionalRun} of the ${p.kinds.length} recommended kinds were run` : ''}.` : (p.answer === 'Yes' ? `Every kind of performance test this product needs was run.` : `The performance tests are ${p.answer === 'No' ? 'not' : 'not fully'} comprehensive: ${notRun.length} of ${p.total} kinds this product needs were not run (${names(notRun)}).`)
       + (p.failed ? ` ${p.failed} of the ${p.run} that were run failed (see each).` : p.run ? ` All ${p.run} that were run passed.` : ''),
     hidden: x.answer === 'Not applicable' ? 'No place for hidden problems is listed in the standard.' : (x.answer === 'Yes' ? `The review looked in all ${x.total} places where hidden problems usually sit.` : `The review did not look in ${notLooked.length} of ${x.total} places where hidden problems usually sit (${names(notLooked)}); problems may remain there.`)
@@ -203,6 +277,8 @@ export function conclusions(ins) {
 
 export function validatePack(pack, catalogue, { stage } = {}) {
   stage = stage || pack.stage || 'submission';
+  const raw = pack;
+  pack = resolvePack(pack, catalogue);
   const problems = [];
   const err = (where, message) => problems.push({ level: 'error', where, message });
   const warn = (where, message) => problems.push({ level: 'warning', where, message });
@@ -322,6 +398,23 @@ export function validatePack(pack, catalogue, { stage } = {}) {
       if (!c) return err(at, `Unknown criterion "${r.id}".`);
       if (seen.has(r.id)) err(at, 'Criterion appears twice.');
       seen.add(r.id);
+      const given = (raw.worksheet || [])[i] || r;
+      if (given.answers) {
+        const ids = (c.checks || []).map((x) => x.id);
+        for (const [k, a] of Object.entries(given.answers)) {
+          if (!ids.includes(k)) err(at, `Unknown question "${k}". This criterion's questions are ${ids.join(', ')}.`);
+          else if (!ANSWER_VALUES.includes(a)) err(at, `${k}: answer yes, no, unknown or n/a.`);
+        }
+        const o = rowOutcome(given, c);
+        if (o.unanswered.length) return err(at, `Answer every question: ${o.unanswered.join(', ')} ${o.unanswered.length === 1 ? 'has' : 'have'} no answer.`);
+        if (given.result && given.result !== o.result) err(at, `The answers make this "${o.result}", but the row says "${given.result}". Leave result out: it is worked out from the answers.`);
+        if (Object.values(given.answers).includes('unknown')) need(given.needed, at, 'Say what is needed to answer the questions marked unknown.');
+        if (Object.values(given.answers).includes('n/a')) need(given.note, at, 'Say why the questions marked n/a do not apply.');
+        if (given.severity && o.computedSeverity && given.severity !== o.computedSeverity) {
+          if (!filled(given.severityReason)) err(at, `The answers make this ${o.computedSeverity}, not ${given.severity}. To move it one level for this product, give the reason in severityReason.`);
+          else if (Math.abs(SEVERITIES.indexOf(given.severity) - SEVERITIES.indexOf(o.computedSeverity)) > 1) err(at, `The answers make this ${o.computedSeverity}; severity can move one level from there, not to ${given.severity}.`);
+        }
+      }
       if (!RESULTS[r.result]) return err(at, `Result must be one of: ${Object.keys(RESULTS).join(', ')}.`);
       if (r.finding && !findingIds.has(r.finding)) err(at, `Finding ${r.finding} is not in the findings list.`);
       if (r.result === 'meets') {
@@ -332,6 +425,10 @@ export function validatePack(pack, catalogue, { stage } = {}) {
       if (r.result === 'does-not-meet') {
         const sev = severityOf(r, findings);
         if (!SEVERITIES.includes(sev)) err(at, 'A failed criterion needs a severity, directly or through its finding.');
+        const linked = r.finding && findings.find((x) => x.id === r.finding);
+        if (linked && r.severity && SEVERITIES.indexOf(linked.severity) > SEVERITIES.indexOf(r.severity) && !/^fixed/i.test(linked.status || '')) {
+          err(at, `Finding ${linked.id} is ${linked.severity}, but the answers make ${r.id} ${r.severity}. Raise the finding to ${r.severity}, or move the row one level with severityReason.`);
+        }
         need(r.evidence, at, 'Say what was found.');
         if (!r.finding) need(r.fix, at, 'Say what would fix it, or link a finding that does.');
         if ((sev === 'Medium' || sev === 'Low') && pack.verdict?.decision !== 'NO-GO' && !(filled(r.owner) && filled(r.due))) {
@@ -442,7 +539,8 @@ function criteriaBlock(pack, catalogue, code) {
     const sev = r.result === 'does-not-meet' ? severityOf(r, findings) : null;
     if (['does-not-meet', 'cannot-verify', 'missing'].includes(result)) {
       const what = r.result === 'cannot-verify' ? (r.needed ? `Needed: ${fmt(r.needed)}` : '') : r.finding ? '' : r.fix ? `Fix: ${fmt(r.fix)}` : '';
-      attention.push(`<li><span class="att-head"><a class="fref" href="#c-${esc(c.id)}">${esc(c.id)}</a> ${esc(c.title)} ${result === 'missing' ? '<span class="chip r-missing">No result</span>' : chip(result)}${sevChip(sev)}${r.finding ? ` ${codeLink(r.finding)}` : ''}</span>${what ? `<span class="att-what">${what}</span>` : ''}</li>`);
+      const failing = (c.checks || []).filter((q) => r.answers && (r.answers[q.id] === 'no' || r.answers[q.id] === 'unknown')).map((q) => `${esc(q.q)} ${answerChip(r.answers[q.id])}`);
+      attention.push(`<li><span class="att-head"><a class="fref" href="#c-${esc(c.id)}">${esc(c.id)}</a> ${esc(c.title)} ${result === 'missing' ? '<span class="chip r-missing">No result</span>' : chip(result)}${sevChip(sev)}${r.finding ? ` ${codeLink(r.finding)}` : ''}</span>${failing.length ? `<span class="att-what">${failing.join('<br>')}</span>` : ''}${what ? `<span class="att-what">${what}</span>` : ''}</li>`);
     }
     const tag = app === 'recommended' ? `<span class="tag">Recommended; required from tier ${c.tier}</span>` : app === 'off' ? '<span class="tag">Doesn\'t apply to this product</span>' : '';
     const notes = [
@@ -455,29 +553,34 @@ function criteriaBlock(pack, catalogue, code) {
       !r.result && app === 'off' ? `<p class="dim">Applies only to products that ${esc(c.when.map((w) => catalogue.features[w]).join(' or '))}.</p>` : '',
     ].join('');
     const status = r.result ? chip(r.result) : `<span class="chip r-${result}">${result === 'missing' ? 'No result' : result === 'optional' ? 'Not assessed' : 'Not applicable'}</span>`;
+    const qList = (c.checks || []).length && (r.answers || app === 'mandatory') ? `<ol class="qlist">${c.checks.map((q) => `<li>${esc(q.q)} ${answerChip(r.answers?.[q.id] || 'missing')}${r.answers?.[q.id] === 'no' ? ` <span class="dim">a no is ${esc(q.ifNo)}</span>` : ''}</li>`).join('')}</ol>` : '';
     return `<li class="crit row-${result}" id="c-${esc(c.id)}">
       <div class="crit-id">${esc(c.id)}</div>
       <div class="crit-body"><p class="crit-title">${esc(c.title)} ${tag}</p>
-        <p class="crit-std">${fmt(c.standard)}</p>${notes}</div>
+        <p class="crit-std">${fmt(c.standard)}</p>${qList}${notes}</div>
       <div class="crit-result">${status}${r.grade ? `<span class="grade" title="${esc(GRADE_WORDS[r.grade] || '')}">Evidence ${esc(r.grade)}: ${esc(GRADE_WORDS[r.grade] || '')}</span>` : ''}${sevChip(sev)}${r.finding ? codeLink(r.finding) : ''}</div>
     </li>`;
   });
   const n = areaCounts(pack, catalogue, code);
+  const pts = checklistPoints(pack, catalogue).areas.find((a) => a.code === code);
   return `<div class="judged">
+    ${pts && pts.total ? `<p class="points"><span class="lbl">Points</span> <b>${pts.yes}</b> of ${pts.total}: one for each question answered yes</p>` : ''}
     ${attention.length ? `<h3>Checklist items that need attention</h3><ul class="attention">${attention.join('')}</ul>` : '<p class="dim">Every checklist item in this area that applies is met.</p>'}
     <details><summary>Full checklist for this area: ${cs.length} items · ${countsText(n)}</summary><ul class="crits">${items.join('')}</ul></details>
   </div>`;
 }
 
 function scoreboard(pack, catalogue) {
-  return `<div class="score">${catalogue.areas.map((a) => {
+  const pts = checklistPoints(pack, catalogue);
+  return `<p class="points"><span class="lbl">Checklist points</span> <b>${pts.yes}</b> of ${pts.total}: one for each yes/no question answered yes</p><div class="score">${catalogue.areas.map((a) => {
+    const ap = pts.areas.find((x) => x.code === a.code);
     const n = areaCounts(pack, catalogue, a.code);
     const total = Object.values(n).reduce((x, y) => x + y, 0) || 1;
     const seg = (k, label) => (n[k] ? `<span class="seg k-${k}" style="flex-grow:${n[k]}" title="${n[k]} ${label}"></span>` : '');
     return `<a class="score-row" href="#${a.section}">
       <span class="score-name">${esc(a.name)}</span>
       <span class="bar" role="img" aria-label="${countsText(n)}, ${n['not-applicable']} don't apply, out of ${total}">${seg('meets', 'meet')}${seg('does-not-meet', "don't meet")}${seg('cannot-verify', "can't be verified")}${seg('missing', 'without a result')}${seg('not-applicable', "don't apply")}</span>
-      <span class="score-n"><b class="t-meets">${n.meets}</b> meet · <b class="t-fails">${n['does-not-meet']}</b> don't · <b class="t-unknown">${n['cannot-verify'] + n.missing}</b> can't verify</span>
+      <span class="score-n"><b class="t-meets">${n.meets}</b> meet · <b class="t-fails">${n['does-not-meet']}</b> don't · <b class="t-unknown">${n['cannot-verify'] + n.missing}</b> can't verify${ap && ap.total ? ` · ${ap.yes}/${ap.total} points` : ''}</span>
     </a>`;
   }).join('')}<p class="legend"><span><i class="k-meets"></i>Meets</span><span><i class="k-does-not-meet"></i>Does not meet</span><span><i class="k-cannot-verify"></i>Cannot be verified</span><span><i class="k-not-applicable"></i>Doesn't apply</span></p></div>`;
 }
@@ -529,12 +632,15 @@ export const SECTION_ORDER = {
   review: ['verdict', 'method', 'questions', 'recommendations', 'findings', 'harness', 'performance', 'architecture', 'rules', 'security', 'operations', 'history', 'product', 'demo', 'run', 'requirements', 'acceptance', 'limits', 'glossary'],
   submission: ['verdict', 'findings', 'product', 'demo', 'run', 'requirements', 'architecture', 'rules', 'harness', 'performance', 'security', 'operations', 'history', 'acceptance', 'limits', 'glossary'],
 };
+const ANSWER_WORDS = { yes: 'Yes', no: 'No', unknown: 'Not known', 'n/a': "Doesn't apply", missing: 'No answer' };
+const answerChip = (a) => `<span class="chip ${a === 'yes' ? 'r-meets' : a === 'no' ? 'r-does-not-meet' : a === 'n/a' ? 'r-not-applicable' : 'r-cannot-verify'}">${esc(ANSWER_WORDS[a] || 'No answer')}</span>`;
 const ansChip = (a) => `<span class="chip ans ${a === 'Yes' ? 'r-meets' : a === 'No' ? 'r-does-not-meet' : a === 'Partly' ? 'r-cannot-verify' : 'r-not-applicable'}">${esc(a)}</span>`;
 const perfChip = (r) => `<span class="chip ${r === 'pass' ? 'r-meets' : r === 'fail' ? 'r-does-not-meet' : 'r-cannot-verify'}">${esc(PERF_RESULTS[r] || 'No result')}</span>`;
 const hiddenChip = (r) => `<span class="chip ${r === 'none-found' ? 'r-meets' : r === 'found' ? 'r-does-not-meet' : 'r-cannot-verify'}">${esc(HIDDEN_RESULTS[r] || 'No result')}</span>`;
 const skillLink = (t) => (/^https?:/.test(t.link) ? `<a href="${esc(t.link)}">${esc(t.name)}</a>` : `<code>${esc(t.name)}</code>`);
 
 export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = loadCatalogue() } = {}) {
+  pack = resolvePack(pack, catalogue);
   const stage = pack.stage || 'submission';
   const problems = validatePack(pack, catalogue, { stage });
   const errors = problems.filter((x) => x.level === 'error');
@@ -574,7 +680,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
   const said = ins ? conclusions(ins) : null;
   const probItem = (f) => `<li>${codeLink(f.id)} ${sevChip(f.severity)} ${fmt(f.title || '')}</li>`;
   const qEvidence = ins ? {
-    harness: `${ins.harness.met} of ${ins.harness.total} harness checks met${ins.harness.recurring ? `; ${recurringText(ins.harness)}` : ''}.`,
+    harness: `${ins.harness.yes} of ${ins.harness.points} harness questions answered yes${ins.harness.recurring ? `; ${recurringText(ins.harness)}` : ''}.`,
     performance: ins.performance.total ? `${ins.performance.run} of ${ins.performance.total} kinds of performance test run; ${ins.performance.passed} passed, ${ins.performance.failed} failed.` : 'None required at this risk tier.',
     hidden: `${ins.hidden.examined} of ${ins.hidden.total} places examined; ${ins.hidden.found.length} hidden problem${ins.hidden.found.length === 1 ? '' : 's'} found.`,
   } : {};
@@ -602,6 +708,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
     ${table(['Source', 'Used', 'What was used, or why not', 'Why it matters'], sources.map((x) => [esc(x.name), x.entry ? `<span class="chip ${x.entry.used ? 'r-meets' : 'r-not-applicable'}">${x.entry.used ? 'Used' : 'Not used'}</span>` : '<span class="chip r-missing">No entry</span>', fmt(x.entry?.detail || ''), esc(x.why)]))}
     ${filled(pack.method?.skills) ? `<h3>Skills and tools used</h3>${table(['Skill or tool', 'What it did'], pack.method.skills.map((x) => [fmt(x.name), fmt(x.how || '')]))}` : ''}
     <div class="key"><h3>How to read the results</h3><dl>
+      <dt>Questions and points</dt><dd>Every checklist item is a few yes/no questions, each about one fact the inspector could see or run. Each yes is a point. The software works out the item's result from the answers (any no: doesn't meet; any not known: can't verify) and its severity from the most serious no, so two inspections that agree on the facts get the same results.</dd>
       <dt>Yes, Partly, No</dt><dd>Counted by software from the record: everything done is Yes, at least half is Partly, less than half is No.</dd>
       <dt>Blocker</dt><dd>Delivery can't happen until it's done.</dd>
       <dt>Condition</dt><dd>Also required, at the time shown, but not a reason to stop on its own.</dd>
@@ -621,9 +728,9 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
     </article>`;
   const hz = ins?.harness, pf = ins?.performance, hd = ins?.hidden;
   const questionsBody = ins ? `<p class="dim">${esc(QUESTIONS_NOTE)}</p><div class="qs">
-    ${qCard(1, 'harness', `<p>${hz.met} of ${hz.total} harness checks met.</p>
+    ${qCard(1, 'harness', `<p>${hz.yes} of ${hz.points} harness questions answered yes; ${hz.met} of ${hz.total} checks fully met.</p>
       <div class="q-cols"><div><h5>In place</h5>${hz.met ? `<ul>${hz.checks.filter((x) => x.result === 'meets').map((x) => `<li>${codeLink(x.id)} ${esc(x.title)}</li>`).join('')}</ul>` : '<p class="dim">None.</p>'}</div>
-      <div><h5>Missing or unproven</h5>${hz.total - hz.met ? `<ul>${hz.checks.filter((x) => x.result !== 'meets').map((x) => `<li>${codeLink(x.id)} ${esc(x.title)} ${x.result === 'missing' ? '<span class="chip r-missing">No result</span>' : chip(x.result)}${x.text ? `<br><span class="dim">${esc(x.label)}: ${fmt(x.text)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="dim">Nothing.</p>'}</div></div>
+      <div><h5>Answered no, or not known</h5>${hz.questions.some((x) => x.answer !== 'yes' && x.answer !== 'n/a') ? `<ul>${hz.questions.filter((x) => x.answer !== 'yes' && x.answer !== 'n/a').map((x) => `<li>${codeLink(x.criterion)} ${esc(x.q)} ${answerChip(x.answer)}</li>`).join('')}</ul>` : '<p class="dim">Nothing.</p>'}</div></div>
       ${hz.recurring ? `<p>${hz.recurring} kinds of problem came back during the project (see <a href="#history">Quality history</a>): ${esc(recurringText(hz).replace(/^of the \d+ kinds of problem that came back, /, ''))}. The kind of test that would catch each:</p>
       ${table(['Kind of test', 'In the project', 'Would catch these problems that came back'], hz.testKinds.filter((k) => k.suites.length || k.needed.length).map((k) => [esc(k.name), k.suites.length ? `Yes: ${esc(k.suites.join(', '))}` : '<strong>No</strong>', k.needed.length ? k.needed.map((n) => `${esc(n.name)} <span class="dim">(${n.times} time${n.times === 1 ? '' : 's'}${n.caught ? ', caught now' : ''})</span>`).join('<br>') : '<span class="dim">none</span>']))}` : ''}`,
       hz.recommend.length ? `<p>Most needed first:</p><ol class="recs">${hz.recommend.map((k) => { const t = recommendText(k); return `<li><strong>${esc(t.what)}</strong> ${esc(t.forWhat)}<br><span class="dim">${esc(t.catches)}${k.skills.length ? ` Skills and tools: ${k.skills.map(skillLink).join(', ')}.` : ''}</span></li>`; }).join('')}</ol>` : '', 'harness')}
@@ -1022,6 +1129,9 @@ dialog .close { font: 500 13px var(--body); border: 1px solid var(--line); backg
 .attention li { display: grid; gap: 3px; }
 .att-head { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
 .att-what { color: var(--muted); font-size: 13.5px; padding-left: 2px; }
+.qlist { margin: 8px 0 4px; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
+.qlist .chip { margin-left: 4px; }
+.points { font-size: 14px; }
 .q-table td:first-child a { font-weight: 600; color: var(--ink); }
 .said { display: grid; gap: 6px; padding-left: 18px; }
 .top { display: grid; gap: 6px; padding-left: 22px; }
@@ -1089,6 +1199,7 @@ abbr[title]:focus::after { content: attr(title); position: absolute; left: 0; to
 
 // Per area: how many criteria are mandatory, how many have each result, and which mandatory ones have none.
 export function worksheetStatus(pack, catalogue) {
+  pack = resolvePack(pack, catalogue);
   const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
   return catalogue.areas.map((a) => {
     const cs = catalogue.criteria.filter((c) => c.id.startsWith(a.code + '-'));
@@ -1207,9 +1318,17 @@ export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme, sca
   if (stage === 'worksheet' || stage === 'review') {
     const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
     for (const code of codes) {
-      const ids = catalogue.criteria.filter((c) => c.id.startsWith(code + '-') && applicability(c, pack.project) === 'mandatory').map((c) => c.id);
-      const done = ids.filter((id) => RESULTS[rows.get(id)?.result]);
-      add(`${code}: mandatory criteria with a result`, ids.length, done.length, ids.filter((id) => !done.includes(id)));
+      // Every yes/no question of every mandatory criterion needs an answer (a whole criterion may be not applicable).
+      let total = 0;
+      const open = [];
+      for (const c of catalogue.criteria.filter((x) => x.id.startsWith(code + '-') && applicability(x, pack.project) === 'mandatory')) {
+        const r = rows.get(c.id);
+        const qs = (c.checks || []).map((x) => x.id);
+        total += qs.length;
+        if (r && rowOutcome(r, c).result === 'not-applicable') continue;
+        open.push(...(r?.answers ? rowOutcome(r, c).unanswered : qs));
+      }
+      add(`${code}: questions answered`, total, total - open.length, open);
     }
     // The records behind the three questions, counted with the lens that writes them.
     const ins = inspection(pack, catalogue);
@@ -1265,6 +1384,7 @@ const cell = (v) => String(v ?? '').replace(/\|/g, '\\|').replace(/\s*\n\s*/g, '
 const mdTable = (headers, rows) => [`| ${headers.join(' | ')} |`, `|${headers.map(() => '---').join('|')}|`, ...rows.map((r) => `| ${r.map(cell).join(' | ')} |`)];
 
 export function reportMarkdown(pack, catalogue) {
+  pack = resolvePack(pack, catalogue);
   const p = pack.project || {};
   const v = pack.verdict || {};
   const ins = inspection(pack, catalogue);
@@ -1274,7 +1394,7 @@ export function reportMarkdown(pack, catalogue) {
   const open = findings.filter((f) => !/^fixed/i.test(f.status || '')).sort((a, b) => sevRank(a.severity) - sevRank(b.severity));
   const keys = Object.keys(QUESTIONS);
   const evidence = {
-    harness: `${hz.met} of ${hz.total} harness checks met${hz.recurring ? `; ${recurringText(hz)}` : ''}`,
+    harness: `${hz.yes} of ${hz.points} harness questions answered yes${hz.recurring ? `; ${recurringText(hz)}` : ''}`,
     performance: pf.total ? `${pf.run} of ${pf.total} kinds of performance test run; ${pf.passed} passed, ${pf.failed} failed` : 'none required at this risk tier',
     hidden: `${hd.examined} of ${hd.total} places examined; ${hd.found.length} hidden problem${hd.found.length === 1 ? '' : 's'} found`,
   };
@@ -1305,7 +1425,9 @@ export function reportMarkdown(pack, catalogue) {
 
   L.push('## 3. Results', '');
   L.push(`### 3.1 ${QUESTIONS.harness.title} ${hz.answer}`, '', `*${QUESTIONS.harness.why}*`, '');
-  L.push(`**Evidence.** ${hz.met} of ${hz.total} harness checks met.`, '');
+  L.push(`**Evidence.** ${hz.yes} of ${hz.points} harness questions answered yes; ${hz.met} of ${hz.total} checks fully met.`, '');
+  const noHarness = hz.questions.filter((x) => x.answer !== 'yes' && x.answer !== 'n/a');
+  if (noHarness.length) L.push('Answered no, or not known:', '', ...noHarness.map((x) => `- ${x.criterion} ${x.q} **${ANSWER_WORDS[x.answer] || 'No answer'}**`), '');
   const inPlace = hz.checks.filter((x) => x.result === 'meets');
   const missing = hz.checks.filter((x) => x.result !== 'meets');
   if (inPlace.length) L.push(`In place: ${inPlace.map((x) => `${x.id} ${x.title}`).join('; ')}.`, '');
@@ -1351,9 +1473,59 @@ export function reportMarkdown(pack, catalogue) {
     L.push('');
   }
   L.push('## Appendix B. Checklist results by area', '', 'Every criterion in the standard, including those that don\'t apply to this product (`review-pack.mjs status` counts only the mandatory ones).', '');
-  L.push(...mdTable(['Area', 'Meet', "Don't meet", "Can't verify", "Don't apply"], catalogue.areas.map((a) => { const n = areaCounts(pack, catalogue, a.code); return [`${a.code} ${a.name}`, n.meets, n['does-not-meet'], n['cannot-verify'] + n.missing, n['not-applicable']]; })), '');
+  const pts = checklistPoints(pack, catalogue);
+  L.push(...mdTable(['Area', 'Points (yes answers)', 'Meet', "Don't meet", "Can't verify", "Don't apply"], catalogue.areas.map((a) => { const n = areaCounts(pack, catalogue, a.code); const ap = pts.areas.find((x) => x.code === a.code); return [`${a.code} ${a.name}`, `${ap.yes} of ${ap.total}`, n.meets, n['does-not-meet'], n['cannot-verify'] + n.missing, n['not-applicable']]; })), '');
+  L.push(`Checklist points in all: **${pts.yes} of ${pts.total}**.`, '');
   if (filled(pack.glossary)) L.push('## Appendix C. Glossary', '', ...pack.glossary.map((g) => `- **${g.term}:** ${g.meaning}`), '');
   return L.join('\n');
+}
+
+// ---------- comparing two inspections ----------
+// Two inspections of the same version should agree. This counts where they do, question by question.
+export function comparePacks(a, b, catalogue) {
+  const ra = resolvePack(a, catalogue), rb = resolvePack(b, catalogue);
+  const rowsA = new Map(ra.worksheet.map((r) => [r.id, r])), rowsB = new Map(rb.worksheet.map((r) => [r.id, r]));
+  let qBoth = 0, qSame = 0, cBoth = 0, cSame = 0;
+  const differences = [];
+  for (const c of catalogue.criteria) {
+    const x = rowsA.get(c.id), y = rowsB.get(c.id);
+    if (!x || !y) continue;
+    if (x.result && y.result) { cBoth++; if (x.result === y.result) cSame++; }
+    for (const q of c.checks || []) {
+      const ax = x.answers?.[q.id], ay = y.answers?.[q.id];
+      if (!ANSWER_VALUES.includes(ax) || !ANSWER_VALUES.includes(ay)) continue;
+      qBoth++;
+      if (ax === ay) qSame++;
+      else differences.push({ id: q.id, q: q.q, a: ax, b: ay });
+    }
+  }
+  const pa = checklistPoints(a, catalogue), pb = checklistPoints(b, catalogue);
+  const ia = inspection(a, catalogue), ib = inspection(b, catalogue);
+  return {
+    questions: { both: qBoth, same: qSame }, criteria: { both: cBoth, same: cSame },
+    verdict: [a.verdict?.decision || '—', b.verdict?.decision || '—'],
+    answers: Object.keys(QUESTIONS).map((k) => ({ key: k, a: ia[k].answer, b: ib[k].answer })),
+    points: pa.areas.map((x, i) => ({ code: x.code, name: x.name, a: `${x.yes}/${x.total}`, b: `${pb.areas[i].yes}/${pb.areas[i].total}` })),
+    totalPoints: [`${pa.yes}/${pa.total}`, `${pb.yes}/${pb.total}`],
+    differences,
+  };
+}
+
+export function compareMarkdown(cmp) {
+  const pct = (n, d) => (d ? `${Math.round((100 * n) / d)}%` : '—');
+  return [
+    '# Two inspections compared', '',
+    `- **Same answer on ${cmp.questions.same} of ${cmp.questions.both} questions** (${pct(cmp.questions.same, cmp.questions.both)}).`,
+    `- Same result on ${cmp.criteria.same} of ${cmp.criteria.both} criteria (${pct(cmp.criteria.same, cmp.criteria.both)}).`,
+    `- Verdict: ${cmp.verdict[0]} and ${cmp.verdict[1]}.`,
+    `- Checklist points: ${cmp.totalPoints[0]} and ${cmp.totalPoints[1]}.`, '',
+    '| Question | First | Second |', '|---|---|---|',
+    ...cmp.answers.map((x) => `| ${QUESTIONS[x.key].title} | ${x.a} | ${x.b} |`), '',
+    '| Area | Points, first | Points, second |', '|---|---|---|',
+    ...cmp.points.map((x) => `| ${x.code} ${x.name} | ${x.a} | ${x.b} |`), '',
+    cmp.differences.length ? `## Questions answered differently (${cmp.differences.length})` : '## No question was answered differently', '',
+    ...cmp.differences.map((d) => `- **${d.id}** ${d.q} First: ${d.a}; second: ${d.b}.`), '',
+  ].join('\n');
 }
 
 // ---------- template and criteria list ----------
@@ -1382,7 +1554,7 @@ export function templatePack(catalogue, { tier = 2, features = [], stage = 'subm
     findings: [],
     worksheet: catalogue.criteria
       .filter((c) => applicability(c, project) === 'mandatory')
-      .map((c) => ({ id: c.id, result: '', grade: '', evidence: '', note: '', needed: '' })),
+      .map((c) => ({ id: c.id, answers: Object.fromEntries((c.checks || []).map((q) => [q.id, ''])), grade: '', evidence: '', note: '', needed: '' })),
     notChecked: [],
     glossary: [],
   };
@@ -1410,14 +1582,17 @@ export function criteriaMarkdown(catalogue) {
     '',
     'Each criterion is **mandatory from** the risk tier shown, and recommended below it. Criteria with a condition apply only to products with that feature. **Lowest grade** is the weakest evidence that can support a "meets": A = the reviewer ran, reproduced or measured it; B = the reviewer inspected the thing itself; C = a statement only.',
     '',
+    'Each criterion is judged by its **yes/no questions**: the reviewer answers each one (yes, no, unknown, or n/a with a reason), and the software works out the result (any no: does not meet; any unknown: cannot verify; otherwise meets) and the severity (the most serious "a no is" among the questions answered no). Each yes is one point.',
+    '',
   ];
   for (const a of catalogue.areas) {
     const cs = catalogue.criteria.filter((c) => c.id.startsWith(a.code + '-'));
-    lines.push(`## ${a.code}: ${a.name} (${cs.length})`, '', `*${a.question}*`, '', '| ID | Criterion | Standard | Evidence | Mandatory from | Lowest grade |', '|---|---|---|---|---|---|');
+    lines.push(`## ${a.code}: ${a.name} (${cs.length})`, '', `*${a.question}*`, '', '| ID | Criterion | Standard | Questions (a no is…) | Evidence | Mandatory from | Lowest grade |', '|---|---|---|---|---|---|---|');
     for (const c of cs) {
       const cond = c.when ? `<br>*Only if the product ${c.when.map((w) => catalogue.features[w]).join(' or ')}.*` : '';
       const src = c.source ? `<br>*Source: ${c.source}*` : '';
-      lines.push(`| ${c.id} | **${c.title}** | ${c.standard}${cond}${src} | ${c.evidence} | Tier ${c.tier} | ${c.minGrade} |`);
+      const qs = (c.checks || []).map((q) => `${q.id.split('.')[1]}. ${q.q} (${q.ifNo})`).join('<br>');
+      lines.push(`| ${c.id} | **${c.title}** | ${c.standard}${cond}${src} | ${qs} | ${c.evidence} | Tier ${c.tier} | ${c.minGrade} |`);
     }
     lines.push('');
   }
@@ -1500,6 +1675,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     }
     writeFileSync(args[0], JSON.stringify(mergeWorksheet(pack, lists), null, 2) + '\n');
     console.log(`Merged ${lists.reduce((n, l) => n + l.length, 0)} rows into ${args[0]}`);
+  } else if (cmd === 'compare' && args[0] && args[1]) {
+    const [a, b] = [args[0], args[1]].map((f) => JSON.parse(readFileSync(f, 'utf8')));
+    const md = compareMarkdown(comparePacks(a, b, catalogue));
+    if (args[2]) { writeFileSync(args[2], md); console.log(`Wrote ${args[2]}`); } else console.log(md);
   } else if (cmd === 'report' && args[0] && args[1]) {
     const pack = JSON.parse(readFileSync(args[0], 'utf8'));
     writeFileSync(args[1], reportMarkdown(pack, catalogue));
@@ -1508,7 +1687,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     writeFileSync(args[0], criteriaMarkdown(catalogue) + '\n');
     console.log(`Wrote ${args[0]}`);
   } else {
-    console.error('Usage:\n  review-pack.mjs validate <pack.json> [--stage submission|review]\n  review-pack.mjs gate <submission|worksheet|review> <pack.json> [--areas S,A] [--readme README.md] [--scans dir]\n  review-pack.mjs render <pack.json> <out.html> [--fragment]\n  review-pack.mjs report <pack.json> <REPORT.md>\n  review-pack.mjs template <out.json> [--tier 1|2|3] [--features a,b] [--stage review]\n  review-pack.mjs status <pack.json>\n  review-pack.mjs merge <pack.json> <rows.json>...\n  review-pack.mjs criteria <out.md>');
+    console.error('Usage:\n  review-pack.mjs validate <pack.json> [--stage submission|review]\n  review-pack.mjs gate <submission|worksheet|review> <pack.json> [--areas S,A] [--readme README.md] [--scans dir]\n  review-pack.mjs render <pack.json> <out.html> [--fragment]\n  review-pack.mjs report <pack.json> <REPORT.md>\n  review-pack.mjs compare <first.json> <second.json> [out.md]\n  review-pack.mjs template <out.json> [--tier 1|2|3] [--features a,b] [--stage review]\n  review-pack.mjs status <pack.json>\n  review-pack.mjs merge <pack.json> <rows.json>...\n  review-pack.mjs criteria <out.md>');
     process.exit(2);
   }
 }

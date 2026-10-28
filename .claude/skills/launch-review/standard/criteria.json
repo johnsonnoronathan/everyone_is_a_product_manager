@@ -1,5 +1,5 @@
 {
-  "standard": "1.0",
+  "standard": "1.1",
   "about": "The criteria a project is judged against. Each has a minimum risk tier from which it is mandatory, an optional condition (it applies only to projects with that feature), and the lowest evidence grade that can support a 'meets' result. Grades: A = the reviewer ran, reproduced or measured it; B = the reviewer inspected the thing itself (code, configuration, the document being judged); C = a statement only (documentation, the author's word).",
   "features": {
     "aiAssisted": "AI coding agents or assistants write or change the code",
@@ -77,7 +77,24 @@
       "standard": "The README says in plain words what the product does, who uses it and which user journeys matter most.",
       "evidence": "The README.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "R-01.1",
+          "q": "Does the README say in plain words what the product does?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "R-01.2",
+          "q": "Does it say who uses it?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "R-01.3",
+          "q": "Does it name the user journeys that matter most?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "R-02",
@@ -85,7 +102,24 @@
       "standard": "Following only the README, a reviewer gets the app running locally or on a staging copy within 30 minutes. No undocumented steps.",
       "evidence": "The reviewer's own run: commands and output.",
       "minGrade": "A",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "R-02.1",
+          "q": "Following only the README on a clean checkout, did the app start?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "R-02.2",
+          "q": "Did it start within 30 minutes?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "R-02.3",
+          "q": "Was every step needed written in the README?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "R-03",
@@ -93,7 +127,24 @@
       "standard": "A review page in this standard's format exists, is linked from the README, and passes the validator for the submission stage.",
       "evidence": "Validator output.",
       "minGrade": "A",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "R-03.1",
+          "q": "Is there a review pack in this standard's format?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "R-03.2",
+          "q": "Does the README link to the review page?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "R-03.3",
+          "q": "Does `review-pack.mjs gate submission` pass on it?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "R-04",
@@ -101,7 +152,19 @@
       "standard": "Every setting the app reads is listed with its purpose, whether it is secret, an example value and whether production needs it.",
       "evidence": "The settings table compared with a search of the code for every setting it reads.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "R-04.1",
+          "q": "Is every setting the code reads listed (checked against a search of the code)?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "R-04.2",
+          "q": "Does each listed setting give its purpose, whether it is secret, an example and whether production needs it?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "R-05",
@@ -113,6 +176,23 @@
       "when": [
         "accounts",
         "money"
+      ],
+      "checks": [
+        {
+          "id": "R-05.1",
+          "q": "Are there test accounts, or a documented way to create them, for every role?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "R-05.2",
+          "q": "Is there a documented way to reset test data?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "R-05.3",
+          "q": "Do payments, email and other side effects run in test mode?",
+          "ifNo": "High"
+        }
       ]
     },
     {
@@ -121,7 +201,19 @@
       "standard": "A staging environment, separate from production with its own database and keys, is available to the reviewer.",
       "evidence": "Staging address and its configuration.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "R-06.1",
+          "q": "Is a staging copy available to the reviewer?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "R-06.2",
+          "q": "Does staging have its own database and keys, separate from production?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "R-07",
@@ -129,7 +221,24 @@
       "standard": "The requirements the review judges against are written down with numbers (traffic, response times, acceptable data loss, recovery time) and agreed by a named person.",
       "evidence": "The requirements section, with who agreed and when.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "R-07.1",
+          "q": "Are the traffic and response-time targets written down with numbers?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "R-07.2",
+          "q": "Are the acceptable data loss and recovery time written down with numbers?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "R-07.3",
+          "q": "Did a named person agree them, with a date?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "R-08",
@@ -137,7 +246,19 @@
       "standard": "The author lists known problems, limitations and what is out of scope.",
       "evidence": "Known problems register and out-of-scope list.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "R-08.1",
+          "q": "Is there a list of known problems?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "R-08.2",
+          "q": "Is what is out of scope listed?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "R-09",
@@ -145,7 +266,19 @@
       "standard": "Runtime and tool versions are stated, and dependency lockfiles are committed.",
       "evidence": "README, version files, lockfiles.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "R-09.1",
+          "q": "Are the runtime and tool versions stated?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "R-09.2",
+          "q": "Are dependency lockfiles committed?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "H-01",
@@ -157,7 +290,19 @@
       "when": [
         "aiAssisted"
       ],
-      "source": "agents.md format; Claude Code memory files"
+      "source": "agents.md format; Claude Code memory files",
+      "checks": [
+        {
+          "id": "H-01.1",
+          "q": "Is there an agent instruction file (AGENTS.md, CLAUDE.md or similar) at the root?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-01.2",
+          "q": "Does it say how to set up, test and run the project?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "H-02",
@@ -168,6 +313,18 @@
       "tier": 1,
       "when": [
         "aiAssisted"
+      ],
+      "checks": [
+        {
+          "id": "H-02.1",
+          "q": "Does every command in the instruction file work as written?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-02.2",
+          "q": "Does every path and rule it mentions match the code?",
+          "ifNo": "Medium"
+        }
       ]
     },
     {
@@ -179,6 +336,23 @@
       "tier": 2,
       "when": [
         "aiAssisted"
+      ],
+      "checks": [
+        {
+          "id": "H-03.1",
+          "q": "Does it state the business rules that must never be broken?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-03.2",
+          "q": "Does it say where money and secrets are handled?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-03.3",
+          "q": "Does it name the files never edited by hand and the module boundaries?",
+          "ifNo": "Low"
+        }
       ]
     },
     {
@@ -190,6 +364,18 @@
       "tier": 2,
       "when": [
         "aiAssisted"
+      ],
+      "checks": [
+        {
+          "id": "H-04.1",
+          "q": "Is every recurring problem from the quality history in it as a short rule?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-04.2",
+          "q": "Does each of those rules point to the test or check that enforces it?",
+          "ifNo": "Low"
+        }
       ]
     },
     {
@@ -201,6 +387,23 @@
       "tier": 2,
       "when": [
         "aiAssisted"
+      ],
+      "checks": [
+        {
+          "id": "H-05.1",
+          "q": "Can it be read in full in a few minutes, with details linked out?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "H-05.2",
+          "q": "Is it free of secrets?",
+          "ifNo": "High"
+        },
+        {
+          "id": "H-05.3",
+          "q": "Is it free of contradictions, with itself and with the code?",
+          "ifNo": "Low"
+        }
       ]
     },
     {
@@ -209,7 +412,19 @@
       "standard": "Every Must acceptance criterion and every business rule has an automated test.",
       "evidence": "A table from each criterion and rule to its test.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "H-06.1",
+          "q": "Does every Must acceptance criterion have an automated test?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-06.2",
+          "q": "Does every business rule have an automated test?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "H-07",
@@ -217,7 +432,19 @@
       "standard": "Tests assert the business result (stock, balance, order state, what the user sees, including what should disappear), not only status codes or that a page loaded.",
       "evidence": "A sample of tests.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "H-07.1",
+          "q": "Do the tests check the business result (stock, money, order state), not only status codes or that a page loaded?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-07.2",
+          "q": "Do the browser tests also check what should disappear?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "H-08",
@@ -225,7 +452,34 @@
       "standard": "Tests cover malformed and invalid input, unauthorised access, double submission, restarts, timeouts and slow or failing partners, not only the happy path.",
       "evidence": "The test list, by failure type.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "H-08.1",
+          "q": "Is there an automated test with malformed and invalid input?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-08.2",
+          "q": "Is there an automated test of access by the wrong user and by nobody?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-08.3",
+          "q": "Is there an automated test of a double submission?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-08.4",
+          "q": "Is there an automated test of a restart?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-08.5",
+          "q": "Is there an automated test with a slow or failing partner?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "H-09",
@@ -233,7 +487,14 @@
       "standard": "The whole suite passes three runs in a row with retries turned off.",
       "evidence": "Three run logs.",
       "minGrade": "A",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "H-09.1",
+          "q": "Did the whole suite pass three runs in a row with retries turned off?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "H-10",
@@ -241,7 +502,19 @@
       "standard": "Tests and checks run automatically on every change, and the main branch accepts only changes that pass.",
       "evidence": "CI configuration and recent runs, branch protection.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "H-10.1",
+          "q": "Do the tests run automatically on every change (CI)?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-10.2",
+          "q": "Does the main branch accept only changes that pass?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "H-11",
@@ -249,7 +522,19 @@
       "standard": "A linter or formatter and, where the language has one, a type checker are configured and pass.",
       "evidence": "The reviewer's run.",
       "minGrade": "A",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "H-11.1",
+          "q": "Is a linter or formatter configured, and does it pass?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "H-11.2",
+          "q": "Where the language has one, is a type checker configured, and does it pass?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "H-12",
@@ -257,7 +542,19 @@
       "standard": "Secret scanning and vulnerable-dependency checks run in CI or before every commit.",
       "evidence": "CI configuration or hooks, and a recent run.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "H-12.1",
+          "q": "Does secret scanning run in CI or before every commit?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-12.2",
+          "q": "Does a vulnerable-dependency check run in CI or before every commit?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "H-13",
@@ -265,7 +562,14 @@
       "standard": "Changes, AI-generated ones included, are reviewed before merging by someone other than their author: a person or a separate agent session.",
       "evidence": "Recent pull requests and their reviews.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "H-13.1",
+          "q": "Is every change reviewed before merging by someone other than its author (a person or a separate agent session)?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "A-01",
@@ -273,7 +577,19 @@
       "standard": "Every entry point (pages, APIs, webhooks, scheduled jobs, admin and test routes, browser-to-database access) is listed with who may call it and what it touches. The reviewer found none missing.",
       "evidence": "The map compared with the code's routes and jobs.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "A-01.1",
+          "q": "Is every entry point listed (pages, APIs, webhooks, scheduled jobs, admin and test routes, browser-to-database access), with none missing when compared with the code?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "A-01.2",
+          "q": "Does each say who may call it and what it touches?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "A-02",
@@ -281,7 +597,19 @@
       "standard": "Each component has one stated job. Business rules live in one place on the server, not repeated in the browser or across services.",
       "evidence": "Component list and the code behind each rule.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "A-02.1",
+          "q": "Does each component have one stated job?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "A-02.2",
+          "q": "Does each business rule live in one place on the server, not repeated in the browser or across services?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "A-03",
@@ -289,7 +617,19 @@
       "standard": "Major design choices (database, hosting, payments, where state is kept) are written down with the reason, the alternatives and the known downsides.",
       "evidence": "Decision records.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "A-03.1",
+          "q": "Are the major design choices (database, hosting, payments, where state is kept) written down?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "A-03.2",
+          "q": "Does each give the reason, the alternatives and the downsides?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "A-04",
@@ -298,7 +638,24 @@
       "evidence": "The code for each outside call.",
       "minGrade": "B",
       "tier": 1,
-      "source": "AWS Well-Architected, Reliability pillar"
+      "source": "AWS Well-Architected, Reliability pillar",
+      "checks": [
+        {
+          "id": "A-04.1",
+          "q": "Does every call to another service have a time limit?",
+          "ifNo": "High"
+        },
+        {
+          "id": "A-04.2",
+          "q": "Are retries limited, with back-off?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "A-04.3",
+          "q": "Is there a defined outcome when the service fails or doesn't answer?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "A-05",
@@ -306,7 +663,19 @@
       "standard": "Email, file processing, reports and similar work run in the background through a durable queue or outbox, so a slow partner doesn't slow the user.",
       "evidence": "The code path for each slow task.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "A-05.1",
+          "q": "Does slow work (email, files, reports) run outside the user's request?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "A-05.2",
+          "q": "Is that work kept in a durable queue or outbox, so it survives a restart?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "A-06",
@@ -315,7 +684,14 @@
       "evidence": "In-memory state found in the code, and the decision record.",
       "minGrade": "B",
       "tier": 2,
-      "source": "Twelve-Factor App, VI Processes"
+      "source": "Twelve-Factor App, VI Processes",
+      "checks": [
+        {
+          "id": "A-06.1",
+          "q": "Is state that must be shared or survive (sessions, counters, rate limits, queues) kept outside the app server's memory, or is the one-server limit written down and accepted?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "A-07",
@@ -324,7 +700,19 @@
       "evidence": "Configuration per environment.",
       "minGrade": "B",
       "tier": 1,
-      "source": "Twelve-Factor App, X Dev/prod parity"
+      "source": "Twelve-Factor App, X Dev/prod parity",
+      "checks": [
+        {
+          "id": "A-07.1",
+          "q": "Does production have its own database, separate from development and testing?",
+          "ifNo": "High"
+        },
+        {
+          "id": "A-07.2",
+          "q": "Does production have its own keys and accounts?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "A-08",
@@ -333,7 +721,19 @@
       "evidence": "A start attempt with bad settings.",
       "minGrade": "A",
       "tier": 2,
-      "source": "Twelve-Factor App, III Config"
+      "source": "Twelve-Factor App, III Config",
+      "checks": [
+        {
+          "id": "A-08.1",
+          "q": "Do settings come from the environment rather than the code?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "A-08.2",
+          "q": "Does production refuse to start with missing, placeholder or test settings?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "A-09",
@@ -341,7 +741,24 @@
       "standard": "Values that must be right on the day (opening times, prices, stock, switches) are set in one place, parsed strictly (full date, time and time zone), and the value in force is visible.",
       "evidence": "Change the setting, restart, and read the value in force.",
       "minGrade": "A",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "A-09.1",
+          "q": "Is each value that must be right on the day (opening time, price, stock, switches) set in one place only?",
+          "ifNo": "High"
+        },
+        {
+          "id": "A-09.2",
+          "q": "Is it read strictly (full date, time and time zone; anything else refused)?",
+          "ifNo": "High"
+        },
+        {
+          "id": "A-09.3",
+          "q": "Can the value in force be seen?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "A-10",
@@ -349,7 +766,24 @@
       "standard": "Schema changes run through versioned migrations. Nothing deletes data at start-up. Destructive changes have a backup and a plan.",
       "evidence": "Migrations and start-up code.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "A-10.1",
+          "q": "Do schema changes run through versioned migrations?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "A-10.2",
+          "q": "Does nothing delete data at start-up?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "A-10.3",
+          "q": "Do destructive changes have a backup and a plan?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "A-11",
@@ -358,7 +792,19 @@
       "evidence": "Dependency list checked against the registry.",
       "minGrade": "B",
       "tier": 1,
-      "source": "OWASP Top 10:2025 A03 Software Supply Chain Failures"
+      "source": "OWASP Top 10:2025 A03 Software Supply Chain Failures",
+      "checks": [
+        {
+          "id": "A-11.1",
+          "q": "Does every dependency exist in the official registry under that exact name?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "A-11.2",
+          "q": "Is every dependency maintained and needed?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "A-12",
@@ -366,7 +812,19 @@
       "standard": "Rate limits, quotas and costs of each outside service are known and fit the expected peak.",
       "evidence": "Provider documentation compared with the target load.",
       "minGrade": "B",
-      "tier": 3
+      "tier": 3,
+      "checks": [
+        {
+          "id": "A-12.1",
+          "q": "Are the rate limits, quotas and costs of each outside service known?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "A-12.2",
+          "q": "Do they fit the expected peak?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "D-01",
@@ -374,7 +832,14 @@
       "standard": "The business rules are listed in plain words, for example \"never sell more than the stock\", \"one per customer\", \"every paid order has exactly one payment\".",
       "evidence": "The business rules section.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "D-01.1",
+          "q": "Are the business rules written down in plain words?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "D-02",
@@ -383,7 +848,14 @@
       "evidence": "Schema and code for each rule.",
       "minGrade": "B",
       "tier": 1,
-      "source": "OWASP Top 10:2025 A06 Insecure Design"
+      "source": "OWASP Top 10:2025 A06 Insecure Design",
+      "checks": [
+        {
+          "id": "D-02.1",
+          "q": "Is each business rule enforced where it can't be skipped (a database constraint, a transaction or an atomic update, not a check followed by a separate write)?",
+          "ifNo": "Critical"
+        }
+      ]
     },
     {
       "id": "D-03",
@@ -391,7 +863,19 @@
       "standard": "Prices, totals, discounts, roles and ownership are worked out on the server from trusted data, never taken from the browser.",
       "evidence": "The code, and a tampered request.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "D-03.1",
+          "q": "Are prices, totals and discounts worked out on the server from trusted data?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "D-03.2",
+          "q": "Are roles and ownership worked out on the server, never taken from the browser?",
+          "ifNo": "Critical"
+        }
+      ]
     },
     {
       "id": "D-04",
@@ -402,6 +886,18 @@
       "tier": 1,
       "when": [
         "money"
+      ],
+      "checks": [
+        {
+          "id": "D-04.1",
+          "q": "Are amounts stored as whole minor units (cents) or a decimal type?",
+          "ifNo": "High"
+        },
+        {
+          "id": "D-04.2",
+          "q": "Are rounding and currency rules stated?",
+          "ifNo": "Low"
+        }
       ]
     },
     {
@@ -410,7 +906,19 @@
       "standard": "Creating orders, charges and other one-off actions is idempotent: a double click, a retry or a replayed request never creates a second one.",
       "evidence": "A double-submit and a retry test.",
       "minGrade": "A",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "D-05.1",
+          "q": "Does a double click create only one order and one charge?",
+          "ifNo": "High"
+        },
+        {
+          "id": "D-05.2",
+          "q": "Does a retried or replayed request create no second order or charge?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "D-06",
@@ -421,6 +929,13 @@
       "tier": 1,
       "when": [
         "money"
+      ],
+      "checks": [
+        {
+          "id": "D-06.1",
+          "q": "If the process stops between charging and recording, is the purchase completed or undone by a recovery path, so money never moves without a record?",
+          "ifNo": "High"
+        }
       ]
     },
     {
@@ -432,6 +947,18 @@
       "tier": 2,
       "when": [
         "money"
+      ],
+      "checks": [
+        {
+          "id": "D-07.1",
+          "q": "Is a time-out of a payment or other outside action treated as unknown, not failed?",
+          "ifNo": "High"
+        },
+        {
+          "id": "D-07.2",
+          "q": "Does a background job settle unknown outcomes with the provider?",
+          "ifNo": "High"
+        }
       ]
     },
     {
@@ -441,7 +968,24 @@
       "evidence": "Malformed requests sent by the reviewer.",
       "minGrade": "A",
       "tier": 1,
-      "source": "OWASP Top 10:2025 A10 Mishandling of Exceptional Conditions"
+      "source": "OWASP Top 10:2025 A10 Mishandling of Exceptional Conditions",
+      "checks": [
+        {
+          "id": "D-08.1",
+          "q": "Is every input checked for type, range, length and format?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "D-08.2",
+          "q": "Do malformed requests get a 4xx answer, never a crash?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "D-08.3",
+          "q": "Is bad input rejected rather than silently corrected?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "D-09",
@@ -449,7 +993,24 @@
       "standard": "Times are stored in UTC. Business times (opening hours, deadlines) carry a time zone. Date parsing is strict.",
       "evidence": "Code, and attempts with ambiguous dates.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "D-09.1",
+          "q": "Are times stored in UTC?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "D-09.2",
+          "q": "Do business times (opening hours, deadlines) carry a time zone?",
+          "ifNo": "High"
+        },
+        {
+          "id": "D-09.3",
+          "q": "Are ambiguous dates refused?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "D-10",
@@ -461,6 +1022,13 @@
       "when": [
         "money",
         "adminArea"
+      ],
+      "checks": [
+        {
+          "id": "D-10.1",
+          "q": "Do changes to money, stock and admin settings record who, what and when?",
+          "ifNo": "Medium"
+        }
       ]
     },
     {
@@ -472,6 +1040,18 @@
       "tier": 2,
       "when": [
         "personalData"
+      ],
+      "checks": [
+        {
+          "id": "D-11.1",
+          "q": "Is it stated what personal data is kept, why and for how long?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "D-11.2",
+          "q": "Is there a working way to delete a person's data on request?",
+          "ifNo": "Medium"
+        }
       ]
     },
     {
@@ -484,6 +1064,18 @@
       "when": [
         "money",
         "limitedStock"
+      ],
+      "checks": [
+        {
+          "id": "D-12.1",
+          "q": "Is there a routine check comparing records with reality (charges with orders, stock with sales)?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "D-12.2",
+          "q": "Does a difference raise an alert?",
+          "ifNo": "Medium"
+        }
       ]
     },
     {
@@ -495,6 +1087,18 @@
       "tier": 2,
       "when": [
         "money"
+      ],
+      "checks": [
+        {
+          "id": "D-13.1",
+          "q": "Have a purchase, a decline and a refund been made in the real provider's test mode?",
+          "ifNo": "High"
+        },
+        {
+          "id": "D-13.2",
+          "q": "Is one small real purchase and refund done, or planned before launch, in production?",
+          "ifNo": "Medium"
+        }
       ]
     },
     {
@@ -504,7 +1108,24 @@
       "evidence": "Secret scan of files and history, and of the browser bundle.",
       "minGrade": "A",
       "tier": 1,
-      "source": "CWE-798"
+      "source": "CWE-798",
+      "checks": [
+        {
+          "id": "S-01.1",
+          "q": "Are the code and git history free of secrets (secret scan)?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "S-01.2",
+          "q": "Is everything sent to the browser free of secrets?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "S-01.3",
+          "q": "Are logs free of secrets?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "S-02",
@@ -513,7 +1134,19 @@
       "evidence": "Requests as another user and as nobody.",
       "minGrade": "A",
       "tier": 1,
-      "source": "OWASP Top 10:2025 A01 Broken Access Control"
+      "source": "OWASP Top 10:2025 A01 Broken Access Control",
+      "checks": [
+        {
+          "id": "S-02.1",
+          "q": "Does every entry point check on the server who is asking?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "S-02.2",
+          "q": "Is it impossible to read or change another user's data by changing an id?",
+          "ifNo": "Critical"
+        }
+      ]
     },
     {
       "id": "S-03",
@@ -521,7 +1154,24 @@
       "standard": "Admin functions need an admin role with personal accounts, not a shared password. Test, debug and seed routes don't exist in production.",
       "evidence": "Requests to every admin and test route.",
       "minGrade": "A",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "S-03.1",
+          "q": "Do admin functions need an admin role?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "S-03.2",
+          "q": "Do admins have personal accounts rather than a shared password?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "S-03.3",
+          "q": "Are test, debug and seed routes absent from production?",
+          "ifNo": "Critical"
+        }
+      ]
     },
     {
       "id": "S-04",
@@ -532,6 +1182,18 @@
       "tier": 1,
       "when": [
         "browserDatabase"
+      ],
+      "checks": [
+        {
+          "id": "S-04.1",
+          "q": "Do the database access rules deny by default?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "S-04.2",
+          "q": "Is each table's access tested with the public key?",
+          "ifNo": "High"
+        }
       ]
     },
     {
@@ -541,7 +1203,19 @@
       "evidence": "Code scan and review.",
       "minGrade": "B",
       "tier": 1,
-      "source": "OWASP Top 10:2025 A05 Injection"
+      "source": "OWASP Top 10:2025 A05 Injection",
+      "checks": [
+        {
+          "id": "S-05.1",
+          "q": "Are all database queries parameterised?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "S-05.2",
+          "q": "Is no shell command, template or HTML built from user input without encoding?",
+          "ifNo": "Critical"
+        }
+      ]
     },
     {
       "id": "S-06",
@@ -553,7 +1227,29 @@
       "when": [
         "accounts"
       ],
-      "source": "OWASP Top 10:2025 A07 Authentication Failures"
+      "source": "OWASP Top 10:2025 A07 Authentication Failures",
+      "checks": [
+        {
+          "id": "S-06.1",
+          "q": "Does sign-in use a proven provider or library?",
+          "ifNo": "High"
+        },
+        {
+          "id": "S-06.2",
+          "q": "Are passwords, if any, hashed with a slow algorithm?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "S-06.3",
+          "q": "Are session cookies Secure, HttpOnly and SameSite?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "S-06.4",
+          "q": "Does signing out end the session?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "S-07",
@@ -561,7 +1257,19 @@
       "standard": "Sign-in, sign-up, password reset, checkout and other costly endpoints have rate limits or bot protection.",
       "evidence": "Repeated requests until the limit applies.",
       "minGrade": "A",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "S-07.1",
+          "q": "Do sign-in, sign-up and password reset have rate limits or bot protection?",
+          "ifNo": "High"
+        },
+        {
+          "id": "S-07.2",
+          "q": "Do checkout and other costly endpoints have rate limits or bot protection?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "S-08",
@@ -570,7 +1278,24 @@
       "evidence": "Header check against the running site.",
       "minGrade": "A",
       "tier": 2,
-      "source": "OWASP Top 10:2025 A02 Security Misconfiguration"
+      "source": "OWASP Top 10:2025 A02 Security Misconfiguration",
+      "checks": [
+        {
+          "id": "S-08.1",
+          "q": "Is HTTPS used everywhere?",
+          "ifNo": "High"
+        },
+        {
+          "id": "S-08.2",
+          "q": "Are security headers set?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "S-08.3",
+          "q": "Is cross-site access (CORS) limited to known sites?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "S-09",
@@ -578,7 +1303,14 @@
       "standard": "Users never see stack traces, SQL or internal paths.",
       "evidence": "Requests that cause errors.",
       "minGrade": "A",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "S-09.1",
+          "q": "Do error answers hide stack traces, SQL and internal paths?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "S-10",
@@ -587,7 +1319,19 @@
       "evidence": "Dependency scan output and triage notes.",
       "minGrade": "A",
       "tier": 1,
-      "source": "OWASP Top 10:2025 A03 Software Supply Chain Failures"
+      "source": "OWASP Top 10:2025 A03 Software Supply Chain Failures",
+      "checks": [
+        {
+          "id": "S-10.1",
+          "q": "Were the dependencies scanned for known vulnerabilities?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "S-10.2",
+          "q": "Was every hit triaged?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "S-11",
@@ -598,6 +1342,18 @@
       "tier": 2,
       "when": [
         "webhooks"
+      ],
+      "checks": [
+        {
+          "id": "S-11.1",
+          "q": "Does every incoming webhook check the sender's signature?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "S-11.2",
+          "q": "Are replayed webhooks ignored?",
+          "ifNo": "High"
+        }
       ]
     },
     {
@@ -609,6 +1365,18 @@
       "tier": 2,
       "when": [
         "uploads"
+      ],
+      "checks": [
+        {
+          "id": "S-12.1",
+          "q": "Are uploads checked for type and size?",
+          "ifNo": "High"
+        },
+        {
+          "id": "S-12.2",
+          "q": "Are they stored outside the web root and served safely?",
+          "ifNo": "High"
+        }
       ]
     },
     {
@@ -621,7 +1389,24 @@
       "when": [
         "ai"
       ],
-      "source": "OWASP Top 10 for LLM Applications (2025)"
+      "source": "OWASP Top 10 for LLM Applications (2025)",
+      "checks": [
+        {
+          "id": "S-13.1",
+          "q": "Do the AI features resist prompt injection when tried?",
+          "ifNo": "High"
+        },
+        {
+          "id": "S-13.2",
+          "q": "Are they unable to reveal other users' data?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "S-13.3",
+          "q": "Do they have cost and rate limits?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "S-14",
@@ -632,6 +1417,23 @@
       "tier": 2,
       "when": [
         "personalData"
+      ],
+      "checks": [
+        {
+          "id": "S-14.1",
+          "q": "Is personal data kept to what is needed?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "S-14.2",
+          "q": "Does it travel only over encrypted connections?",
+          "ifNo": "High"
+        },
+        {
+          "id": "S-14.3",
+          "q": "Does it stay out of logs and error reports?",
+          "ifNo": "Medium"
+        }
       ]
     },
     {
@@ -640,7 +1442,14 @@
       "standard": "An independent penetration test is done, or booked before or soon after launch.",
       "evidence": "Test report or booking.",
       "minGrade": "B",
-      "tier": 3
+      "tier": 3,
+      "checks": [
+        {
+          "id": "S-15.1",
+          "q": "Is an independent penetration test done, or booked before or soon after launch?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "P-01",
@@ -648,7 +1457,24 @@
       "standard": "The target load is worked out from business numbers (visitors, time window, peak factor) and agreed: requests per second per endpoint and response-time budgets.",
       "evidence": "The worked target and who agreed it.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "P-01.1",
+          "q": "Is the target load worked out from business numbers (visitors, time window, peak factor)?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "P-01.2",
+          "q": "Does it give requests per second per request type and response-time budgets?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "P-01.3",
+          "q": "Has a named person agreed it?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "P-02",
@@ -656,7 +1482,24 @@
       "standard": "A stepped load test reaches at least 150% of target on a production-like setup, with results per step (rate achieved, p95 response time, errors).",
       "evidence": "Load test results.",
       "minGrade": "A",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "P-02.1",
+          "q": "Was a stepped load test run up to at least 150% of the target, with results per step?",
+          "ifNo": "High"
+        },
+        {
+          "id": "P-02.2",
+          "q": "Did the app hold 150% of the target within its speed budgets and error limit?",
+          "ifNo": "High"
+        },
+        {
+          "id": "P-02.3",
+          "q": "Was it run on a production-like setup?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "P-03",
@@ -664,7 +1507,19 @@
       "standard": "The load test was run at least twice, and every run is kept, failures included.",
       "evidence": "All run results.",
       "minGrade": "A",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "P-03.1",
+          "q": "Was the load test run at least twice?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "P-03.2",
+          "q": "Is every run kept, failures included?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "P-04",
@@ -676,6 +1531,18 @@
       "when": [
         "limitedStock",
         "money"
+      ],
+      "checks": [
+        {
+          "id": "P-04.1",
+          "q": "In a race test, was nothing sold beyond the stock?",
+          "ifNo": "Critical"
+        },
+        {
+          "id": "P-04.2",
+          "q": "In a race test, was nobody charged twice?",
+          "ifNo": "High"
+        }
       ]
     },
     {
@@ -688,6 +1555,23 @@
       "when": [
         "money",
         "ai"
+      ],
+      "checks": [
+        {
+          "id": "P-05.1",
+          "q": "Was the slowest realistic partner simulated (answers of 3 to 10 seconds, and time-outs)?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "P-05.2",
+          "q": "Did that cause no double actions?",
+          "ifNo": "High"
+        },
+        {
+          "id": "P-05.3",
+          "q": "Did that cause no pile-up of waiting requests?",
+          "ifNo": "High"
+        }
       ]
     },
     {
@@ -696,7 +1580,19 @@
       "standard": "Database queries on the busiest paths use indexes and no query-per-item loops. Hot reads are cached with a stated freshness.",
       "evidence": "Query plans or code review of the hot paths.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "P-06.1",
+          "q": "Do the busiest paths avoid one-query-per-item loops and use indexes?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "P-06.2",
+          "q": "Are hot reads cached with a stated freshness?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "P-07",
@@ -704,7 +1600,24 @@
       "standard": "Connection pools, queues and request bodies have limits and time-outs. Work fails fast instead of waiting forever.",
       "evidence": "Configuration and code.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "P-07.1",
+          "q": "Do connection pools and queues have limits and time-outs?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "P-07.2",
+          "q": "Do request bodies have a size limit?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "P-07.3",
+          "q": "Does work fail fast instead of waiting forever?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "P-08",
@@ -712,7 +1625,14 @@
       "standard": "Beyond capacity, the app sheds load (a queue page, 'try again', 429 or 503) instead of crashing or slowing everyone down.",
       "evidence": "A test beyond capacity.",
       "minGrade": "A",
-      "tier": 3
+      "tier": 3,
+      "checks": [
+        {
+          "id": "P-08.1",
+          "q": "Beyond capacity, does the app turn people away politely (queue page, try again, 429 or 503) instead of crashing or slowing everyone down?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "P-09",
@@ -721,7 +1641,14 @@
       "evidence": "Lighthouse or field data.",
       "minGrade": "A",
       "tier": 3,
-      "source": "web.dev Core Web Vitals"
+      "source": "web.dev Core Web Vitals",
+      "checks": [
+        {
+          "id": "P-09.1",
+          "q": "Do key pages meet the Core Web Vitals 'good' thresholds on a mid-range phone profile?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "P-10",
@@ -729,7 +1656,19 @@
       "standard": "It is written down what to scale first, how quickly it can be scaled, and what peak costs.",
       "evidence": "The capacity plan.",
       "minGrade": "B",
-      "tier": 3
+      "tier": 3,
+      "checks": [
+        {
+          "id": "P-10.1",
+          "q": "Is it written down what to scale first and how quickly?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "P-10.2",
+          "q": "Is the cost at peak written down?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "O-01",
@@ -738,7 +1677,24 @@
       "evidence": "Calls to both, with a dependency down.",
       "minGrade": "A",
       "tier": 2,
-      "source": "Google SRE: production readiness"
+      "source": "Google SRE: production readiness",
+      "checks": [
+        {
+          "id": "O-01.1",
+          "q": "Is there a liveness check?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "O-01.2",
+          "q": "Is there a readiness check that fails when a dependency is down?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "O-01.3",
+          "q": "Do the checks expose nothing internal?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "O-02",
@@ -747,7 +1703,19 @@
       "evidence": "A restart under load.",
       "minGrade": "A",
       "tier": 2,
-      "source": "Twelve-Factor App, IX Disposability"
+      "source": "Twelve-Factor App, IX Disposability",
+      "checks": [
+        {
+          "id": "O-02.1",
+          "q": "On shutdown, does the app finish the requests in progress?",
+          "ifNo": "High"
+        },
+        {
+          "id": "O-02.2",
+          "q": "Does a restart or deploy lose no data?",
+          "ifNo": "Critical"
+        }
+      ]
     },
     {
       "id": "O-03",
@@ -755,7 +1723,24 @@
       "standard": "Backups run automatically and a restore has been tried. Possible data loss is within the agreed limit.",
       "evidence": "Restore log.",
       "minGrade": "A",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "O-03.1",
+          "q": "Do backups run automatically?",
+          "ifNo": "High"
+        },
+        {
+          "id": "O-03.2",
+          "q": "Was a restore tried, and did it work?",
+          "ifNo": "High"
+        },
+        {
+          "id": "O-03.3",
+          "q": "Is the possible data loss within the agreed limit?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "O-04",
@@ -763,7 +1748,14 @@
       "standard": "Going back to the previous release has been tried against the current database.",
       "evidence": "Rollback log.",
       "minGrade": "A",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "O-04.1",
+          "q": "Was going back to the previous release tried against the current database, and did it work?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "O-05",
@@ -772,7 +1764,19 @@
       "evidence": "A test alert, received.",
       "minGrade": "A",
       "tier": 2,
-      "source": "OWASP Top 10:2025 A09 Security Logging and Alerting Failures"
+      "source": "OWASP Top 10:2025 A09 Security Logging and Alerting Failures",
+      "checks": [
+        {
+          "id": "O-05.1",
+          "q": "Are errors, response times and capacity monitored?",
+          "ifNo": "High"
+        },
+        {
+          "id": "O-05.2",
+          "q": "Did a test alert reach a named person who can act?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "O-06",
@@ -780,7 +1784,19 @@
       "standard": "Logs are structured, carry a request id, and contain no secrets or personal data.",
       "evidence": "Logs from a test run.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "O-06.1",
+          "q": "Are logs structured, with a request id?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "O-06.2",
+          "q": "Are logs free of secrets and personal data?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "O-07",
@@ -788,7 +1804,19 @@
       "standard": "A launch and incident runbook exists, and every step was tried once with tools that exist.",
       "evidence": "The runbook and a rehearsal log.",
       "minGrade": "A",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "O-07.1",
+          "q": "Is there a launch and incident runbook?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "O-07.2",
+          "q": "Was every step tried once, with tools that exist, and did it work?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "O-08",
@@ -800,6 +1828,18 @@
       "when": [
         "launchSpike",
         "money"
+      ],
+      "checks": [
+        {
+          "id": "O-08.1",
+          "q": "Can checkout, sign-up or the promotion be paused without a deploy?",
+          "ifNo": "High"
+        },
+        {
+          "id": "O-08.2",
+          "q": "Is no data lost when it is paused and resumed?",
+          "ifNo": "High"
+        }
       ]
     },
     {
@@ -808,7 +1848,19 @@
       "standard": "Keep-alive and time-out settings fit the load balancer, and request size limits are set.",
       "evidence": "Server and load balancer settings.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "O-09.1",
+          "q": "Do keep-alive and time-out settings fit the load balancer?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "O-09.2",
+          "q": "Are request size limits set?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "O-10",
@@ -816,7 +1868,24 @@
       "standard": "An on-call contact, an escalation path and a way to tell customers about problems are arranged for launch.",
       "evidence": "The rota and contact list.",
       "minGrade": "B",
-      "tier": 3
+      "tier": 3,
+      "checks": [
+        {
+          "id": "O-10.1",
+          "q": "Is an on-call person named for the launch?",
+          "ifNo": "High"
+        },
+        {
+          "id": "O-10.2",
+          "q": "Is there an escalation path?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "O-10.3",
+          "q": "Is there a way to tell customers about problems?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "Q-01",
@@ -824,7 +1893,19 @@
       "standard": "Defects from git history (fix commits, reverts), the issue tracker, incidents and earlier reviews are collected for the period under review.",
       "evidence": "History scan output and the sources used.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "Q-01.1",
+          "q": "Were fix commits and reverts collected from the git history?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "Q-01.2",
+          "q": "Were the issue tracker, incident notes and earlier reviews collected, or their absence recorded?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "Q-02",
@@ -832,7 +1913,19 @@
       "standard": "Defects are grouped into problem classes, and every class with two or more occurrences is listed.",
       "evidence": "The problem classes with their occurrences.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "Q-02.1",
+          "q": "Are the defects grouped into problem classes?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "Q-02.2",
+          "q": "Is every class with two or more occurrences listed?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "Q-03",
@@ -841,7 +1934,14 @@
       "evidence": "Root cause per class, with the commits or reports read.",
       "minGrade": "B",
       "tier": 1,
-      "source": "Google SRE: postmortem culture"
+      "source": "Google SRE: postmortem culture",
+      "checks": [
+        {
+          "id": "Q-03.1",
+          "q": "Does each recurring class have a root cause that explains why it keeps happening, found by reading the actual changes?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "Q-04",
@@ -849,7 +1949,19 @@
       "standard": "Each recurring class has a control that catches the next occurrence automatically: a test, a code-scanning rule, a database constraint, a type, a CI gate, or an agent rule backed by one of these.",
       "evidence": "The control, run against a known example.",
       "minGrade": "A",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "Q-04.1",
+          "q": "Does each recurring class have an automatic control (a test, a scanning rule, a constraint, a type or a CI gate)?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "Q-04.2",
+          "q": "Was each control run against a known example and shown to catch it?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "Q-05",
@@ -857,7 +1969,14 @@
       "standard": "Each bug fix adds a test that fails without the fix.",
       "evidence": "A sample of fix commits.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "Q-05.1",
+          "q": "Does each bug fix in a sample of fix commits add a test that fails without the fix?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "Q-06",
@@ -865,7 +1984,19 @@
       "standard": "Files with the most fixes were reviewed in depth, and a refactor or extra tests are planned where needed.",
       "evidence": "Hotspot list and notes.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "Q-06.1",
+          "q": "Were the files with the most fixes reviewed in depth?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "Q-06.2",
+          "q": "Is a refactor or extra tests planned where needed?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "Q-07",
@@ -873,7 +2004,14 @@
       "standard": "Every open known problem is listed with severity, owner and due date.",
       "evidence": "The register.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "Q-07.1",
+          "q": "Is every open known problem listed with severity, owner and due date?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "Q-08",
@@ -881,7 +2019,19 @@
       "standard": "Reverts and repeated fixes in the same place are explained, and their cause is covered by a control.",
       "evidence": "The reverts and repeat fixes, with notes.",
       "minGrade": "B",
-      "tier": 2
+      "tier": 2,
+      "checks": [
+        {
+          "id": "Q-08.1",
+          "q": "Are reverts and repeated fixes in one place explained?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "Q-08.2",
+          "q": "Is their cause covered by a control?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "Q-09",
@@ -890,7 +2040,14 @@
       "evidence": "Counts from both reviews.",
       "minGrade": "A",
       "tier": 3,
-      "source": "DORA: change failure rate"
+      "source": "DORA: change failure rate",
+      "checks": [
+        {
+          "id": "Q-09.1",
+          "q": "Are the defects per problem class compared with the previous review?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "U-01",
@@ -898,7 +2055,24 @@
       "standard": "Acceptance criteria are numbered, versioned and agreed by the product owner before testing. Changes are approved again.",
       "evidence": "The criteria file and its approvals.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "U-01.1",
+          "q": "Are the acceptance criteria numbered and versioned?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "U-01.2",
+          "q": "Did the product owner agree them before testing?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "U-01.3",
+          "q": "Were later changes approved again?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "U-02",
@@ -906,7 +2080,14 @@
       "standard": "Every Must criterion passes three runs in a row with no retries.",
       "evidence": "The acceptance run.",
       "minGrade": "A",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "U-02.1",
+          "q": "Does every Must criterion pass three runs in a row with no retries?",
+          "ifNo": "High"
+        }
+      ]
     },
     {
       "id": "U-03",
@@ -914,7 +2095,14 @@
       "standard": "User-visible behaviour has screenshots or recordings attached to each result.",
       "evidence": "The attachments.",
       "minGrade": "A",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "U-03.1",
+          "q": "Does every user-visible result have a screenshot or recording attached?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "U-04",
@@ -922,7 +2110,14 @@
       "standard": "The first screen of the report gives the verdict, the reason and the blockers in plain language.",
       "evidence": "The report.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "U-04.1",
+          "q": "Does the report's first screen give the verdict, the reason and the blockers in plain language?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "U-05",
@@ -930,7 +2125,24 @@
       "standard": "Each result has a plain-language impact. Numbers have units and the target beside them. Technical terms are in a glossary.",
       "evidence": "The report.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "U-05.1",
+          "q": "Does each result have a plain-language impact?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "U-05.2",
+          "q": "Do numbers have units and the target beside them?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "U-05.3",
+          "q": "Are technical terms in a glossary?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "U-06",
@@ -938,7 +2150,19 @@
       "standard": "Each result links to its evidence, and whatever wasn't checked is listed.",
       "evidence": "The report.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "U-06.1",
+          "q": "Does each result link to its evidence?",
+          "ifNo": "Low"
+        },
+        {
+          "id": "U-06.2",
+          "q": "Is everything that wasn't checked listed?",
+          "ifNo": "Medium"
+        }
+      ]
     },
     {
       "id": "U-07",
@@ -946,7 +2170,14 @@
       "standard": "The report records the commit, date, tool versions and reviewer, so the review can be repeated.",
       "evidence": "The report.",
       "minGrade": "B",
-      "tier": 1
+      "tier": 1,
+      "checks": [
+        {
+          "id": "U-07.1",
+          "q": "Does the report record the commit, date, tool versions and reviewer?",
+          "ifNo": "Low"
+        }
+      ]
     },
     {
       "id": "U-08",
@@ -955,7 +2186,14 @@
       "evidence": "Accessibility scan output.",
       "minGrade": "A",
       "tier": 2,
-      "source": "WCAG 2.1"
+      "source": "WCAG 2.1",
+      "checks": [
+        {
+          "id": "U-08.1",
+          "q": "Do key pages have no serious or critical violations in automated WCAG 2.1 AA checks?",
+          "ifNo": "Medium"
+        }
+      ]
     }
   ],
   "performanceTests": [

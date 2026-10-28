@@ -12,11 +12,11 @@ Version `fa296a2` (the app's code hasn't changed since; later commits touch only
 
 | Question | Answer | Evidence |
 |---|---|---|
-| 1. Is the test harness properly set up? | **No** | 2 of 13 harness checks met; of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught |
+| 1. Is the test harness properly set up? | **No** | 8 of 27 harness questions answered yes; of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught |
 | 2. Are the performance tests comprehensive? | **Partly** | 4 of 8 kinds of performance test run; 4 passed, 0 failed |
 | 3. Does the architecture review cover hidden problems? | **Yes** | 9 of 9 places examined; 12 hidden problems found |
 
-- The test harness is not set up: 10 of 13 checks are not met and 1 could not be verified, and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
+- The test harness is not set up: 8 of 27 harness questions are answered yes (2 of 13 checks fully met), and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
 - The performance tests are not fully comprehensive: 4 of 8 kinds this product needs were not run (beyond capacity, long run, page speed on phones, on a production-like setup). All 4 that were run passed.
 - The review looked in all 9 places where hidden problems usually sit. It found 12 problems there.
 
@@ -63,7 +63,29 @@ Version `fa296a2` (the app's code hasn't changed since; later commits touch only
 
 *The tests, automatic checks and AI-agent instructions that stop the next change, by a person or an AI agent, from breaking something or bringing an old bug back.*
 
-**Evidence.** 2 of 13 harness checks met.
+**Evidence.** 8 of 27 harness questions answered yes; 2 of 13 checks fully met.
+
+Answered no, or not known:
+
+- H-01 Is there an agent instruction file (AGENTS.md, CLAUDE.md or similar) at the root? **No**
+- H-01 Does it say how to set up, test and run the project? **No**
+- H-02 Does every command in the instruction file work as written? **No**
+- H-02 Does every path and rule it mentions match the code? **No**
+- H-03 Does it state the business rules that must never be broken? **No**
+- H-03 Does it say where money and secrets are handled? **No**
+- H-03 Does it name the files never edited by hand and the module boundaries? **No**
+- H-04 Is every recurring problem from the quality history in it as a short rule? **No**
+- H-04 Does each of those rules point to the test or check that enforces it? **No**
+- H-05 Can it be read in full in a few minutes, with details linked out? **No**
+- H-06 Does every business rule have an automated test? **No**
+- H-07 Do the browser tests also check what should disappear? **No**
+- H-08 Is there an automated test with malformed and invalid input? **No**
+- H-08 Is there an automated test of a restart? **No**
+- H-10 Does the main branch accept only changes that pass? **Not known**
+- H-11 Is a linter or formatter configured, and does it pass? **No**
+- H-11 Where the language has one, is a type checker configured, and does it pass? **No**
+- H-12 Does secret scanning run in CI or before every commit? **No**
+- H-12 Does a vulnerable-dependency check run in CI or before every commit? **No**
 
 In place: H-09 Tests are reliable; H-13 Changes get an independent review.
 
@@ -93,7 +115,7 @@ Missing or unproven:
 | Load and race tests | Yes: Race test, Load test | — |
 | Automatic scans | **No** | Bad input crashes the app or is quietly accepted (6 times) |
 
-**Conclusion.** The test harness is not set up: 10 of 13 checks are not met and 1 could not be verified, and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
+**Conclusion.** The test harness is not set up: 8 of 27 harness questions are answered yes (2 of 13 checks fully met), and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
 
 ### 3.2 Are the performance tests comprehensive? Partly
 
@@ -356,6 +378,15 @@ An inspection lowers the risk; it does not prove there are no problems.
 - **Who:** Developer
 - **Status:** Open
 
+### OPS-01 · Medium · Confirmed: No request ids, and admin actions are anonymous
+
+- **Impact:** Harder to trace one shopper's problem.
+- **Where:** `fixed/server.mjs:61-66` (logging)
+- **Fix:** A request id per request, and admin identity in the log.
+- **Done when:** Every log line carries a request id; admin actions name the admin.
+- **Who:** Developer
+- **Status:** Partly fixed
+
 ### HAR-01 · Medium · Confirmed: No instructions for the AI agents that write the code
 
 - **Impact:** Every new session of the AI coding assistant starts without the project's rules and lessons, so the problems under Quality history can return. Several problems so far were introduced by fixes.
@@ -382,15 +413,6 @@ An inspection lowers the risk; it does not prove there are no problems.
 - **Done when:** Every kind of recurring problem is marked "caught automatically".
 - **Who:** Developer
 - **Status:** Open
-
-### OPS-01 · Low · Confirmed: No request ids, and admin actions are anonymous
-
-- **Impact:** Harder to trace one shopper's problem.
-- **Where:** `fixed/server.mjs:61-66` (logging)
-- **Fix:** A request id per request, and admin identity in the log.
-- **Done when:** Every log line carries a request id; admin actions name the admin.
-- **Who:** Developer
-- **Status:** Partly fixed
 
 ### ARC-12 · Low · Confirmed: Different non-Latin addresses collide
 
@@ -450,17 +472,19 @@ An inspection lowers the risk; it does not prove there are no problems.
 
 Every criterion in the standard, including those that don't apply to this product (`review-pack.mjs status` counts only the mandatory ones).
 
-| Area | Meet | Don't meet | Can't verify | Don't apply |
-|---|---|---|---|---|
-| R Reviewability | 7 | 2 | 0 | 0 |
-| H Harness | 2 | 10 | 1 | 0 |
-| A Architecture | 8 | 2 | 2 | 0 |
-| D Data and business rules | 5 | 8 | 0 | 0 |
-| S Security | 5 | 3 | 3 | 4 |
-| P Performance | 6 | 1 | 3 | 0 |
-| O Operations | 2 | 3 | 5 | 0 |
-| Q Quality history | 5 | 4 | 0 | 0 |
-| U Acceptance and report | 6 | 2 | 0 | 0 |
+| Area | Points (yes answers) | Meet | Don't meet | Can't verify | Don't apply |
+|---|---|---|---|---|---|
+| R Reviewability | 19 of 22 | 6 | 3 | 0 | 0 |
+| H Harness | 8 of 27 | 2 | 10 | 1 | 0 |
+| A Architecture | 17 of 25 | 8 | 2 | 2 | 0 |
+| D Data and business rules | 11 of 24 | 5 | 8 | 0 | 0 |
+| S Security | 16 of 24 | 5 | 3 | 3 | 4 |
+| P Performance | 16 of 22 | 6 | 2 | 2 | 0 |
+| O Operations | 9 of 22 | 2 | 3 | 5 | 0 |
+| Q Quality history | 9 of 14 | 5 | 4 | 0 | 0 |
+| U Acceptance and report | 10 of 13 | 6 | 2 | 0 | 0 |
+
+Checklist points in all: **115 of 193**.
 
 ## Appendix C. Glossary
 

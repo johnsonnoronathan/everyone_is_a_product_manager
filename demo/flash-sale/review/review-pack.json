@@ -1,5 +1,5 @@
 {
-  "standard": "1.0",
+  "standard": "1.1",
   "stage": "review",
   "project": {
     "name": "Holiday sneaker drop",
@@ -1927,7 +1927,7 @@
     },
     {
       "id": "OPS-01",
-      "severity": "Low",
+      "severity": "Medium",
       "confidence": "Confirmed",
       "status": "Partly fixed",
       "title": "No request ids, and admin actions are anonymous",
@@ -2148,581 +2148,872 @@
   "worksheet": [
     {
       "id": "R-01",
-      "result": "meets",
       "grade": "B",
-      "evidence": "`demo/flash-sale/README.md` says what the app is (a 100-pair sneaker drop, one per customer), the two versions, and how to run and test it."
+      "evidence": "`demo/flash-sale/README.md` says what the app is (a 100-pair sneaker drop, one per customer), the two versions, and how to run and test it.",
+      "answers": {
+        "R-01.1": "yes",
+        "R-01.2": "yes",
+        "R-01.3": "no"
+      },
+      "fix": "Name the main journeys in the README's What it is item (sign in, buy one pair, see the order), or point to the review page's Demo section."
     },
     {
       "id": "R-02",
-      "result": "meets",
       "grade": "A",
-      "evidence": "`node demo/flash-sale/run.mjs fixed` started on a clean checkout with Node 22 and served the page at http://127.0.0.1:3000; CI does the same on every change."
+      "evidence": "`node demo/flash-sale/run.mjs fixed` started on a clean checkout with Node 22 and served the page at http://127.0.0.1:3000; CI does the same on every change.",
+      "answers": {
+        "R-02.1": "yes",
+        "R-02.2": "yes",
+        "R-02.3": "yes"
+      }
     },
     {
       "id": "R-03",
-      "result": "meets",
       "grade": "A",
-      "evidence": "This pack passes `review-pack.mjs validate --stage submission`, and the demo README links to this page."
+      "evidence": "This pack passes `review-pack.mjs validate --stage submission`, and the demo README links to this page.",
+      "answers": {
+        "R-03.1": "yes",
+        "R-03.2": "yes",
+        "R-03.3": "yes"
+      }
     },
     {
       "id": "R-04",
-      "result": "meets",
       "grade": "B",
-      "evidence": "The settings table under How to run it matches a search of the code for every setting it reads."
+      "evidence": "The settings table under How to run it matches a search of the code for every setting it reads.",
+      "answers": {
+        "R-04.1": "yes",
+        "R-04.2": "yes"
+      }
     },
     {
       "id": "R-05",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Test sign-in accepts any email; the reset route and demo admin token worked; payments go to the local simulator."
+      "evidence": "Test sign-in accepts any email; the reset route and demo admin token worked; payments go to the local simulator.",
+      "answers": {
+        "R-05.1": "yes",
+        "R-05.2": "yes",
+        "R-05.3": "yes"
+      }
     },
     {
       "id": "R-06",
-      "result": "does-not-meet",
-      "severity": "Medium",
       "evidence": "No staging copy: everything ran on one local machine against simulators.",
-      "fix": "Set up a staging copy with its own database, keys and test payments, and give the reviewer access."
+      "fix": "Set up a staging copy with its own database, keys and test payments, and give the reviewer access.",
+      "answers": {
+        "R-06.1": "no",
+        "R-06.2": "n/a"
+      },
+      "note": "There is no staging copy, so the question about its separation doesn't apply yet."
     },
     {
       "id": "R-07",
-      "result": "does-not-meet",
-      "severity": "Medium",
       "evidence": "Traffic, stock, payment and opening requirements have numbers and were agreed; acceptable data loss and recovery time were never set (RQ-5).",
-      "fix": "Agree with the hosting provider how much data could be lost (for example 5 minutes) and how fast the shop must be back (for example 30 minutes), and record who agreed."
+      "fix": "Agree with the hosting provider how much data could be lost (for example 5 minutes) and how fast the shop must be back (for example 30 minutes), and record who agreed.",
+      "answers": {
+        "R-07.1": "yes",
+        "R-07.2": "no",
+        "R-07.3": "yes"
+      }
     },
     {
       "id": "R-08",
-      "result": "meets",
       "grade": "B",
-      "evidence": "`fixed/RUNBOOK.md` lists the limits accepted for launch day; the known problems register (Quality history) lists every open problem; out of scope is under Product."
+      "evidence": "`fixed/RUNBOOK.md` lists the limits accepted for launch day; the known problems register (Quality history) lists every open problem; out of scope is under Product.",
+      "answers": {
+        "R-08.1": "yes",
+        "R-08.2": "yes"
+      }
     },
     {
       "id": "R-09",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Node 22.13+ stated; the app has no dependencies; the acceptance suite's lockfile is committed; CI pins k6 1.3.0 and Semgrep 1.181.0."
+      "evidence": "Node 22.13+ stated; the app has no dependencies; the acceptance suite's lockfile is committed; CI pins k6 1.3.0 and Semgrep 1.181.0.",
+      "answers": {
+        "R-09.1": "yes",
+        "R-09.2": "yes"
+      }
     },
     {
       "id": "H-01",
-      "result": "does-not-meet",
       "finding": "HAR-01",
-      "evidence": "No AGENTS.md, CLAUDE.md or similar anywhere in the repository, although an AI coding assistant wrote and fixed the code."
+      "evidence": "No AGENTS.md, CLAUDE.md or similar anywhere in the repository, although an AI coding assistant wrote and fixed the code.",
+      "answers": {
+        "H-01.1": "no",
+        "H-01.2": "no"
+      }
     },
     {
       "id": "H-02",
-      "result": "does-not-meet",
       "finding": "HAR-01",
-      "evidence": "There is no instruction file whose commands could be checked."
+      "evidence": "There is no instruction file whose commands could be checked.",
+      "answers": {
+        "H-02.1": "no",
+        "H-02.2": "no"
+      }
     },
     {
       "id": "H-03",
-      "result": "does-not-meet",
       "finding": "HAR-01",
-      "evidence": "The business rules and boundaries exist only in review reports and code; agents aren't told them."
+      "evidence": "The business rules and boundaries exist only in review reports and code; agents aren't told them.",
+      "answers": {
+        "H-03.1": "no",
+        "H-03.2": "no",
+        "H-03.3": "no"
+      }
     },
     {
       "id": "H-04",
-      "result": "does-not-meet",
       "finding": "HAR-01",
-      "evidence": "None of the six recurring problems (Quality history) is recorded where an agent would read it."
+      "evidence": "None of the six recurring problems (Quality history) is recorded where an agent would read it.",
+      "answers": {
+        "H-04.1": "no",
+        "H-04.2": "no"
+      }
     },
     {
       "id": "H-05",
-      "result": "does-not-meet",
       "finding": "HAR-01",
-      "evidence": "No instruction file."
+      "evidence": "No instruction file.",
+      "answers": {
+        "H-05.1": "no",
+        "H-05.2": "n/a",
+        "H-05.3": "n/a"
+      },
+      "note": "There is no instruction file, so it can't contain secrets or contradictions."
     },
     {
       "id": "H-06",
-      "result": "does-not-meet",
-      "severity": "Low",
       "evidence": "All 10 Must criteria have automated tests, and six of the seven business rules do; the one-per-address rule (BR-3) has none, which is how ARC-12 went unnoticed.",
-      "fix": "Add a test that two different addresses can each buy, and that one address can't buy twice."
+      "fix": "Add a test that two different addresses can each buy, and that one address can't buy twice.",
+      "answers": {
+        "H-06.1": "yes",
+        "H-06.2": "no"
+      }
     },
     {
       "id": "H-07",
-      "result": "does-not-meet",
-      "severity": "Low",
       "finding": "ARC-15",
-      "evidence": "Tests check orders, charges and messages, but not what should disappear: the sign-in box stayed visible for three rounds."
+      "evidence": "Tests check orders, charges and messages, but not what should disappear: the sign-in box stayed visible for three rounds.",
+      "answers": {
+        "H-07.1": "yes",
+        "H-07.2": "no"
+      }
     },
     {
       "id": "H-08",
-      "result": "does-not-meet",
       "finding": "HAR-02",
-      "evidence": "Covered: tampered price, double click, other users' orders, slow and failing payments, missing address, too early, paused. Not covered: malformed requests and restarts, two of the recurring problems under Quality history."
+      "evidence": "Covered: tampered price, double click, other users' orders, slow and failing payments, missing address, too early, paused. Not covered: malformed requests and restarts, two of the recurring problems under Quality history.",
+      "answers": {
+        "H-08.1": "no",
+        "H-08.2": "yes",
+        "H-08.3": "yes",
+        "H-08.4": "no",
+        "H-08.5": "yes"
+      }
     },
     {
       "id": "H-09",
-      "result": "meets",
       "grade": "A",
-      "evidence": "12 browser tests, each run 3 times with retries off (36 runs): all passed, none flaky (2026-10-17). CI repeats each test twice."
+      "evidence": "12 browser tests, each run 3 times with retries off (36 runs): all passed, none flaky (2026-10-17). CI repeats each test twice.",
+      "answers": {
+        "H-09.1": "yes"
+      }
     },
     {
       "id": "H-10",
-      "result": "cannot-verify",
       "evidence": "CI runs the race test and the acceptance suite on every push and pull request, and recent pull requests merged after green CI.",
-      "needed": "The branch protection settings for `main` (repository settings, owner access)."
+      "needed": "The branch protection settings for `main` (repository settings, owner access).",
+      "answers": {
+        "H-10.1": "yes",
+        "H-10.2": "unknown"
+      }
     },
     {
       "id": "H-11",
-      "result": "does-not-meet",
       "finding": "HAR-02",
-      "evidence": "No linter, formatter or type checker for the app code."
+      "evidence": "No linter, formatter or type checker for the app code.",
+      "answers": {
+        "H-11.1": "no",
+        "H-11.2": "no"
+      }
     },
     {
       "id": "H-12",
-      "result": "does-not-meet",
-      "severity": "Low",
       "evidence": "Gitleaks, OSV-Scanner and Semgrep run only when a reviewer runs them; CI tests the Semgrep rules but doesn't scan the app.",
-      "fix": "Run Gitleaks, OSV-Scanner and Semgrep in CI on every change."
+      "fix": "Run Gitleaks, OSV-Scanner and Semgrep in CI on every change.",
+      "answers": {
+        "H-12.1": "no",
+        "H-12.2": "no"
+      }
     },
     {
       "id": "H-13",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Changes reach `main` through pull requests with an automated review (Codex) and CI; each round of fixes was reviewed by a separate session that hadn't written it."
+      "evidence": "Changes reach `main` through pull requests with an automated review (Codex) and CI; each round of fixes was reviewed by a separate session that hadn't written it.",
+      "answers": {
+        "H-13.1": "yes"
+      }
     },
     {
       "id": "A-01",
-      "result": "meets",
       "grade": "B",
-      "evidence": "The round-2 system map lists every web route, the start-up, the background jobs, the payment call and the shutdown signals; compared with the router, none is missing."
+      "evidence": "The round-2 system map lists every web route, the start-up, the background jobs, the payment call and the shutdown signals; compared with the router, none is missing.",
+      "answers": {
+        "A-01.1": "yes",
+        "A-01.2": "yes"
+      }
     },
     {
       "id": "A-02",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Price, limits, opening time and payment state are decided on the server; the page only displays them."
+      "evidence": "Price, limits, opening time and payment state are decided on the server; the page only displays them.",
+      "answers": {
+        "A-02.1": "yes",
+        "A-02.2": "yes"
+      }
     },
     {
       "id": "A-03",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Four decisions with reasons, alternatives and downsides under Architecture, taken from the round-2 change notes."
+      "evidence": "Four decisions with reasons, alternatives and downsides under Architecture, taken from the round-2 change notes.",
+      "answers": {
+        "A-03.1": "yes",
+        "A-03.2": "yes"
+      }
     },
     {
       "id": "A-04",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Payment call: 3 s limit, one repeat-safe key per order, unknown outcomes settled every 5 s. Database: 1 s wait for a connection on ordinary queries. Email sending isn't built yet."
+      "evidence": "Payment call: 3 s limit, one repeat-safe key per order, unknown outcomes settled every 5 s. Database: 1 s wait for a connection on ordinary queries. Email sending isn't built yet.",
+      "answers": {
+        "A-04.1": "yes",
+        "A-04.2": "yes",
+        "A-04.3": "yes"
+      }
     },
     {
       "id": "A-05",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Emails are queued in a durable outbox, written in the same transaction as the payment, so a slow email provider can't slow checkout. Sending itself isn't built yet: that is ARC-07, not this criterion. (Corrected 2026-10-27 after an independent test review judged it this way.)"
+      "evidence": "Emails are queued in a durable outbox, written in the same transaction as the payment, so a slow email provider can't slow checkout. Sending itself isn't built yet: that is ARC-07, not this criterion. (Corrected 2026-10-27 after an independent test review judged it this way.)",
+      "answers": {
+        "A-05.1": "yes",
+        "A-05.2": "yes"
+      }
     },
     {
       "id": "A-06",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Rate limits and caches live in one process; the one-instance limit is written in the runbook and accepted for launch day (ARC-06)."
+      "evidence": "Rate limits and caches live in one process; the one-instance limit is written in the runbook and accepted for launch day (ARC-06).",
+      "answers": {
+        "A-06.1": "yes"
+      }
     },
     {
       "id": "A-07",
-      "result": "cannot-verify",
-      "needed": "The staging and production configuration, which isn't in the repository."
+      "needed": "The staging and production configuration, which isn't in the repository.",
+      "answers": {
+        "A-07.1": "unknown",
+        "A-07.2": "unknown"
+      }
     },
     {
       "id": "A-08",
-      "result": "does-not-meet",
-      "finding": "SEC-04",
-      "evidence": "With `NODE_ENV=production`, start-up refuses demo switches, placeholder secrets and a missing opening time (verified). Without it the demo configuration starts, and no production start command sets it. Production also starts without a database setting or payment address (ARC-16)."
+      "finding": "ARC-16",
+      "evidence": "With `NODE_ENV=production`, start-up refuses demo switches, placeholder secrets and a missing opening time (verified). Without it the demo configuration starts, and no production start command sets it. Production also starts without a database setting or payment address (ARC-16).",
+      "answers": {
+        "A-08.1": "yes",
+        "A-08.2": "no"
+      }
     },
     {
       "id": "A-09",
-      "result": "does-not-meet",
       "finding": "ARC-11",
-      "evidence": "After a second start with a new `SALE_STARTS_AT`, the log showed the new time while the shop kept the old one and sold a pair. \"Nov 27\" was stored as 2001 and opened the sale."
+      "evidence": "After a second start with a new `SALE_STARTS_AT`, the log showed the new time while the shop kept the old one and sold a pair. \"Nov 27\" was stored as 2001 and opened the sale.",
+      "answers": {
+        "A-09.1": "no",
+        "A-09.2": "no",
+        "A-09.3": "no"
+      }
     },
     {
       "id": "A-10",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Four append-only, versioned migrations; nothing is deleted at start-up (a restart kept orders and stock). Rollback is judged under O-04."
+      "evidence": "Four append-only, versioned migrations; nothing is deleted at start-up (a restart kept orders and stock). Rollback is judged under O-04.",
+      "answers": {
+        "A-10.1": "yes",
+        "A-10.2": "yes",
+        "A-10.3": "n/a"
+      },
+      "note": "No destructive change exists: the four migrations only add."
     },
     {
       "id": "A-11",
-      "result": "meets",
       "grade": "B",
-      "evidence": "The app uses only Node built-ins; the acceptance suite's packages (`@playwright/test`, `@axe-core/playwright`) are real registry packages, pinned in its lockfile."
+      "evidence": "The app uses only Node built-ins; the acceptance suite's packages (`@playwright/test`, `@axe-core/playwright`) are real registry packages, pinned in its lockfile.",
+      "answers": {
+        "A-11.1": "yes",
+        "A-11.2": "yes"
+      }
     },
     {
       "id": "A-12",
-      "result": "cannot-verify",
-      "needed": "The production payment and email providers' rate limits and quotas, compared with 150 purchases a second at peak."
+      "needed": "The production payment and email providers' rate limits and quotas, compared with 150 purchases a second at peak.",
+      "answers": {
+        "A-12.1": "unknown",
+        "A-12.2": "unknown"
+      }
     },
     {
       "id": "D-01",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Seven rules under Business rules."
+      "evidence": "Seven rules under Business rules.",
+      "answers": {
+        "D-01.1": "yes"
+      }
     },
     {
       "id": "D-02",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Stock: atomic update in a transaction plus `CHECK (stock >= 0)`; one per customer and per address: unique indexes; payment key: unique."
+      "evidence": "Stock: atomic update in a transaction plus `CHECK (stock >= 0)`; one per customer and per address: unique indexes; payment key: unique.",
+      "answers": {
+        "D-02.1": "yes"
+      }
     },
     {
       "id": "D-03",
-      "result": "meets",
       "grade": "A",
-      "evidence": "AC-03: a request claiming $0.01 was charged $49.99."
+      "evidence": "AC-03: a request claiming $0.01 was charged $49.99.",
+      "answers": {
+        "D-03.1": "yes",
+        "D-03.2": "yes"
+      }
     },
     {
       "id": "D-04",
-      "result": "does-not-meet",
-      "severity": "Low",
       "evidence": "Amounts are whole cents throughout, but no currency or rounding rule is stated anywhere. (Corrected 2026-10-27: the criterion asks for both.)",
-      "fix": "State the currency (US dollars) and the rounding rule under Business rules."
+      "fix": "State the currency (US dollars) and the rounding rule under Business rules.",
+      "answers": {
+        "D-04.1": "yes",
+        "D-04.2": "no"
+      }
     },
     {
       "id": "D-05",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Double clicks (AC-04) and 1,000 double-clicking buyers (race test) each produced one order; repeat requests while confirming get 409."
+      "evidence": "Double clicks (AC-04) and 1,000 double-clicking buyers (race test) each produced one order; repeat requests while confirming get 409.",
+      "answers": {
+        "D-05.1": "yes",
+        "D-05.2": "yes"
+      }
     },
     {
       "id": "D-06",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Reservation and order in one transaction; post-charge writes retried until they land; a crash in the middle of a payment was settled after restart."
+      "evidence": "Reservation and order in one transaction; post-charge writes retried until they land; a crash in the middle of a payment was settled after restart.",
+      "answers": {
+        "D-06.1": "yes"
+      }
     },
     {
       "id": "D-07",
-      "result": "does-not-meet",
       "finding": "ARC-10",
-      "evidence": "Time-outs are \"unknown\" and settled with the same key (verified: 40 charges for 40 orders), but an error that retrying can't fix is never settled."
+      "evidence": "Time-outs are \"unknown\" and settled with the same key (verified: 40 charges for 40 orders), but an error that retrying can't fix is never settled.",
+      "answers": {
+        "D-07.1": "yes",
+        "D-07.2": "no"
+      },
+      "severity": "Medium",
+      "severityReason": "Time-outs are settled (40 charges for 40 orders); only a payment error that retrying can't fix stays unsettled, so the harm is limited to that case."
     },
     {
       "id": "D-08",
-      "result": "does-not-meet",
       "finding": "ARC-11",
-      "evidence": "Malformed paths and bodies now get 400 (7 paths and `null`, array and scalar bodies tried). But dates are parsed leniently: \"Nov 27\", \"1\" and 12345 were all accepted as opening times."
+      "evidence": "Malformed paths and bodies now get 400 (7 paths and `null`, array and scalar bodies tried). But dates are parsed leniently: \"Nov 27\", \"1\" and 12345 were all accepted as opening times.",
+      "answers": {
+        "D-08.1": "no",
+        "D-08.2": "yes",
+        "D-08.3": "no"
+      }
     },
     {
       "id": "D-09",
-      "result": "does-not-meet",
       "finding": "ARC-11",
-      "evidence": "\"2026-11-27\" without a time zone is read as midnight UTC: 7 pm the evening before in New York."
+      "evidence": "\"2026-11-27\" without a time zone is read as midnight UTC: 7 pm the evening before in New York.",
+      "answers": {
+        "D-09.1": "yes",
+        "D-09.2": "no",
+        "D-09.3": "no"
+      }
     },
     {
       "id": "D-10",
-      "result": "does-not-meet",
       "finding": "OPS-01",
-      "evidence": "Orders and payments are logged; admin changes are logged without who made them."
+      "evidence": "Orders and payments are logged; admin changes are logged without who made them.",
+      "answers": {
+        "D-10.1": "no"
+      }
     },
     {
       "id": "D-11",
-      "result": "does-not-meet",
-      "severity": "Medium",
       "evidence": "Emails and shipping addresses are kept in orders and the email queue, with no stated purpose, retention period or way to delete them on request.",
-      "fix": "Write a privacy notice (what is kept, why, for how long) and build a way to delete a customer's data on request."
+      "fix": "Write a privacy notice (what is kept, why, for how long) and build a way to delete a customer's data on request.",
+      "answers": {
+        "D-11.1": "no",
+        "D-11.2": "no"
+      }
     },
     {
       "id": "D-12",
-      "result": "does-not-meet",
       "finding": "OPS-08",
-      "evidence": "The runbook's \"charges vs orders\" check and alert don't exist."
+      "evidence": "The runbook's \"charges vs orders\" check and alert don't exist.",
+      "answers": {
+        "D-12.1": "no",
+        "D-12.2": "no"
+      }
     },
     {
       "id": "D-13",
-      "result": "does-not-meet",
       "finding": "INT-01",
-      "evidence": "Payments have only ever gone to the local simulator; no card is collected, and the charge request carries only an amount and an email."
+      "evidence": "Payments have only ever gone to the local simulator; no card is collected, and the charge request carries only an amount and an email.",
+      "answers": {
+        "D-13.1": "no",
+        "D-13.2": "no"
+      }
     },
     {
       "id": "S-01",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Gitleaks 8.28.0 on files and history: nothing in scope (the one hit in history is the first version's planted fake key)."
+      "evidence": "Gitleaks 8.28.0 on files and history: nothing in scope (the one hit in history is the first version's planted fake key).",
+      "answers": {
+        "S-01.1": "yes",
+        "S-01.2": "yes",
+        "S-01.3": "yes"
+      }
     },
     {
       "id": "S-02",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Another shopper and a signed-out visitor both get \"not found\" for someone's order (AC-06); every route in the system map checked."
+      "evidence": "Another shopper and a signed-out visitor both get \"not found\" for someone's order (AC-06); every route in the system map checked.",
+      "answers": {
+        "S-02.1": "yes",
+        "S-02.2": "yes"
+      }
     },
     {
       "id": "S-03",
-      "result": "does-not-meet",
       "finding": "SEC-06",
-      "evidence": "Test routes are refused in production (verified), but admins share one static token."
+      "evidence": "Test routes are refused in production (verified), but admins share one static token.",
+      "answers": {
+        "S-03.1": "yes",
+        "S-03.2": "no",
+        "S-03.3": "yes"
+      }
     },
     {
       "id": "S-05",
-      "result": "meets",
       "grade": "B",
-      "evidence": "All database queries are parameterised; no shell or HTML is built from input; Semgrep found nothing."
+      "evidence": "All database queries are parameterised; no shell or HTML is built from input; Semgrep found nothing.",
+      "answers": {
+        "S-05.1": "yes",
+        "S-05.2": "yes"
+      }
     },
     {
       "id": "S-06",
-      "result": "does-not-meet",
       "finding": "INT-01",
-      "evidence": "The only sign-in is a test stub that accepts any email, and it is switched off in production, where `POST /api/login` answers 404. A missing integration does not meet; it isn't merely unverified."
+      "evidence": "The only sign-in is a test stub that accepts any email, and it is switched off in production, where `POST /api/login` answers 404. A missing integration does not meet; it isn't merely unverified.",
+      "answers": {
+        "S-06.1": "no",
+        "S-06.2": "n/a",
+        "S-06.3": "n/a",
+        "S-06.4": "no"
+      },
+      "note": "There are no passwords (real sign-in is to come from a provider), and sessions use a token kept in the page's session storage, not cookies."
     },
     {
       "id": "S-07",
-      "result": "does-not-meet",
       "finding": "SEC-03",
-      "evidence": "Buying is limited to 5 tries per 10 s per email; signed-in reads aren't limited (PERF-03), and there is no bot protection."
+      "evidence": "Buying is limited to 5 tries per 10 s per email; signed-in reads aren't limited (PERF-03), and there is no bot protection.",
+      "answers": {
+        "S-07.1": "no",
+        "S-07.2": "no"
+      },
+      "severity": "Medium",
+      "severityReason": "Checkout itself is limited to 5 tries per 10 s per customer; what is missing is a limit on signed-in reads and bot protection, so the harm is limited."
     },
     {
       "id": "S-08",
-      "result": "cannot-verify",
       "evidence": "Security headers pass on the local instance.",
-      "needed": "A staging or production address, to check HTTPS, HSTS and the load balancer."
+      "needed": "A staging or production address, to check HTTPS, HSTS and the load balancer.",
+      "answers": {
+        "S-08.1": "unknown",
+        "S-08.2": "yes",
+        "S-08.3": "yes"
+      }
     },
     {
       "id": "S-09",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Errors return a short message; malformed requests get 400 with no stack trace."
+      "evidence": "Errors return a short message; malformed requests get 400 with no stack trace.",
+      "answers": {
+        "S-09.1": "yes"
+      }
     },
     {
       "id": "S-10",
-      "result": "meets",
       "grade": "A",
-      "evidence": "OSV-Scanner 2.2.3: the app has no dependencies to be vulnerable."
+      "evidence": "OSV-Scanner 2.2.3: the app has no dependencies to be vulnerable.",
+      "answers": {
+        "S-10.1": "yes",
+        "S-10.2": "yes"
+      }
     },
     {
       "id": "S-14",
-      "result": "cannot-verify",
       "evidence": "Logs carry a scrambled customer reference instead of emails (checked on a local run); the order API returns no address or email.",
-      "needed": "Proof that only HTTPS reaches the app (staging or production address)."
+      "needed": "Proof that only HTTPS reaches the app (staging or production address).",
+      "answers": {
+        "S-14.1": "yes",
+        "S-14.2": "unknown",
+        "S-14.3": "yes"
+      }
     },
     {
       "id": "S-15",
-      "result": "cannot-verify",
-      "needed": "A booked independent penetration test (recommended at tier 3)."
+      "needed": "A booked independent penetration test (recommended at tier 3).",
+      "answers": {
+        "S-15.1": "unknown"
+      }
     },
     {
       "id": "P-01",
-      "result": "meets",
       "grade": "B",
-      "evidence": "600 requests/s from 3,000 visitors in 60 s × 3 peak factor; budgets of 500 ms and 1.5 s (`peak-brief.json`)."
+      "evidence": "600 requests/s from 3,000 visitors in 60 s × 3 peak factor; budgets of 500 ms and 1.5 s (`peak-brief.json`).",
+      "answers": {
+        "P-01.1": "yes",
+        "P-01.2": "yes",
+        "P-01.3": "yes"
+      }
     },
     {
       "id": "P-02",
-      "result": "cannot-verify",
       "evidence": "200% reached in 2 of 3 runs, but on one 4-core machine shared with the simulator and the load generator.",
-      "needed": "A run on production-sized machines with the load generator on its own machine."
+      "needed": "A run on production-sized machines with the load generator on its own machine.",
+      "answers": {
+        "P-02.1": "yes",
+        "P-02.2": "unknown",
+        "P-02.3": "no"
+      },
+      "fix": "Run the stepped load test on production-sized machines, with the load generator on its own machine (needs a staging copy)."
     },
     {
       "id": "P-03",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Three runs plus a same-day baseline, all kept, including the one that failed at 150%."
+      "evidence": "Three runs plus a same-day baseline, all kept, including the one that failed at 150%.",
+      "answers": {
+        "P-03.1": "yes",
+        "P-03.2": "yes"
+      }
     },
     {
       "id": "P-04",
-      "result": "meets",
       "grade": "A",
-      "evidence": "1,000 buyers × 2 clicks for 100 pairs: 100 sold, 0 charged twice, nothing left pending."
+      "evidence": "1,000 buyers × 2 clicks for 100 pairs: 100 sold, 0 charged twice, nothing left pending.",
+      "answers": {
+        "P-04.1": "yes",
+        "P-04.2": "yes"
+      }
     },
     {
       "id": "P-05",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Provider at ~3 s: 40 charges for 40 orders, 60 for 60; repeat clicks refused."
+      "evidence": "Provider at ~3 s: 40 charges for 40 orders, 60 for 60; repeat clicks refused.",
+      "answers": {
+        "P-05.1": "yes",
+        "P-05.2": "yes",
+        "P-05.3": "yes"
+      }
     },
     {
       "id": "P-06",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Product reads cached for 1 s with one refresh at a time; unknown ids answered from memory; no query per item."
+      "evidence": "Product reads cached for 1 s with one refresh at a time; unknown ids answered from memory; no query per item.",
+      "answers": {
+        "P-06.1": "yes",
+        "P-06.2": "yes"
+      }
     },
     {
       "id": "P-07",
-      "result": "meets",
       "grade": "B",
-      "evidence": "10-connection pool with a 1 s wait, 10 KB request limit, 3 s payment limit, 5 buy attempts per 10 s."
+      "evidence": "10-connection pool with a 1 s wait, 10 KB request limit, 3 s payment limit, 5 buy attempts per 10 s.",
+      "answers": {
+        "P-07.1": "yes",
+        "P-07.2": "yes",
+        "P-07.3": "yes"
+      }
     },
     {
       "id": "P-08",
-      "result": "cannot-verify",
-      "needed": "A test beyond capacity, or a waiting room in front of the drop."
+      "needed": "A test beyond capacity, or a waiting room in front of the drop.",
+      "answers": {
+        "P-08.1": "unknown"
+      }
     },
     {
       "id": "P-09",
-      "result": "cannot-verify",
-      "needed": "A Lighthouse run on a mid-range phone profile."
+      "needed": "A Lighthouse run on a mid-range phone profile.",
+      "answers": {
+        "P-09.1": "unknown"
+      }
     },
     {
       "id": "P-10",
-      "result": "does-not-meet",
-      "severity": "Low",
       "evidence": "The only plan is \"one instance; move rate limits to a shared store before adding a second\". No numbers or costs.",
-      "fix": "Write down what to scale first, how fast it can be scaled, and what the night costs."
+      "fix": "Write down what to scale first, how fast it can be scaled, and what the night costs.",
+      "answers": {
+        "P-10.1": "no",
+        "P-10.2": "no"
+      }
     },
     {
       "id": "O-01",
-      "result": "cannot-verify",
       "evidence": "`/healthz` answers without the database and `/readyz` checks it; both return only `{ok}`.",
-      "needed": "A call to `/readyz` with the database stopped, showing it reports not ready. (Corrected 2026-10-27: the criterion asks for that test.)"
+      "needed": "A call to `/readyz` with the database stopped, showing it reports not ready. (Corrected 2026-10-27: the criterion asks for that test.)",
+      "answers": {
+        "O-01.1": "yes",
+        "O-01.2": "unknown",
+        "O-01.3": "yes"
+      }
     },
     {
       "id": "O-02",
-      "result": "meets",
       "grade": "A",
-      "evidence": "On shutdown, requests in progress finish (10 s limit); orders survive a restart; a crash mid-payment was settled after restart."
+      "evidence": "On shutdown, requests in progress finish (10 s limit); orders survive a restart; a crash mid-payment was settled after restart.",
+      "answers": {
+        "O-02.1": "yes",
+        "O-02.2": "yes"
+      }
     },
     {
       "id": "O-03",
-      "result": "cannot-verify",
       "finding": "OPS-04",
-      "needed": "A restore log from the production database provider."
+      "needed": "A restore log from the production database provider.",
+      "answers": {
+        "O-03.1": "unknown",
+        "O-03.2": "unknown",
+        "O-03.3": "unknown"
+      }
     },
     {
       "id": "O-04",
-      "result": "does-not-meet",
       "finding": "OPS-09",
-      "evidence": "Starting the previous release against the new database failed at start-up."
+      "evidence": "Starting the previous release against the new database failed at start-up.",
+      "answers": {
+        "O-04.1": "no"
+      }
     },
     {
       "id": "O-05",
-      "result": "cannot-verify",
       "finding": "OPS-04",
-      "needed": "A test alert received by the named on-call person."
+      "needed": "A test alert received by the named on-call person.",
+      "answers": {
+        "O-05.1": "unknown",
+        "O-05.2": "unknown"
+      }
     },
     {
       "id": "O-06",
-      "result": "does-not-meet",
       "finding": "OPS-01",
-      "evidence": "Structured JSON logs without personal data, but no request ids."
+      "evidence": "Structured JSON logs without personal data, but no request ids.",
+      "answers": {
+        "O-06.1": "no",
+        "O-06.2": "yes"
+      }
     },
     {
       "id": "O-07",
-      "result": "does-not-meet",
       "finding": "OPS-08",
-      "evidence": "The runbook exists; four of its steps rely on tools that don't exist, and it hasn't been rehearsed."
+      "evidence": "The runbook exists; four of its steps rely on tools that don't exist, and it hasn't been rehearsed.",
+      "answers": {
+        "O-07.1": "yes",
+        "O-07.2": "no"
+      }
     },
     {
       "id": "O-08",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Pause: new purchases refused with \"paused\", existing orders kept; resume works (AC-13)."
+      "evidence": "Pause: new purchases refused with \"paused\", existing orders kept; resume works (AC-13).",
+      "answers": {
+        "O-08.1": "yes",
+        "O-08.2": "yes"
+      }
     },
     {
       "id": "O-09",
-      "result": "cannot-verify",
       "evidence": "The app keeps connections open 65 s and limits request bodies to 10 KB.",
-      "needed": "The load balancer's idle timeout, which must be below 65 s."
+      "needed": "The load balancer's idle timeout, which must be below 65 s.",
+      "answers": {
+        "O-09.1": "unknown",
+        "O-09.2": "yes"
+      }
     },
     {
       "id": "O-10",
-      "result": "cannot-verify",
       "finding": "OPS-04",
-      "needed": "The on-call rota and escalation contacts."
+      "needed": "The on-call rota and escalation contacts.",
+      "answers": {
+        "O-10.1": "unknown",
+        "O-10.2": "unknown",
+        "O-10.3": "unknown"
+      }
     },
     {
       "id": "Q-01",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Three review reports (66 findings) and the git history of `demo/flash-sale/` collected; there is no issue tracker or incident log."
+      "evidence": "Three review reports (66 findings) and the git history of `demo/flash-sale/` collected; there is no issue tracker or incident log.",
+      "answers": {
+        "Q-01.1": "yes",
+        "Q-01.2": "yes"
+      }
     },
     {
       "id": "Q-02",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Six recurring problem classes under Quality history, each with its occurrences."
+      "evidence": "Six recurring problem classes under Quality history, each with its occurrences.",
+      "answers": {
+        "Q-02.1": "yes",
+        "Q-02.2": "yes"
+      }
     },
     {
       "id": "Q-03",
-      "result": "meets",
       "grade": "B",
-      "evidence": "A root cause per class under Quality history, from the reports and the changes behind them."
+      "evidence": "A root cause per class under Quality history, from the reports and the changes behind them.",
+      "answers": {
+        "Q-03.1": "yes"
+      }
     },
     {
       "id": "Q-04",
-      "result": "does-not-meet",
       "finding": "HIS-01",
-      "evidence": "None of the recurring kinds is fully caught automatically yet. Concurrency and unknown payment outcomes have checks in CI (the race test and acceptance test AC-08) but open problems remain (SEC-03, ARC-10). Bad input is partly covered: code-scanning rules exist but aren't run against the app. Restarts and settings, screens, and operations have no automatic check."
+      "evidence": "None of the recurring kinds is fully caught automatically yet. Concurrency and unknown payment outcomes have checks in CI (the race test and acceptance test AC-08) but open problems remain (SEC-03, ARC-10). Bad input is partly covered: code-scanning rules exist but aren't run against the app. Restarts and settings, screens, and operations have no automatic check.",
+      "answers": {
+        "Q-04.1": "no",
+        "Q-04.2": "no"
+      }
     },
     {
       "id": "Q-05",
-      "result": "does-not-meet",
-      "severity": "Low",
       "evidence": "The payment, address, opening and pause fixes came with tests (AC-08, AC-11 to AC-13); the crash fixes (SEC-01, SEC-05) and the restart fix (ARC-05) didn't. Each round's fixes also landed in one commit (79 files in round 2), so no single fix can be traced to its test.",
-      "fix": "From now on, one fix per commit, each with a test that fails without it."
+      "fix": "From now on, one fix per commit, each with a test that fails without it.",
+      "answers": {
+        "Q-05.1": "no"
+      }
     },
     {
       "id": "Q-06",
-      "result": "meets",
       "grade": "B",
-      "evidence": "`fixed/server.mjs` (52 finding locations), `shared/public/app.js` (13) and `fixed/RUNBOOK.md` (10) were each read in full in round 2. Git can't rank hotspots here because each round's fixes landed in one commit."
+      "evidence": "`fixed/server.mjs` (52 finding locations), `shared/public/app.js` (13) and `fixed/RUNBOOK.md` (10) were each read in full in round 2. Git can't rank hotspots here because each round's fixes landed in one commit.",
+      "answers": {
+        "Q-06.1": "yes",
+        "Q-06.2": "yes"
+      }
     },
     {
       "id": "Q-07",
-      "result": "does-not-meet",
-      "severity": "Medium",
       "evidence": "Every open problem is listed with its severity and who fixes it, but none has a due date.",
-      "fix": "Give every open problem in the register a due date."
+      "fix": "Give every open problem in the register a due date.",
+      "answers": {
+        "Q-07.1": "no"
+      }
     },
     {
       "id": "Q-08",
-      "result": "does-not-meet",
-      "severity": "Low",
       "evidence": "Five problems were introduced by fixes (marked under Quality history); each is explained, but only one cause (the payment time-out) is now covered by an automatic check.",
-      "fix": "Add an automatic check for the causes of SEC-01, ARC-11, OPS-09 and PERF-04 (see Quality history)."
+      "fix": "Add an automatic check for the causes of SEC-01, ARC-11, OPS-09 and PERF-04 (see Quality history).",
+      "answers": {
+        "Q-08.1": "yes",
+        "Q-08.2": "no"
+      }
     },
     {
       "id": "Q-09",
-      "result": "meets",
       "grade": "A",
-      "evidence": "New findings per review: 30, then 23, then 13; Critical: 10, then 1, then 0. Counts per class are under Quality history."
+      "evidence": "New findings per review: 30, then 23, then 13; Critical: 10, then 1, then 0. Counts per class are under Quality history.",
+      "answers": {
+        "Q-09.1": "yes"
+      }
     },
     {
       "id": "U-01",
-      "result": "does-not-meet",
-      "severity": "Low",
       "evidence": "The criteria are numbered and versioned, and each change is explained, but neither version records who approved it or when.",
-      "fix": "Record who approved each version of the criteria, and when."
+      "fix": "Record who approved each version of the criteria, and when.",
+      "answers": {
+        "U-01.1": "yes",
+        "U-01.2": "no",
+        "U-01.3": "no"
+      }
     },
     {
       "id": "U-02",
-      "result": "meets",
       "grade": "A",
-      "evidence": "All 10 Must criteria pass 3 of 3 runs (AC-07 through the race test); 0 flaky."
+      "evidence": "All 10 Must criteria pass 3 of 3 runs (AC-07 through the race test); 0 flaky.",
+      "answers": {
+        "U-02.1": "yes"
+      }
     },
     {
       "id": "U-03",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Screenshots for 10 of 13 criteria; the other three attach the requests and answers."
+      "evidence": "Screenshots for 10 of 13 criteria; the other three attach the requests and answers.",
+      "answers": {
+        "U-03.1": "yes"
+      }
     },
     {
       "id": "U-04",
-      "result": "meets",
       "grade": "A",
-      "evidence": "Reading test, 2026-10-27: a shop owner and an executive who hadn't seen the page both answered \"don't launch\" correctly from the first screen, 5 out of 5 sure."
+      "evidence": "Reading test, 2026-10-27: a shop owner and an executive who hadn't seen the page both answered \"don't launch\" correctly from the first screen, 5 out of 5 sure.",
+      "answers": {
+        "U-04.1": "yes"
+      }
     },
     {
       "id": "U-05",
-      "result": "does-not-meet",
-      "severity": "Low",
       "evidence": "Second reading test (2026-10-27): the owner's confidence rose from 3 to 3.5 of 5 and the to-do list was clear, but readers still found unexplained terms in the developer sections and counts that disagreed.",
-      "fix": "Keep technical detail under What to fix and the evidence sections; have every count on the page computed from the data; run a reading test with the real owner before sign-off."
+      "fix": "Keep technical detail under What to fix and the evidence sections; have every count on the page computed from the data; run a reading test with the real owner before sign-off.",
+      "answers": {
+        "U-05.1": "yes",
+        "U-05.2": "yes",
+        "U-05.3": "no"
+      }
     },
     {
       "id": "U-06",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Each criterion carries its evidence; Not checked lists what wasn't."
+      "evidence": "Each criterion carries its evidence; Not checked lists what wasn't.",
+      "answers": {
+        "U-06.1": "yes",
+        "U-06.2": "yes"
+      }
     },
     {
       "id": "U-07",
-      "result": "meets",
       "grade": "B",
-      "evidence": "Commit `fa296a2`, dates, tool versions (Gitleaks 8.28.0, OSV-Scanner 2.2.3, Semgrep 1.181.0, Playwright 1.56.1, k6 1.3.0 in CI) and the reviewer are recorded."
+      "evidence": "Commit `fa296a2`, dates, tool versions (Gitleaks 8.28.0, OSV-Scanner 2.2.3, Semgrep 1.181.0, Playwright 1.56.1, k6 1.3.0 in CI) and the reviewer are recorded.",
+      "answers": {
+        "U-07.1": "yes"
+      }
     },
     {
       "id": "U-08",
-      "result": "meets",
       "grade": "A",
-      "evidence": "axe (WCAG 2.1 A/AA) on the sale page: no serious or critical violations (AC-09)."
+      "evidence": "axe (WCAG 2.1 A/AA) on the sale page: no serious or critical violations (AC-09).",
+      "answers": {
+        "U-08.1": "yes"
+      }
     }
   ],
   "scans": {

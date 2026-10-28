@@ -93,7 +93,21 @@ The criteria are listed in [`criteria.md`](criteria.md) (generated from [`criter
 | Q | Quality history | What has gone wrong before, and is it fixed for good? |
 | U | Acceptance and report | Does it do what we agreed, and can the owner understand the result? |
 
-Each row of `worksheet[]` is `{ id, result, grade, evidence, note, needed, severity, finding, owner, due, accepted }`.
+Each row of `worksheet[]` is `{ id, answers, grade, evidence, note, needed, finding, fix, owner, due, accepted }`, plus `severity` and `severityReason` when the severity is moved (below).
+
+**Yes/no questions, not judgements.** Each criterion is a short list of yes/no questions, listed in [`criteria.md`](criteria.md); "yes" is always the good answer, and each question says what a "no" means (Critical, High, Medium or Low). The reviewer answers every question in `answers` (`{ "H-08.1": "yes", "H-08.2": "no", … }`) with one of:
+
+- `yes` or `no`: what the reviewer saw, ran or read;
+- `unknown`: the reviewer couldn't find out (then `needed` says what would answer it);
+- `n/a`: the question doesn't apply to this product (then `note` says why).
+
+The software then works out everything else, so two reviews that agree on the facts get the same results:
+
+- **Result:** any `no` means *does not meet*; otherwise any `unknown` means *cannot verify*; all `n/a` means *not applicable*; all `yes` means *meets*. Don't write a result: one that contradicts the answers is refused.
+- **Severity:** the most serious "a no is" among the questions answered `no`. It may move one level for this product (tier 3 data, a feature behind a VPN) only with the reason in `severityReason`; a finding linked to the row must be at least that severe.
+- **Points:** one for each `yes`, out of every question of the mandatory criteria. Unanswered questions count against the total, and questions answered `n/a` are left out. The page and the report show the points per area and in all.
+
+**When the thing a question asks about is missing** (no instruction file, no sign-in, no staging copy), answer `no` where the question asks for something it should provide ("Does it say how to run the tests?"), and `n/a` with the reason where the question asks whether it is free of a danger ("Is it free of secrets?").
 
 **Four results, and what each needs:**
 
@@ -128,7 +142,7 @@ Each criterion names its lowest acceptable grade. Grade C never supports a "meet
 
 `aiAssisted` (AI agents write code), `accounts`, `personalData`, `money`, `limitedStock`, `adminArea`, `browserDatabase`, `webhooks`, `uploads`, `ai` (calls an AI model at runtime), `launchSpike`.
 
-A mandatory criterion with no result counts as "cannot verify".
+A mandatory criterion with no result counts as "cannot verify". The gates count the questions answered, per area, and list every one without an answer.
 
 ## 4. Verdict rules
 
