@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### The inspection report
+- **Three questions, answered first and counted by software:**
+  - *Is the test harness properly set up?* From the harness checklist, plus the kinds of test that would have caught each problem that came back.
+  - *Are the performance tests comprehensive?* From every kind of performance test the product needs (load, repeated runs, rush, slow partner, beyond capacity, long run, page speed, production-like), each passed, failed or not run.
+  - *Does the architecture review cover hidden problems?* From the nine places hidden problems usually sit, each examined or not, with what was found.
+- **The report reads like an inspection:** evidence and conclusions first, then how the inspection was done (every source of evidence, used or why not, and the skills used), the results, the recommendations, the limits and the appendices. The review page follows the same order.
+- **`REPORT.md` is generated** (`review-pack.mjs report`) from the same record as the page, so every inspection reads the same way; the skill no longer writes it by hand.
+- **Harness recommendations from the problems that came back:** each recurring problem names the kinds of test that would catch it (unit, integration, end-to-end, visual, self-check, load, scan), each test suite has a type, and the report says which kinds to add or strengthen, with skills and tools that help (this repository's skills, Anthropic's `webapp-testing`, Superpowers' `test-driven-development`, Playwright screenshot comparison).
+- **New gate counts:** sources of evidence, kinds of performance test, places hidden problems sit, test-suite types, and the kinds of test for each recurring problem. The lens files for performance and architecture carry their part (`merge` puts it in place).
+- `acceptance-test`: guidance for visual checks with Playwright's screenshot comparison.
+- The demo's worked example has the new records, and its written report is `demo/flash-sale/review/REPORT.md`.
+
 ## 0.2.0 (2026-10-28): the review standard
 
 ### Review standard

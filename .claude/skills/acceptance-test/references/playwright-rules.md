@@ -19,6 +19,9 @@
 ## Assert what should disappear, too
 After a state change, check that the old state is gone, not only that the new one appeared: the sign-in form hides after signing in, the "Buy" button is disabled after selling out, the error message clears. (A real example: a CSS rule `form { display: flex }` silently overrode the `hidden` attribute, and every screenshot showed the sign-in form after sign-in for two review rounds.) `await expect(locator).toBeHidden()` costs one line.
 
+## Visual checks
+Where how a screen looks is part of the promise (prices, the sold-out state, a phone layout, things that should disappear), add a screenshot comparison to the test: `await expect(page).toHaveScreenshot('sold-out.png', { animations: 'disabled', mask: [page.getByTestId('countdown')] })`, or `expect(locator).toHaveScreenshot()` for one part of the page. The first run saves the approved picture; later runs fail when the screen changes, and `npx playwright test --update-snapshots` approves an intended change. Mask anything that changes on its own (clocks, countdowns, random data), and create and compare the pictures on the same machine type (the CI runner or Playwright's Docker image), because fonts and rendering differ between systems. See [Playwright's visual comparisons](https://playwright.dev/docs/test-snapshots).
+
 ## Assert the outcome
 - Pair UI assertions with a check of the source of truth for money, counts, permissions and data: `request.get('/api/my-orders')`, an admin/test endpoint, or a DB query in a fixture.
 - Give assertions a message that reads as the business rule: `expect(orders, 'orders for this customer').toHaveLength(1)`. The report shows it.

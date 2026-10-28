@@ -166,3 +166,82 @@ Each criterion is **mandatory from** the risk tier shown, and recommended below 
 | U-07 | **The review can be repeated** | The report records the commit, date, tool versions and reviewer, so the review can be repeated. | The report. | Tier 1 | B |
 | U-08 | **Key pages are accessible** | Key pages have no serious or critical accessibility violations in automated WCAG 2.1 AA checks.<br>*Source: WCAG 2.1* | Accessibility scan output. | Tier 2 | A |
 
+## The three questions: what the inspection counts
+
+An inspection answers three questions before delivery. Besides the criteria, it records these, and the software counts them (`review-pack.mjs gate`).
+
+### Kinds of performance test (8)
+
+*Are the performance tests comprehensive?* Each kind is recorded as passed, failed or not run, in `performance.coverage`.
+
+| ID | Kind of test | What it proves | Needed from |
+|---|---|---|---|
+| `load` | **Load at the target and above it** | It holds the expected traffic, and shows where it breaks. | Tier 2 |
+| `repeat` | **Repeated runs, all kept** | The result is not luck: the same test passes more than once, and failed runs are kept too. | Tier 2 |
+| `rush` | **Rush on something limited** | Many people buying or booking the last items at the same moment never oversell or pay twice. Only if the product sells or allocates something limited (stock, seats, coupons, slots) or takes payments, issues refunds or credits, or holds balances. | Tier 1 |
+| `slow-partner` | **Slow or failing partner** | When payment, email or an AI service is slow or down, nobody is charged twice or left stuck. Only if the product takes payments, issues refunds or credits, or holds balances or calls an AI model at runtime. | Tier 2 |
+| `overload` | **Beyond capacity** | Past its limit it turns people away politely and recovers, instead of crashing. | Tier 3 |
+| `long-run` | **Long run** | An hour or more at normal traffic without slowing down, filling up or running out of memory. | Tier 3 |
+| `page-speed` | **Page speed on phones** | People on mid-range phones get the page quickly. | Tier 3 |
+| `production-like` | **On a production-like setup** | The numbers hold on the real hosting, with a realistic amount of data, not only on a laptop. | Tier 2 |
+
+### Where hidden problems sit (9)
+
+*Does the architecture review cover hidden problems?* Each place is recorded as problems found, none found or not checked, with how the review looked, in `architecture.hiddenChecks`.
+
+| ID | Place | What to look for | Related criteria |
+|---|---|---|---|
+| `at-once` | **Two things at once** | Double clicks, two people taking the last item, a job running twice: anything that reads, decides and then writes. | P-04, D-02, D-05, D-06 |
+| `partners` | **Slow, failing or repeated outside calls** | Every call to payment, email, AI or another service has a time limit and a repeat-safe key, and a time-out is treated as "unknown" and settled later, never as failed. | A-04, A-12, D-07, P-05 |
+| `restarts` | **Restarts, deploys and rollbacks** | What a restart or a new release does in the middle of a purchase: data that must survive, work that must finish, and going back to the previous version. | O-02, O-04, A-10 |
+| `settings` | **Settings and environments** | A setting missing or wrong in production, the same setting in two places, test switches left on, test and live sharing data or keys. | A-07, A-08, A-09 |
+| `bad-input` | **Unexpected input** | Malformed requests, huge bodies, odd characters and addresses: one bad request must not crash the app or corrupt data. | D-08, H-08 |
+| `limits` | **What runs out first** | Connection pools, queues, memory, rate limits, a single server: what runs out first under load, and what happens then. | A-06, P-07, P-08 |
+| `data-rules` | **Data that can become wrong** | Rules the data must obey (stock, money, one per customer) enforced where they cannot be bypassed: in the database or one transaction, not only on the screen. | D-01, D-02, D-03, D-04, D-12 |
+| `time` | **Time and dates** | Time zones, opening times, timers and schedules, dates typed by people, clocks that differ between machines. | D-09, A-09 |
+| `background` | **Background jobs and queues** | Jobs that retry, run twice, get stuck or fail silently: emails, settlements and clean-ups that never finish. | — |
+
+### Kinds of automatic test (7)
+
+*Is the test harness properly set up?* Each test suite has one of these types (`harness.suites[].type`), and each problem that came back names the kinds that would catch it (`history.classes[].catchWith`).
+
+| ID | Kind of test | Catches |
+|---|---|---|
+| `unit` | **Unit tests** | A rule or calculation that is wrong: prices, limits, reading input, dates. |
+| `integration` | **Integration tests** | Parts that work alone but not together: database rules and transactions, a stand-in payment provider that is slow or fails. |
+| `end-to-end` | **End-to-end tests in a browser** | A user journey that breaks: signing in, buying, seeing the order. |
+| `visual` | **Visual tests** | A screen that looks wrong although it works: something that should disappear stays, things overlap, a layout breaks on a phone. |
+| `self-check` | **Self-checks** | The app checking itself: refusing to start with missing or unsafe settings, a health check that tests what matters, a quick test after every deploy. |
+| `load` | **Load and race tests** | Slow pages, overselling and double charges when many people arrive at once. |
+| `scan` | **Automatic scans** | Leaked keys, risky code patterns, libraries with known security holes. |
+
+### Sources of evidence (10)
+
+Each is recorded as used (with what) or not (with why), in `method.sources`.
+
+| ID | Source | Why it matters |
+|---|---|---|
+| `code` | **The code, at the version inspected** | What is actually there, not what anyone remembers. |
+| `history` | **Change history** | Fixes, reverts and the files that keep changing show what keeps going wrong. |
+| `issues` | **Issue tracker or tickets** | Bugs the team already knows about, and how often each kind came back. |
+| `user-reports` | **Reports from users and support** | Problems real people met, which tests did not. |
+| `earlier-reviews` | **Earlier reviews and incident notes** | What was found before, and whether it was really fixed. |
+| `project-tests` | **The project's own tests, run again** | Whether they pass, and what they would never notice. |
+| `running-app` | **The running app, used by the inspector** | What a user sees, including what tests skip. |
+| `measurements` | **Load, race and speed measurements** | How it behaves under the expected traffic, measured rather than guessed. |
+| `scans` | **Automatic scans** | Leaked keys, risky patterns and vulnerable libraries, found by tools. |
+| `people` | **Answers from the owner and the team** | The agreed requirements and the decisions behind the design. |
+
+### Skills and tools the report recommends (8)
+
+| Skill or tool | From | Helps build | What it does |
+|---|---|---|---|
+| `acceptance-test` | this repository | end-to-end, visual | Turns what the owner expects into numbered criteria and browser tests with screenshots, run three times each; add Playwright screenshot comparisons for visual checks. |
+| `peak-traffic-test` | this repository | load | Turns the expected crowd into a load plan, runs staged load tests and the race test, and explains the result in plain words. |
+| `launch-review` | this repository | scan | Runs the scanners and this inspection; its scanner script can run on every change in CI. |
+| [webapp-testing](https://github.com/anthropics/skills/tree/main/skills/webapp-testing) | Anthropic skills | end-to-end, visual | Lets an AI agent drive a local web app in a real browser with Playwright: check behaviour, take screenshots, read the browser log. |
+| [test-driven-development](https://github.com/obra/superpowers) | Superpowers (obra/superpowers) | unit, integration | Makes the AI agent write a failing test before each fix or feature, so every bug fixed gets the test that stops it coming back. |
+| [systematic-debugging](https://github.com/obra/superpowers) | Superpowers (obra/superpowers) | — | Makes the AI agent find the root cause of a bug before changing code, instead of patching the symptom. |
+| [verification-before-completion](https://github.com/obra/superpowers) | Superpowers (obra/superpowers) | self-check | Makes the AI agent prove a fix works (run the test, show the output) before it says the work is done. |
+| [Playwright screenshot comparison](https://playwright.dev/docs/test-snapshots) | Playwright (toHaveScreenshot) | visual | Compares each screen with an approved picture and fails when it changes; the usual way to add visual tests to browser tests. |
+

@@ -1,56 +1,18 @@
-# Launch-review report template
+# The inspection report
 
-Copy to `launch-review/REPORT.md`. Replace *italic guidance*. The first screen must answer "can we launch, and what must happen first?" without scrolling.
+`REPORT.md` is not written by hand. It is generated from the review pack, after Gate 5:
 
----
+```bash
+node <skill-dir>/scripts/review-pack.mjs report launch-review/review-pack.json launch-review/REPORT.md
+```
 
-# Launch review: [Product]
+It always has this order, like an audit or a release-gate report: the evidence and conclusions first, then how they were reached.
 
-**Verdict: NO-GO / GO WITH CONDITIONS / GO**: *one sentence on why.*
+1. **Summary: evidence and conclusions.** The verdict and why; what would happen if it were delivered now; the three questions, each answered Yes, Partly or No with its evidence in numbers and a one-sentence conclusion; the blockers; when it could be delivered.
+2. **How the inspection was done.** Every source of evidence in the standard list (code, change history, issue tracker, user reports, earlier reviews, the project's tests, the running app, measurements, scans, the owner and team), each used with what, or not with why; the skills and tools used.
+3. **Results.** For each question: the evidence, the conclusion and, for the harness, which kinds of test would have caught the problems that came back.
+4. **Recommendations.** What has to happen (who, how big, when); the kinds of test to add or strengthen; the performance tests still to run; the places not yet examined; the skills and tools the team can use; decisions only the owner can make.
+5. **Limits.** What was not checked.
+6. **Appendices.** Every open problem, checklist results by area, glossary.
 
-*Reviewed commit `abc1234` on YYYY-MM-DD · risk tier N · reviewer: [name] with Claude Code (launch-review skill)*
-
-## Before launch (blockers and conditions)
-1. *Each Critical/High (or condition) as one action line, linking to its finding: "Rotate the payment key and move it to an environment variable → SEC-01".*
-2. …
-
-## Summary
-
-| Area | Critical | High | Medium | Low | Notes |
-|---|---|---|---|---|---|
-| Security | | | | | |
-| Architecture & data | | | | | |
-| Performance & scale | | | | | *link peak-traffic report if run* |
-| Operations | | | | | |
-
-*2–4 sentences in plain language: the overall picture, the biggest risk, what's good.*
-
-## What we checked (coverage)
-
-| Check | How | Result |
-|---|---|---|
-| Secrets in code and git history | Gitleaks | *N found / none* |
-| Vulnerable dependencies | OSV-Scanner | |
-| Risky code patterns | Semgrep (own rules) + manual triage | |
-| Database access rules | RLS/rules check + manual review | |
-| Access control on every entry point | Manual review of N routes (system map) | |
-| Business logic (prices, limits, workflow) | Manual review | |
-| Live headers / exposure | check-headers on *URL* / *not run: no permission* | |
-| Load and oversell | peak-traffic-test / *not run* | |
-| User acceptance | acceptance-test / *not run* | |
-| Operations readiness | Interview + dashboards | *asked / verified* |
-
-**Not checked / limitations:** *e.g. infrastructure configuration in the cloud console, third-party services' own security, mobile app binary, social engineering. Automated and AI-assisted review reduces risk; it does not prove the absence of vulnerabilities. For tier 3, recommend an independent penetration test.*
-
-## Findings
-
-*Grouped by severity (Critical first). Use the finding format from SKILL.md. Each finding carries a status: Open / Fixed: verified (date, commit) / Risk accepted by (name, date, until).*
-
-## System map
-
-*Mermaid diagram + entry-point table from 01-system-map.md (or a link).*
-
-## Appendix
-- Tool versions and commands run (from `scans/coverage.md`).
-- Scanner hits dismissed as false positives, one line each with the reason.
-- Glossary of any technical terms used above.
+The review page (`review.html`) shows the same record in the same order, with all the evidence. To change what the report says, change the record: the worksheet, the findings, `method`, `performance.coverage`, `architecture.hiddenChecks`, `history.classes[].catchWith` and `harness.suites[].type`. The fields are described in `standard/review-standard.md` §2.

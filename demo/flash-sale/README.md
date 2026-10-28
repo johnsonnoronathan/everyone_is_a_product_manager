@@ -17,7 +17,7 @@ The `fixed/` version, handed in and judged under the [review standard](../../.cl
 
 **What it is:** a one-page flash sale for 100 pairs of sneakers, one per customer, opening at midnight. Status: demo; it runs locally against simulated payments and email.
 
-**Review page:** [`review/index.html`](review/index.html) (download and open it in a browser); the record behind it is [`review/review-pack.json`](review/review-pack.json). Staging: none.
+**Review page:** [`review/index.html`](review/index.html) (download and open it in a browser), and the same inspection as a written report: [`review/REPORT.md`](review/REPORT.md). Both are generated from the record [`review/review-pack.json`](review/review-pack.json). Staging: none.
 
 **Quick start** (Node.js 22.13 or later, nothing to install): `node demo/flash-sale/run.mjs fixed`, then open http://127.0.0.1:3000.
 

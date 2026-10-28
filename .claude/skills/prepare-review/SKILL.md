@@ -54,11 +54,11 @@ Components and their jobs; **every entry point** (pages, API routes, webhooks, s
 Every rule the data must obey ("never sell more than the stock", "one per customer", "the price comes from the server"), where it is enforced (database constraint, transaction, code), and which test proves it. Write "none" where there is no test.
 
 ### 7. Harness and performance
-The agent instruction file (`AGENTS.md`, `CLAUDE.md`…) path, or `null` if there is none. Every test suite: kind, what it covers, the command, the result of a run you just did, and whether CI runs it. CI gates and other checks (lint, types, scans).
+The agent instruction file (`AGENTS.md`, `CLAUDE.md`…) path, or `null` if there is none. Every test suite: its `type` (`unit`, `integration`, `end-to-end`, `visual`, `self-check`, `load` or `scan`), what it covers, the command, the result of a run you just did, and whether CI runs it. The review report shows which of these kinds the project has, against the bugs that came back. CI gates and other checks (lint, types, scans).
 
 If there is no agent instruction file and AI writes the code, offer to create one from `<skill-dir>/templates/AGENTS.md`: how to set up, run and test; the business rules; where money and secrets are handled; files never edited by hand; and one line per known recurring problem. Write its rules as rules ("must"), not as claims about the code.
 
-**Performance:** write the traffic target from the requirements. If you ran a load test, add every run; otherwise write "not run". The reviewer runs it if it matters.
+**Performance:** write the traffic target from the requirements. If you ran a load test, add every run; otherwise write "not run". For each kind of performance test you ran (`<launch-review>/standard/criteria.md`, Kinds of performance test), add an entry to `performance.coverage` with `"by": "author"`, its result and one line on what it showed. The reviewer fills in the rest.
 
 ### 8. Known problems and acceptance
 - **Known problems:** anything you know is wrong or risky: failing tests, open bugs from the issue tracker, TODOs that matter, limits, and things you noticed while running the app. Each with severity (or `"Not assessed"`), owner and date if there is one. Run `node <launch-review>/scripts/history-scan.mjs . review/history` and list it under `history.sources`; the reviewer works out what keeps coming back and why.
