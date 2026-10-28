@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
   loadCatalogue, applicability, validatePack, verdictCeiling, renderPage, templatePack, criteriaMarkdown,
-  gate, worksheetStatus, mergeWorksheet, readmeItems, README_ITEMS, scannerHits,
+  gate, worksheetStatus, mergeWorksheet, readmeItems, README_ITEMS, scannerHits, personalDataIn,
 } from '../.claude/skills/launch-review/scripts/review-pack.mjs';
 
 const catalogue = loadCatalogue();
@@ -166,6 +166,29 @@ test('gates count what is missing instead of trusting a summary', () => {
   noBlocker.verdict.blockers = noBlocker.verdict.blockers.filter((b) => !b.refs.includes('ARC-11'));
   const bl = gate('review', noBlocker, catalogue, { baseDir: base }).checks.find((c) => c.name.startsWith('Open Critical'));
   assert.deepEqual(bl.missing, ['ARC-11']);
+});
+
+test('hand-in gate: saved text evidence holds test data only', () => {
+  assert.deepEqual(personalDataIn('{"email":"shopper@example.com","b":"x@shop.test","c":"admin@localhost"}'), []);
+  assert.deepEqual(personalDataIn('{"logo":"/img/logo@2x.png","help":"support@shop.com"}'), [], 'image names and role addresses are not personal data');
+  const found = personalDataIn('{"email":"Jane.Doe@Gmail.com","key":"sk_live_abcdefghijklmnop"}');
+  assert.equal(found.length, 2);
+  assert.ok(found[0].includes('gmail.com') && !found.join(' ').includes('Jane.Doe'), 'describes the find without printing it');
+  assert.ok(!found.join(' ').includes('sk_live_abcdef'), 'never prints the key');
+
+  const dir = mkdtempSync(join(tmpdir(), 'handin-'));
+  try {
+    writeFileSync(join(dir, 'answer.json'), '{"customer":"jane@gmail.com"}');
+    writeFileSync(join(dir, 'clean.json'), '{"customer":"buyer1@example.com"}');
+    const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+    pack.product.journeys = [{ id: 'J1', name: 'Buy', evidence: [{ path: 'answer.json' }, { path: 'clean.json' }] }];
+    pack.acceptance.rows = [];
+    const c = gate('submission', pack, catalogue, { baseDir: dir }).checks.find((x) => x.name.startsWith('Saved text evidence'));
+    assert.equal(c.ok, false);
+    assert.deepEqual(c.missing, ['answer.json: an email address at gmail.com (use example.com or a .test domain)']);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('scanner gate: every rule that fired is reported or dismissed', () => {

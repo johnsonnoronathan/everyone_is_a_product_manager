@@ -149,7 +149,7 @@ An AI reviewer (or a tired person) that says "all 95 criteria checked" may have 
 
 | Gate | When | It counts |
 |---|---|---|
-| `gate submission` | author, before handing in; reviewer, before starting | checker errors (must be 0), demo journeys with evidence, evidence files that really exist, the README's nine items and its link to the page |
+| `gate submission` | author, before handing in; reviewer, before starting | checker errors (must be 0), demo journeys with evidence, evidence files that really exist, saved text evidence with no real email addresses or keys (pictures are checked by eye), the README's nine items and its link to the page |
 | `gate worksheet --areas …` | reviewer, after each part of the review | per area: mandatory criteria with a result, and exactly which are missing |
 | `gate review` | reviewer, before signing | all of the above for every area (except the README, which the R criteria judge), open Critical and High findings listed as blockers, each blocker with a card in What to fix, Must acceptance criteria with a result, every scanner rule that fired reported or dismissed, and a verdict the results allow |
 

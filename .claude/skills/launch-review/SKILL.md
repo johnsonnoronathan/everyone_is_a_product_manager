@@ -38,6 +38,8 @@ Write the focused results into the same `launch-review/` files (worksheet rows, 
 ## Workflow
 
 ### Phase 0: Scope (≈5 min with the user)
+**Where this runs.** A review runs the project's code: installing its packages runs their install scripts, and starting the app or its tests runs whatever they contain. If the project isn't the user's own (a client's hand-in, an app being taken over) and this machine holds real passwords, keys, customer data or access to production, say so before installing anything, and suggest a machine that can be thrown away: a cloud session, a container or a spare computer. Before the first install, read the package scripts (`preinstall`, `postinstall`, `prepare`) and the test set-up; if anything reaches outside the project, stop and ask. Use the test-mode keys the author provides, never real ones.
+
 Run the intake in `references/intake.md`. Infer what you can from the code first and ask only what's left. Write `launch-review/00-scope.md` with the risk tier, and confirm it with the user before going deep.
 
 **Review pack.** Reviews follow `standard/review-standard.md`: the author hands in `review/review-pack.json` (README minimum, demo journeys with screenshots, how to run it, requirements, architecture, business rules, harness, known problems, acceptance criteria). If one exists, check it first:

@@ -18,6 +18,8 @@ A load test without this is indistinguishable from an attack. The skills ask for
 - Send the client §1 of the [review standard](../.claude/skills/launch-review/standard/review-standard.md): what to hand in (README minimum and review pack). A pack that fails the submission check goes back with the page listing what's missing. That is your first report, and it costs you almost nothing.
 
 ## 3. Run the review
+**Run it somewhere you can throw away.** The review installs the client's packages and starts their app and tests, so their code runs on your machine. Use a cloud session, a container or a spare computer with none of your own passwords, keys, other clients' code or production access on it. Payments, email and other outside services use the test-mode keys the client gives you.
+
 Ask Claude for a launch review. It runs the scanners, reviews every entry point, verifies Critical and High findings, and calls `peak-traffic-test` and `acceptance-test` where they apply. Before the report goes out, read it yourself: you are signing it.
 
 **Escalate immediately, don't wait for the report:** live secrets in code or in the browser bundle, personal data readable by anyone, or an open admin endpoint. Tell the client the same day and help them rotate or close it.

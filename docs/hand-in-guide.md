@@ -15,8 +15,9 @@ You don't write the page or its data file (`review/review-pack.json`) by hand. Y
 1. **Open Claude Code in your project folder** ([what Claude Code is and how to install it](https://code.claude.com/docs/en/overview)), with this project's skills installed (see the [README](../README.md#start-here)).
 2. **Ask:** *"Prepare my project for review."* That starts the `prepare-review` skill. It reads your code, runs the app, takes the screenshots, writes the README section and the review page, and asks you for what it can't find out itself (next section).
 3. **Answer its questions.** Where you don't know an answer, say so. It writes "Not agreed yet", which is far better than a guess: a made-up number becomes a promise the reviewer will test you against.
-4. **Let it run the check.** Software checks the hand-in is complete and lists exactly what's missing. It's done when the check says `GATE PASSED`.
-5. **Send it.** Push the code (with the new `review/` folder) to the repository the reviewer can see, and send them the link. If they can't access your repository, send a zip of the project folder.
+4. **Look at the screenshots.** They go to people outside your team, so they must show test data only: test accounts, made-up names and addresses, no real customer and no password or key. The check below reads saved text for real email addresses and keys, but nothing reads pictures.
+5. **Let it run the check.** Software checks the hand-in is complete and lists exactly what's missing. It's done when the check says `GATE PASSED`.
+6. **Send it.** Push the code (with the new `review/` folder) to the repository the reviewer can see, and send them the link. If they can't access your repository, send a zip of the project folder.
 
 If something was missing, the reviewer sends the page back. Its first section lists what to add.
 

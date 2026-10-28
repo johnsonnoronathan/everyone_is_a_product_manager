@@ -894,6 +894,32 @@ export function scannerHits(dir) {
   return [...hits.values()];
 }
 
+// Saved answers and logs go to people outside the team, so they must hold test data only. Email addresses are allowed at
+// the reserved test domains (example.com, .test, .invalid…), and a business's role addresses (support@, info@…) aren't
+// personal. What is found is described, never printed: a key in the gate's output would be one more leak. Pictures can't
+// be read this way; the author looks at those.
+const TEXT_EVIDENCE = /\.(json|txt|md|log|csv|xml|ya?ml)$/i;
+const TEST_DOMAIN = /(^|\.)(example\.(com|net|org)|example|test|invalid|localhost)$/i;
+const NOT_A_DOMAIN = /\.(png|jpe?g|gif|svg|webp|avif|ico|m?js|css|map|json)$/i; // logo@2x.png
+const ROLE_ADDRESS = /^(support|info|hello|contact|help|sales|team|admin|billing|no-?reply)$/i;
+const KEYS = [
+  [/\b[rs]k_live_[0-9A-Za-z]{10,}/, 'a live Stripe key'],
+  [/\bAKIA[0-9A-Z]{16}\b/, 'an AWS access key'],
+  [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'a private key'],
+  [/\bgh[pousr]_[A-Za-z0-9]{36,}/, 'a GitHub token'],
+  [/\bxox[abprs]-[A-Za-z0-9-]{10,}/, 'a Slack token'],
+  [/\bAIza[0-9A-Za-z_-]{35}/, 'a Google API key'],
+];
+export function personalDataIn(text) {
+  const found = new Set();
+  for (const m of text.matchAll(/([A-Za-z0-9._%+-]+)@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,})/g)) {
+    const [, local, domain] = m;
+    if (!TEST_DOMAIN.test(domain) && !NOT_A_DOMAIN.test(domain) && !ROLE_ADDRESS.test(local)) found.add(`an email address at ${domain.toLowerCase()} (use example.com or a .test domain)`);
+  }
+  for (const [re, what] of KEYS) if (re.test(text)) found.add(what);
+  return [...found];
+}
+
 // The README's nine items (standard §1.1), found by their labels as bold text or headings.
 export const README_ITEMS = ['What it is', 'Review page', 'Quick start', 'Test access', 'Tests', 'Settings', 'Architecture', 'Known problems', 'For AI agents'];
 
@@ -904,7 +930,7 @@ export function readmeItems(text) {
 
 export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme, scans } = {}) {
   const checks = [];
-  const add = (name, expected, found, missing = []) => checks.push({ name, expected, found, missing, ok: found === expected && missing.length === 0 });
+  const add = (name, expected, found, missing = [], label = 'missing') => checks.push({ name, expected, found, missing, label, ok: found === expected && missing.length === 0 });
   const codes = areas && areas.length ? areas : catalogue.areas.map((a) => a.code);
 
   if (stage === 'submission' || stage === 'review') {
@@ -916,6 +942,8 @@ export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme, sca
     const paths = evidencePaths(pack);
     const present = paths.filter((p) => existsSync(resolve(baseDir, p)));
     add('Evidence files that exist', paths.length, present.length, paths.filter((p) => !existsSync(resolve(baseDir, p))));
+    const leaks = present.filter((p) => TEXT_EVIDENCE.test(p)).flatMap((p) => personalDataIn(readFileSync(resolve(baseDir, p), 'utf8')).map((what) => `${p}: ${what}`));
+    add('Saved text evidence with real email addresses or keys', 0, leaks.length, leaks, 'found');
   }
   if (stage === 'submission') {
     // The README is the author's to complete. At hand-in it is checked here; in a review it is judged as criteria R-01 to R-09.
@@ -1049,7 +1077,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const result = gate(args[0], pack, catalogue, { baseDir: dirname(resolve(args[1])), areas, readme: arg(args, '--readme'), scans: arg(args, '--scans') && resolve(arg(args, '--scans')) });
     for (const c of result.checks) {
       console.log(`${c.ok ? 'PASS' : 'FAIL'}  ${c.name}: expected ${c.expected}, found ${c.found}`);
-      for (const m of c.missing.slice(0, 40)) console.log(`        missing: ${m}`);
+      for (const m of c.missing.slice(0, 40)) console.log(`        ${c.label}: ${m}`);
       if (c.missing.length > 40) console.log(`        …and ${c.missing.length - 40} more`);
     }
     console.log(result.ok ? `GATE PASSED (${args[0]}).` : `GATE FAILED (${args[0]}): finish the missing items, then run the gate again.`);
