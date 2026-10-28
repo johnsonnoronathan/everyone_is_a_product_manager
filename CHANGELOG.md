@@ -47,6 +47,7 @@
 - **Review other people's code somewhere you can throw away.** A review installs the project's packages and runs its app and tests. `launch-review` now warns before doing that on a machine with real keys or data when the project isn't the user's own; the README and the client playbook say the same.
 - **Hand-ins use test data only.** `prepare-review` and the hand-in guide say so, and the hand-in gate checks saved text evidence. Screenshots still need a person to look at them.
 - **The README says what a review costs** in time and usage allowance, measured in our tests.
+- **CI's demo job runs on Ubuntu 24.04.** `ubuntu-latest` moved to Ubuntu 26.04, where Playwright 1.56 can't install Chromium.
 - **`AGENTS.md` for this repository** (with `CLAUDE.md` pointing to it): how to test, the rules that must not be broken, and lessons from past problems.
 
 ### Demo
