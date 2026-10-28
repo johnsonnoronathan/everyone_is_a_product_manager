@@ -13,6 +13,7 @@
 - **New gate counts:** sources of evidence, kinds of performance test, places hidden problems sit, test-suite types, and the kinds of test for each recurring problem. The lens files for performance and architecture carry their part (`merge` puts it in place).
 - `acceptance-test`: guidance for visual checks with Playwright's screenshot comparison.
 - The demo's worked example has the new records, and its written report is `demo/flash-sale/review/REPORT.md`.
+- `demo/flash-sale/pilot-issues.json`: a simulated issue-tracker export for the naive version, to show how an inspection uses tickets.
 
 ## 0.2.0 (2026-10-28): the review standard
 

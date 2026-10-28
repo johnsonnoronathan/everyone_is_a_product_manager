@@ -9,6 +9,8 @@ A one-page sneaker drop (100 pairs, one per customer) built twice:
   - Its review verified 16 of the 23 earlier findings as fixed and found new ones. The code here is round 2; round 1 is in git history (commit `448562b`).
   - See [`sample-reports/SCORECARD.md`](sample-reports/SCORECARD.md).
 
+[`pilot-issues.json`](pilot-issues.json) is a simulated issue-tracker export for `naive/`: 16 tickets that staff and friends might file after a pilot sale, some closed as "could not reproduce" and then reported again. It is there to show how an inspection uses tickets as evidence. Like the planted problems, it was written for the demo.
+
 Both share `shared/` (frontend, sample data, and simulated infrastructure: a database layer that behaves like a hosted Postgres with network latency and a 10-connection pool, and a fake payment provider that occasionally hangs, like real ones on Black Friday).
 
 ## Review
@@ -46,7 +48,7 @@ node demo/flash-sale/run.mjs naive     # or: fixed
 
 In Claude Code, from the repository root:
 
-- *"Run a launch review of demo/flash-sale/naive"* → `launch-review` skill
+- *"Run a pre-delivery inspection of demo/flash-sale/naive. The issue tracker export is demo/flash-sale/pilot-issues.json"* → `launch-review` skill. The report starts with three questions (is the test harness properly set up, are the performance tests comprehensive, does the architecture review cover hidden problems) and turns the tickets into the kinds of test to add.
 - *"Will demo/flash-sale/naive survive the midnight drop? 3,000 visitors in 60 seconds"* → `peak-traffic-test` skill
 - *"Write acceptance tests for the flash sale and tell me if it's ready"* → `acceptance-test` skill
 
