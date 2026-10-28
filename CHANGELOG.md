@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-10-28): the review standard
 
 ### Review standard
 - **A fixed format for handing projects in and judging them** (`launch-review/standard/review-standard.md`):
@@ -21,6 +21,7 @@
   - a warning when there is too little history to learn from.
 - **Quality gates: software counts, not the AI.** `review-pack.mjs gate submission | worksheet | review` counts what each stage must have produced, lists exactly what is missing, and fails until nothing is:
   - checker errors, journeys with evidence, and evidence files that exist;
+  - saved text evidence with no real email addresses or keys (at hand-in; it says what it found without printing it);
   - the README's nine items and its link to the review page (at hand-in);
   - per area, mandatory criteria with a result (the worksheet can be split per lens and merged with `merge`; `status` shows progress);
   - open Critical and High findings listed as blockers, each blocker with a card, and Must acceptance criteria with a result;
@@ -41,6 +42,12 @@
   - records what became of every scanner hit, and gives the Lighthouse command for page speed on phones.
 - `peak-traffic-test`: **fixed a counting bug in the race test.** Accepted clicks were also counted as rejected (the round-2 sample report says 1,998 rejected; the right number is 1,900). Each response now lands in exactly one bucket, and the summary flags a problem if the buckets don't add up to the clicks sent.
 - `acceptance-test`: the report skips demo journeys tagged `@journey`.
+
+### Safety and housekeeping
+- **Review other people's code somewhere you can throw away.** A review installs the project's packages and runs its app and tests. `launch-review` now warns before doing that on a machine with real keys or data when the project isn't the user's own; the README and the client playbook say the same.
+- **Hand-ins use test data only.** `prepare-review` and the hand-in guide say so, and the hand-in gate checks saved text evidence. Screenshots still need a person to look at them.
+- **The README says what a review costs** in time and usage allowance, measured in our tests.
+- **`AGENTS.md` for this repository** (with `CLAUDE.md` pointing to it): how to test, the rules that must not be broken, and lessons from past problems.
 
 ### Demo
 - `demo/flash-sale/review/`: the fixed version handed in and judged under the standard. All 95 criteria that apply have a result. It records six kinds of problem that came back across three reviews, five problems introduced by fixes, and the verdict NO-GO.

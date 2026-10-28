@@ -13,6 +13,7 @@ They work for any web app: a shop, a booking system for classes or appointments,
 
 - **[Claude Code](https://code.claude.com/docs/en/overview)**, Anthropic's coding assistant ([how to install it](https://code.claude.com/docs/en/setup)). It needs a paid Claude plan or an Anthropic API account. The checks are packaged as Claude Code *skills*: instructions and scripts it follows when you ask for a review.
 - **Your app's code in a folder on your computer.** If you built it in an online builder, export it first (most can export to GitHub, and you can download it from there).
+- **Time and usage allowance.** A full review is a big job for the AI. In our tests one took about half an hour and 300,000 to 450,000 tokens, including the load and acceptance tests; preparing a project for review was a few hundred thousand tokens too. On a subscription plan that is a large share of your usage allowance, so run one at a time. A focused review (*"just review the architecture"*) does far less.
 - **Ideally, a test copy of the app (staging)** with test payments. If you only have the live site, the review still works on the code and on a copy it starts on your computer; nothing is ever tested against the live site without your permission.
 
 ## Start here
@@ -99,6 +100,8 @@ When one person builds and another reviews (you and a consultant, your team and 
 - **Only test systems you own or are authorised to test.** A load test against someone else's site is a denial-of-service attack. The skills ask for explicit confirmation before any load test or live check, and default to staging.
 - **Use staging.** Run load tests and active checks against production only with the owner's written permission, payments in test mode, and someone watching.
 - **Treat reports as confidential.** They describe how to break the app.
+- **Review other people's code somewhere you can throw away.** A review installs the project's packages and runs its app and tests, so a malicious or compromised project could run anything on your computer. For a client's project, use a cloud session, a container or a spare computer with no real passwords, keys or customer data on it.
+- **Hand-ins use test data only.** The review page carries screenshots and saved answers to people outside your team. Take them with test accounts and made-up names and addresses, and look at every screenshot before sending: the hand-in check reads saved text for real email addresses and keys, but nothing reads pictures.
 - **The demo's `naive/` app is intentionally vulnerable.** Run it locally only; never deploy it. Its "secret key" is fake.
 
 ## Limits
@@ -143,10 +146,12 @@ The checklists draw on the [OWASP Top 10:2025](https://owasp.org/Top10/2025/), t
   launch-review/        SKILL.md, references (intake, security, architecture, operations, severity, report), review standard and criteria, scripts (scanners, review pack, history scan), Semgrep rules
   peak-traffic-test/    SKILL.md, references (capacity interview, anti-patterns, report), capacity calculator, k6 scripts, Semgrep rules
   acceptance-test/      SKILL.md, references (writing criteria, Playwright rules), report generator, templates
-.claude-plugin/         marketplace.json: installs the three skills as the "launch-readiness" plugin
+  prepare-review/       SKILL.md, templates (README section, demo journeys, AGENTS.md)
+.claude-plugin/         marketplace.json: installs the four skills as the "launch-readiness" plugin
 demo/flash-sale/        naive/ and fixed/ apps, simulated infrastructure, acceptance suite, sample reports, review page, answer key
-docs/                   release-gate.md: the core lessons; running-client-reviews.md: a playbook for paid review engagements
+docs/                   release-gate.md: the core lessons; hand-in-guide.md: handing a project in; running-client-reviews.md: a playbook for paid review engagements
 tests/                  unit tests for the skill scripts, Semgrep rule fixtures
+AGENTS.md               instructions for AI coding agents working on this repository (CLAUDE.md points to it)
 ```
 
 ## Contributing
