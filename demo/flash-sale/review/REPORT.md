@@ -8,15 +8,17 @@ Version `fa296a2` (the app's code hasn't changed since; later commits touch only
 
 **If it were delivered or launched now:** The sale might open before the email goes out, letting bots and early visitors take the pairs, or stay shut while 3,000 people wait. Nobody knows whether a real card payment goes through, so the first real customer is the first test. Customers get no confirmation email. If something breaks during the sale, the documented way back (rollback) fails, and nobody is named to be woken up.
 
+*These answers measure how complete the testing and the inspection are, not whether the app is ready: the verdict says that.*
+
 | Question | Answer | Evidence |
 |---|---|---|
 | 1. Is the test harness properly set up? | **No** | 2 of 13 harness checks met; of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught |
 | 2. Are the performance tests comprehensive? | **Partly** | 4 of 8 kinds of performance test run; 4 passed, 0 failed |
 | 3. Does the architecture review cover hidden problems? | **Yes** | 9 of 9 places examined; 12 hidden problems found |
 
-- The test harness is not set up: 11 of 13 checks are not met, and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
+- The test harness is not set up: 10 of 13 checks are not met and 1 could not be verified, and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
 - The performance tests are not fully comprehensive: 4 of 8 kinds this product needs were not run (beyond capacity, long run, page speed on phones, on a production-like setup). All 4 that were run passed.
-- The review looked in all 9 places where hidden problems usually sit. It found 12 problems that the tests had passed over.
+- The review looked in all 9 places where hidden problems usually sit. It found 12 problems there.
 
 **Before delivery (4 blockers):**
 
@@ -67,17 +69,17 @@ In place: H-09 Tests are reliable; H-13 Changes get an independent review.
 
 Missing or unproven:
 
-- H-01 Agent instructions exist (does not meet): No AGENTS.md, CLAUDE.md or similar anywhere in the repository, although an AI coding assistant wrote and fixed the code.
-- H-02 Agent instructions are true (does not meet): There is no instruction file whose commands could be checked.
-- H-03 Agents know the rules and boundaries (does not meet): The business rules and boundaries exist only in review reports and code; agents aren't told them.
-- H-04 Lessons are recorded for agents (does not meet): None of the six recurring problems (Quality history) is recorded where an agent would read it.
-- H-05 Agent instructions are lean and safe (does not meet): No instruction file.
-- H-06 Every promise has a test (does not meet): Add a test that two different addresses can each buy, and that one address can't buy twice.
-- H-07 Tests check outcomes (does not meet): Tests check orders, charges and messages, but not what should disappear: the sign-in box stayed visible for three rounds.
-- H-08 Failure paths are tested (does not meet): Covered: tampered price, double click, other users' orders, slow and failing payments, missing address, too early, paused. Not covered: malformed requests and restarts, two of the recurring problems under Quality history.
-- H-10 Every change goes through CI (cannot verify): The branch protection settings for `main` (repository settings, owner access).
-- H-11 Lint and type checks pass (does not meet): No linter, formatter or type checker for the app code.
-- H-12 Security checks are automated (does not meet): Run Gitleaks, OSV-Scanner and Semgrep in CI on every change.
+- H-01 Agent instructions exist (does not meet). Found: No AGENTS.md, CLAUDE.md or similar anywhere in the repository, although an AI coding assistant wrote and fixed the code.
+- H-02 Agent instructions are true (does not meet). Found: There is no instruction file whose commands could be checked.
+- H-03 Agents know the rules and boundaries (does not meet). Found: The business rules and boundaries exist only in review reports and code; agents aren't told them.
+- H-04 Lessons are recorded for agents (does not meet). Found: None of the six recurring problems (Quality history) is recorded where an agent would read it.
+- H-05 Agent instructions are lean and safe (does not meet). Found: No instruction file.
+- H-06 Every promise has a test (does not meet). Fix: Add a test that two different addresses can each buy, and that one address can't buy twice.
+- H-07 Tests check outcomes (does not meet). Found: Tests check orders, charges and messages, but not what should disappear: the sign-in box stayed visible for three rounds.
+- H-08 Failure paths are tested (does not meet). Found: Covered: tampered price, double click, other users' orders, slow and failing payments, missing address, too early, paused. Not covered: malformed requests and restarts, two of the recurring problems under Quality history.
+- H-10 Every change goes through CI (cannot verify). Needed to verify: The branch protection settings for `main` (repository settings, owner access).
+- H-11 Lint and type checks pass (does not meet). Found: No linter, formatter or type checker for the app code.
+- H-12 Security checks are automated (does not meet). Fix: Run Gitleaks, OSV-Scanner and Semgrep in CI on every change.
 
 6 kinds of problem came back during the project; 3 have no automatic test that would catch them and 3 are only partly caught. The kind of test that would catch each:
 
@@ -91,7 +93,7 @@ Missing or unproven:
 | Load and race tests | Yes: Race test, Load test | — |
 | Automatic scans | **No** | Bad input crashes the app or is quietly accepted (6 times) |
 
-**Conclusion.** The test harness is not set up: 11 of 13 checks are not met, and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
+**Conclusion.** The test harness is not set up: 10 of 13 checks are not met and 1 could not be verified, and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
 
 ### 3.2 Are the performance tests comprehensive? Partly
 
@@ -99,7 +101,7 @@ Missing or unproven:
 
 | Kind of test | Result | What it showed |
 |---|---|---|
-| Load at the target and above it | Passed | The target held in 3 of 3 runs and 200% in 2 of 3 (one failed at 150%), all on one 4-core machine shared with the test tools, so the capacity number itself is not proven. |
+| Load at the target and above it | Passed | The product page held the target in 3 of 3 runs and 200% in 2 of 3 (one failed at 150%), all on one 4-core machine shared with the test tools, so the capacity number itself is not proven. Most buy answers in the load test were "sold out", so buying under a rush is judged by the race test instead. |
 | Repeated runs, all kept | Passed | Three runs and a same-day run of the previous version, all kept, including the one that failed. |
 | Rush on something limited | Passed | 1,000 buyers × 2 clicks for 100 pairs: 100 sold, nobody charged twice, nothing left pending. CI runs it on every change. |
 | Slow or failing partner | Passed | Payment provider answering in about 3 seconds: 40 charges for 40 orders, then 60 for 60; repeat clicks refused. |
@@ -112,7 +114,7 @@ Missing or unproven:
 
 ### 3.3 Does the architecture review cover hidden problems? Yes
 
-*Problems that every test passes over. The review looks in each place they usually hide and says what it found there.*
+*The places where problems usually hide from tests: two things at once, restarts, settings, time and the rest. The review looks in each and says what it found there.*
 
 | Where hidden problems sit | Result | How the review looked | Problems |
 |---|---|---|---|
@@ -141,7 +143,7 @@ The 12 hidden problems, most serious first:
 - ARC-12 (Low) Different non-Latin addresses collide
 - ARC-13 (Low) One failing email would block the rest
 
-**Conclusion.** The review looked in all 9 places where hidden problems usually sit. It found 12 problems that the tests had passed over.
+**Conclusion.** The review looked in all 9 places where hidden problems usually sit. It found 12 problems there.
 
 ## 4. Recommendations
 
@@ -162,13 +164,13 @@ The 12 hidden problems, most serious first:
 
 ### Strengthen the test harness
 
-So the problems that came back can't come back again unnoticed:
+So the problems that came back can't come back again unnoticed. Most needed first:
 
-- **Add unit tests** for: Bad input crashes the app or is quietly accepted; Business rules checked in code instead of enforced by the database. A rule or calculation that is wrong: prices, limits, reading input, dates. Skills and tools: test-driven-development.
-- **Strengthen integration tests** for: Outside calls whose outcome is unknown; Settings and data that must survive restarts and deploys; Business rules checked in code instead of enforced by the database. Parts that work alone but not together: database rules and transactions, a stand-in payment provider that is slow or fails. Skills and tools: test-driven-development.
-- **Add visual tests** for: Screen behaviour no test looked at closely. A screen that looks wrong although it works: something that should disappear stays, things overlap, a layout breaks on a phone. Skills and tools: acceptance-test, webapp-testing, Playwright screenshot comparison.
-- **Strengthen self-checks** for: Settings and data that must survive restarts and deploys; Operations promised on paper but not in tools. The app checking itself: refusing to start with missing or unsafe settings, a health check that tests what matters, a quick test after every deploy. Skills and tools: verification-before-completion.
-- **Add automatic scans** for: Bad input crashes the app or is quietly accepted. Leaked keys, risky code patterns, libraries with known security holes. Skills and tools: launch-review.
+1. **Run the integration tests on every change (CI), and extend them.** Would catch: Outside calls whose outcome is unknown; Settings and data that must survive restarts and deploys; Business rules checked in code instead of enforced by the database. Integration tests catch parts that work alone but not together: database rules and transactions, a stand-in payment provider that is slow or fails. Skills and tools: test-driven-development.
+2. **Add unit tests.** Would catch: Bad input crashes the app or is quietly accepted; Business rules checked in code instead of enforced by the database. Unit tests catch a rule or calculation that is wrong: prices, limits, reading input, dates. Skills and tools: test-driven-development.
+3. **Run the self-checks on every change (CI), and extend them.** Would catch: Settings and data that must survive restarts and deploys; Operations promised on paper but not in tools. Self-checks catch the app checking itself: refusing to start with missing or unsafe settings, a health check that tests what matters, a quick test after every deploy. Skills and tools: verification-before-completion.
+4. **Add automatic scans.** Would catch: Bad input crashes the app or is quietly accepted. Automatic scans catch leaked keys, risky code patterns, libraries with known security holes. Skills and tools: launch-review.
+5. **Add visual tests.** Would catch: Screen behaviour no test looked at closely. Visual tests catch a screen that looks wrong although it works: something that should disappear stays, things overlap, a layout breaks on a phone. Skills and tools: acceptance-test, webapp-testing, Playwright screenshot comparison.
 
 ### Complete the performance tests
 
@@ -219,35 +221,234 @@ An inspection lowers the risk; it does not prove there are no problems.
 
 ## Appendix A. Every open problem
 
-| Code | Severity | Problem | Who | Fix |
-|---|---|---|---|---|
-| INT-01 | High | The real database, sign-in and card payment aren't connected | Developer, with the providers the product owner chooses | Connect hosted Postgres, the chosen sign-in provider and the chosen payment provider (including the provider's lookup call and refunds); have a reviewer check them; then make a purchase, a decline and a refund in the provider's test mode, and one small real purchase and refund. |
-| ARC-11 | High | The opening time can silently be wrong | Developer | One source of truth, only full times with a time zone, and show the time in force in the log and the admin answer. Effort: small. |
-| ARC-16 | High | Production starts without a database or payment address, and a restart then loses every order | Developer | In production, refuse to start without a real database connection and a payment address. |
-| ARC-10 | Medium | A payment that never resolves stays "confirming" forever | Developer | Look the payment up instead of re-sending it, give "confirming" a deadline, then release the pair and tell the shopper. |
-| SEC-03 | Medium | One person can still buy several pairs, and nothing slows bots | Developer | Firmer identity for the limit, and a waiting room or bot protection in front of the drop. |
-| SEC-04 | Medium | Production safety depends on one setting nobody sets | Developer | Make production the default: refuse to start with demo values unless demo mode is switched on explicitly, so forgetting one setting can't open the shop with demo settings. Add a real production start command. |
-| SEC-06 | Medium | One shared admin password, and no record of who used it | Developer | Personal admin accounts and an audit entry per change. |
-| ARC-06 | Medium | Rate limits live in one server | Hosting provider or developer | Run one instance (runbook), or move limits to a shared store first. |
-| ARC-07 | Medium | Confirmation emails are queued but never sent | Developer; product owner chooses the email provider | Connect the email provider, with retries per email. |
-| PERF-03 | Medium | One signed-in script can tie up the database | Developer | Rate-limit signed-in reads (`GET /api/orders/:id`, `GET /api/my-orders`), for example 10 per 10 seconds per account. |
-| PERF-04 | Medium | The page reloads non-stop if the sale is more than ~25 days away | Developer | Cap the countdown timer and re-check periodically. |
-| OPS-03 | Medium | Signing in early doesn't survive a new tab | Developer | Keep the session across tabs (for example in a cookie or `localStorage`), weighing the risk on shared computers. |
-| OPS-04 | Medium | The launch-night safety nets haven't been shown | Hosting provider or developer; product owner names the on-call person and agrees recovery targets | Show a tested restore, a received test alert and the rota. |
-| OPS-08 | Medium | The runbook relies on tools that don't exist | Developer | Build each tool and try it once. |
-| OPS-09 | Medium | Rolling back to the previous release fails | Developer | Make the previous release start against the new schema, or roll forward with a tested fix. |
-| HAR-01 | Medium | No instructions for the AI agents that write the code | Developer | Add a short AGENTS.md: how to start and test, the seven business rules, where money and secrets are handled, never edit applied migrations, and one rule per recurring problem linked to its test. Effort: small. |
-| HAR-02 | Medium | Two recurring problems have no test: bad input and restarts | Developer | Move the review's malformed-input and restart scripts into the CI suite, and add a lint and type check for the server. Effort: medium. |
-| HIS-01 | Medium | No kind of recurring problem is fully caught automatically yet | Developer | For each kind of recurring problem in Quality history, add an automatic check (test, code-scanning rule or database constraint) and prove it catches a past example. |
-| OPS-01 | Low | No request ids, and admin actions are anonymous | Developer | A request id per request, and admin identity in the log. |
-| ARC-12 | Low | Different non-Latin addresses collide | Developer | Normalise with Unicode-aware rules. |
-| ARC-13 | Low | One failing email would block the rest | Developer | Retry per email. |
-| ARC-14 | Low | The page points to things that don't exist | Developer | Remove the mentions of an order history and an email, or build them. |
-| ARC-15 | Low | The sign-in box never hides, and the stock count is stale after buying | Developer | Fix the CSS rule that overrides `hidden`, and add a test that it disappears. |
-| PERF-05 | Low | The product cache drops its last good copy when the database is slow | Developer | Serve the last good copy while refreshing. |
-| OPS-10 | Low | Any `?v=` value is cached for a year | Developer | Cache only the current hash. |
+### INT-01 · High · Confirmed: The real database, sign-in and card payment aren't connected
+
+- **Impact:** The code talks only to stand-ins: a local SQLite file instead of the hosted Postgres database, a test sign-in that accepts any email, and a payment simulator. Card details, 3-D Secure, declines and refunds have never been handled, so the first real customer would be the first test.
+- **Where:** Database: `shared/db.mjs` (SQLite stand-in). Sign-in: `POST /api/login` test stub. Payment: `fixed/server.mjs:299-310` (calls the simulator).
+- **Fix:** Connect hosted Postgres, the chosen sign-in provider and the chosen payment provider (including the provider's lookup call and refunds); have a reviewer check them; then make a purchase, a decline and a refund in the provider's test mode, and one small real purchase and refund.
+- **Done when:** The race test and acceptance tests pass against staging with the real database and the provider's test mode, and the provider's records match the shop's orders for one real purchase and refund.
+- **Who:** Developer, with the providers the product owner chooses
+- **Status:** Open
+
+### ARC-11 · High · Confirmed: The opening time can silently be wrong
+
+- **Impact:** If the opening time is changed after the first start, the server keeps the old one while its log shows the new one, so the sale can open hours early or stay shut at midnight. A date without a time zone, or text like "Nov 27" (read as 2001), opens the sale at once.
+- **Where:** `fixed/server.mjs:111-114`, `:646`, `:24-25`, `:537-539`
+- **Fix:** One source of truth, only full times with a time zone, and show the time in force in the log and the admin answer. Effort: small.
+- **Done when:** A test starts the app twice on the same database with a changed opening time and sees the new time in force; "Nov 27", "1" and a date without a time zone are refused; both run in CI.
+- **Who:** Developer
+- **Status:** Open
+
+### ARC-16 · High · Confirmed (found by an independent test review, 2026-10-27): Production starts without a database or payment address, and a restart then loses every order
+
+- **Impact:** With no database setting the app keeps orders only in memory, and with no payment address it calls a test address on the same machine; production mode starts anyway. A restart during the sale then erases every paid order while the customers stay charged (reproduced: 0 paid orders, 1 charge).
+- **Where:** `fixed/server.mjs:70` (database defaults to memory), `:12` (payment address defaults to localhost)
+- **Fix:** In production, refuse to start without a real database connection and a payment address.
+- **Done when:** Starting in production mode without either setting fails, and a restart test with production settings keeps every order.
+- **Who:** Developer
+- **Status:** Open
+
+### ARC-10 · Medium · Confirmed: A payment that never resolves stays "confirming" forever
+
+- **Impact:** A payment error that retrying can't fix keeps the pair reserved indefinitely: the whole stock could be locked with nothing sold. A warning is written to the log after 10 minutes, but nothing yet delivers log warnings to a person.
+- **Where:** `fixed/server.mjs:294-387` (charge, settle, reconciler)
+- **Fix:** Look the payment up instead of re-sending it, give "confirming" a deadline, then release the pair and tell the shopper.
+- **Done when:** A test where the provider keeps failing ends with the pair released and the shopper told, within the agreed deadline.
+- **Who:** Developer
+- **Status:** Open
+
+### SEC-03 · Medium · Confirmed: One person can still buy several pairs, and nothing slows bots
+
+- **Impact:** A second mailbox or a re-spelt address buys another pair.
+- **Where:** `fixed/server.mjs:411-415` (one per customer and per address)
+- **Fix:** Firmer identity for the limit, and a waiting room or bot protection in front of the drop.
+- **Done when:** A second mailbox or a re-spelt address can't buy a second pair in a test; a bot-protection or waiting-room service is in front of the drop.
+- **Who:** Developer
+- **Status:** Partly fixed
+
+### SEC-04 · Medium · Confirmed: Production safety depends on one setting nobody sets
+
+- **Impact:** Started without `NODE_ENV=production`, the shop runs with demo secrets, test sign-in and the reset route switched on.
+- **Where:** `fixed/server.mjs:10-52`
+- **Fix:** Make production the default: refuse to start with demo values unless demo mode is switched on explicitly, so forgetting one setting can't open the shop with demo settings. Add a real production start command.
+- **Done when:** Starting without `NODE_ENV` and without an explicit demo switch fails.
+- **Who:** Developer
+- **Status:** Condition
+
+### SEC-06 · Medium · Confirmed: One shared admin password, and no record of who used it
+
+- **Impact:** Anyone with the token can open, move or pause the sale, and the log can't say who did.
+- **Where:** `fixed/server.mjs:532-568` (admin routes)
+- **Fix:** Personal admin accounts and an audit entry per change.
+- **Done when:** Each admin signs in personally; every change to the sale is logged with who made it.
+- **Who:** Developer
+- **Status:** Open
+
+### ARC-06 · Medium · Confirmed: Rate limits live in one server
+
+- **Impact:** A second instance would halve the protection.
+- **Where:** Rate limits in memory: `fixed/server.mjs:239-253`
+- **Fix:** Run one instance (runbook), or move limits to a shared store first.
+- **Done when:** Runbook and hosting settings run exactly one instance, or limits live in a shared store.
+- **Who:** Hosting provider or developer
+- **Status:** Accepted risk, not yet signed
+
+### ARC-07 · Medium · Confirmed: Confirmation emails are queued but never sent
+
+- **Impact:** Shoppers get no confirmation.
+- **Where:** `fixed/server.mjs:389-408` (outbox sender)
+- **Fix:** Connect the email provider, with retries per email.
+- **Done when:** A test purchase produces a delivered confirmation email from the real provider.
+- **Who:** Developer; product owner chooses the email provider
+- **Status:** Partly fixed
+
+### PERF-03 · Medium · Confirmed: One signed-in script can tie up the database
+
+- **Impact:** Unlimited signed-in reads can starve checkout during the rush.
+- **Where:** `fixed/server.mjs:503-518`
+- **Fix:** Rate-limit signed-in reads (`GET /api/orders/:id`, `GET /api/my-orders`), for example 10 per 10 seconds per account.
+- **Done when:** A load test with one account hammering reads leaves checkout times within budget.
+- **Who:** Developer
+- **Status:** Open
+
+### PERF-04 · Medium · Confirmed: The page reloads non-stop if the sale is more than ~25 days away
+
+- **Impact:** Browser timers overflow above about 25 days, so every open page reloads the product non-stop and hammers the server. The sale date isn't set yet: if the page goes live more than 25 days before the sale, this happens from day one.
+- **Where:** `shared/public/app.js:46-47`
+- **Fix:** Cap the countdown timer and re-check periodically.
+- **Done when:** A page loaded 60 days before opening re-checks no more than once a minute.
+- **Who:** Developer
+- **Status:** Open
+
+### OPS-03 · Medium · Confirmed: Signing in early doesn't survive a new tab
+
+- **Impact:** Shoppers who sign in before midnight and open a new tab must sign in again during the rush.
+- **Where:** `shared/public/app.js` (session in `sessionStorage`)
+- **Fix:** Keep the session across tabs (for example in a cookie or `localStorage`), weighing the risk on shared computers.
+- **Done when:** A shopper signed in early is still signed in in a new tab at midnight.
+- **Who:** Developer
+- **Status:** Partly fixed
+
+### OPS-04 · Medium · Likely: The launch-night safety nets haven't been shown
+
+- **Impact:** Backups, error tracking, alerts and on-call are listed in the runbook but not evidenced.
+- **Where:** `fixed/RUNBOOK.md:9-10`
+- **Fix:** Show a tested restore, a received test alert and the rota.
+- **Done when:** A restore log, a received test alert, and the on-call rota are attached to the review.
+- **Who:** Hosting provider or developer; product owner names the on-call person and agrees recovery targets
+- **Status:** Partly fixed
+
+### OPS-08 · Medium · Confirmed: The runbook relies on tools that don't exist
+
+- **Impact:** Loading stock, resolving a stuck payment, exporting addresses and comparing charges with orders have no tool.
+- **Where:** `fixed/RUNBOOK.md` steps for loading stock, resolving a stuck payment, exporting addresses and comparing charges with orders
+- **Fix:** Build each tool and try it once.
+- **Done when:** Each runbook step names a command that exists, and a rehearsal log shows each one run once.
+- **Who:** Developer
+- **Status:** Open
+
+### OPS-09 · Medium · Confirmed: Rolling back to the previous release fails
+
+- **Impact:** The rollback the runbook prescribes fails at start-up, so the shop stays down when things are already bad.
+- **Where:** `fixed/RUNBOOK.md:27` (rollback step); start-up migrations in `fixed/server.mjs:73-115`
+- **Fix:** Make the previous release start against the new schema, or roll forward with a tested fix.
+- **Done when:** The previous release starts against the current database in a test, or the runbook replaces rollback with a tried roll-forward step.
+- **Who:** Developer
+- **Status:** Open
+
+### HAR-01 · Medium · Confirmed: No instructions for the AI agents that write the code
+
+- **Impact:** Every new session of the AI coding assistant starts without the project's rules and lessons, so the problems under Quality history can return. Several problems so far were introduced by fixes.
+- **Where:** Repository root: no `AGENTS.md`, `CLAUDE.md` or equivalent
+- **Fix:** Add a short AGENTS.md: how to start and test, the seven business rules, where money and secrets are handled, never edit applied migrations, and one rule per recurring problem linked to its test. Effort: small.
+- **Done when:** `AGENTS.md` exists; every command in it works; it lists the business rules and one rule per recurring problem, each linked to a test.
+- **Who:** Developer
+- **Status:** Open
+
+### HAR-02 · Medium · Confirmed: Two recurring problems have no test: bad input and restarts
+
+- **Impact:** Bad input that crashed the app or was quietly accepted, and settings or data lost across restarts, came back again and again across three reviews (see the counts under Quality history); each time only a reviewer caught it.
+- **Where:** `demo/flash-sale/acceptance/`, `.github/workflows/ci.yml`
+- **Fix:** Move the review's malformed-input and restart scripts into the CI suite, and add a lint and type check for the server. Effort: medium.
+- **Done when:** A malformed-input test and a start-twice test run in CI, and each fails on an earlier broken version.
+- **Who:** Developer
+- **Status:** Open
+
+### HIS-01 · Medium · Confirmed: No kind of recurring problem is fully caught automatically yet
+
+- **Impact:** Each depends, at least partly, on the next reviewer noticing.
+- **Where:** Quality history section
+- **Fix:** For each kind of recurring problem in Quality history, add an automatic check (test, code-scanning rule or database constraint) and prove it catches a past example.
+- **Done when:** Every kind of recurring problem is marked "caught automatically".
+- **Who:** Developer
+- **Status:** Open
+
+### OPS-01 · Low · Confirmed: No request ids, and admin actions are anonymous
+
+- **Impact:** Harder to trace one shopper's problem.
+- **Where:** `fixed/server.mjs:61-66` (logging)
+- **Fix:** A request id per request, and admin identity in the log.
+- **Done when:** Every log line carries a request id; admin actions name the admin.
+- **Who:** Developer
+- **Status:** Partly fixed
+
+### ARC-12 · Low · Confirmed: Different non-Latin addresses collide
+
+- **Impact:** A shopper with an address in Japanese, Russian or Greek can be refused because of someone else's address.
+- **Where:** `fixed/server.mjs:414`
+- **Fix:** Normalise with Unicode-aware rules.
+- **Done when:** Two different addresses in Japanese or Greek can both order in a test.
+- **Who:** Developer
+- **Status:** Open
+
+### ARC-13 · Low · Likely: One failing email would block the rest
+
+- **Impact:** Once real sending is added, one failing email would block all later ones, and a second app copy would send every email twice.
+- **Where:** `fixed/server.mjs:389-408`
+- **Fix:** Retry per email.
+- **Done when:** A test with one failing email still sends the rest, once each.
+- **Who:** Developer
+- **Status:** Open
+
+### ARC-14 · Low · Confirmed: The page points to things that don't exist
+
+- **Impact:** Shoppers are sent to an order history and an email that don't exist.
+- **Where:** `shared/public/index.html`, `app.js`
+- **Fix:** Remove the mentions of an order history and an email, or build them.
+- **Done when:** Every link and promise on the page leads somewhere real.
+- **Who:** Developer
+- **Status:** Open
+
+### ARC-15 · Low · Confirmed (seen in the test screenshots): The sign-in box never hides, and the stock count is stale after buying
+
+- **Impact:** Confusing during a one-minute sale; some shoppers will sign in again.
+- **Where:** `shared/public/style.css:6`, `app.js:67, 127, 139`
+- **Fix:** Fix the CSS rule that overrides `hidden`, and add a test that it disappears.
+- **Done when:** An acceptance test checks that the sign-in box disappears and the stock count drops after buying.
+- **Who:** Developer
+- **Status:** Open
+
+### PERF-05 · Low · Confirmed: The product cache drops its last good copy when the database is slow
+
+- **Impact:** Slow database means slow pages for everyone.
+- **Where:** `fixed/server.mjs` product cache
+- **Fix:** Serve the last good copy while refreshing.
+- **Done when:** With a slow database, the page is served from the last good copy within budget.
+- **Who:** Developer
+- **Status:** Open
+
+### OPS-10 · Low · Confirmed: Any `?v=` value is cached for a year
+
+- **Impact:** A mixed-version deploy can pin old JavaScript.
+- **Where:** `fixed/server.mjs:141-152, 611-617`
+- **Fix:** Cache only the current hash.
+- **Done when:** Only the current file version is cached for a year; other `?v=` values get a short cache.
+- **Who:** Developer
+- **Status:** Open
 
 ## Appendix B. Checklist results by area
+
+Every criterion in the standard, including those that don't apply to this product (`review-pack.mjs status` counts only the mandatory ones).
 
 | Area | Meet | Don't meet | Can't verify | Don't apply |
 |---|---|---|---|---|

@@ -21,6 +21,9 @@ const STATUS_CLASSES = ['2xx', '3xx', '4xx', '5xx', 'timeout'];
 const serverErrors = new Counter('server_errors');
 const timeouts = new Counter('timeouts');
 const responses = new Counter('responses');
+// Expected refusals (sold out, already ordered, slow down) are fast and count as fine, so a step where most answers were
+// refusals measured the refusal, not the real work. The summary says so.
+const refusals = new Counter('expected_refusals');
 
 // Up to 1% of a step's planned requests may go unsent. Uses requests/second (ep.stageRates[].rps),
 // not the k6 `rate`, which is per minute for low-traffic endpoints.
@@ -74,6 +77,7 @@ if (SMOKE) {
     thresholds[`http_reqs${filter}`] = ['count>=0'];
     thresholds[`server_errors${filter}`] = ['count>=0'];
     thresholds[`timeouts${filter}`] = ['count>=0'];
+    thresholds[`expected_refusals${filter}`] = ['count>=0'];
     // Iterations k6 could not start because every virtual user was still waiting on a slow response.
     thresholds[`dropped_iterations{scenario:${name}}`] = [`count<=${allowedDrops(ep, si)}`];
   });
@@ -109,6 +113,7 @@ export function hit(data) {
   const res = http.request(method, url, body, params);
   if (res.status === 0) timeouts.add(1, tags);
   else if (res.status >= 500) serverErrors.add(1, tags);
+  else if (res.status >= 400 && (ep.okStatuses || []).includes(res.status)) refusals.add(1, tags);
   if (SMOKE) {
     const cls = res.status === 0 ? 'timeout' : `${Math.floor(res.status / 100)}xx`;
     responses.add(1, { endpoint: ep.id, class: cls });
@@ -173,6 +178,7 @@ export function handleSummary(data) {
         serverErrors: metric(data, 'server_errors', filter, 'count') || 0,
         timeouts: metric(data, 'timeouts', filter, 'count') || 0,
         dropped,
+        refusals: metric(data, 'expected_refusals', filter, 'count') || 0,
         pass: reasons.length === 0,
         reasons,
       };
@@ -233,6 +239,8 @@ export function handleSummary(data) {
       );
     }
   }
+  const mostlyRefused = stages.flatMap((s) => s.endpoints.filter((e) => e.requests && e.refusals / e.requests > 0.5).map((e) => `${e.name} at ${s.multiplier * 100}% (${pct(e.refusals / e.requests)} refused)`));
+  if (mostlyRefused.length) lines.push('', `**Careful:** most answers were expected refusals (${plan.endpoints.flatMap((ep) => ep.okStatuses || []).filter((x, i, a) => a.indexOf(x) === i).join(', ')}: sold out, already ordered or slow down) for ${mostlyRefused.join('; ')}. Those steps measured how fast the app says no, not how fast it completes the real work, so their PASS doesn't show the app can handle it. Reset the stock or use fresh accounts between steps, and judge buying under a rush by the race test.`);
   lines.push(
     '',
     'How to read this: *p95* = 95% of requests were faster than this. *Errors* = share of requests that failed (5xx, timeouts, or unexpected status codes). *Not sent* = requests k6 could not start because every simulated shopper was stuck waiting, which is a sign the site had stopped keeping up.',

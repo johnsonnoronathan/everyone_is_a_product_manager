@@ -66,6 +66,21 @@ test('readCommits and analyse on a small repository', () => {
     assert.equal(r.thin, false);
     assert.equal(analyse(commits.slice(-1), []).thin, true, 'one commit is too little history');
     assert.match(toMarkdown(analyse(commits.slice(-1), []), { repo: dir }), /Too little history to learn from/);
+
+    // Tickets labelled security, performance or ui are defects too; "page" or "button" alone doesn't make a display problem.
+    const tickets = [
+      { number: 1, title: 'Double charge again during pilot', body: 'She clicked once and refreshed the page.', labels: [{ name: 'payments' }], state: 'OPEN' },
+      { number: 2, title: "Order page shows another customer's address", labels: [{ name: 'security' }], state: 'OPEN' },
+      { number: 3, title: 'Sign-in box doesn\'t go away on my phone', labels: [{ name: 'ui' }], state: 'OPEN' },
+      { number: 4, title: 'Product page takes more than 5 seconds', labels: [{ name: 'performance' }], state: 'OPEN' },
+      { number: 5, title: 'Add gift wrapping', labels: [{ name: 'feature request' }], state: 'OPEN' },
+    ];
+    const t = analyse([], tickets);
+    assert.equal(t.totals.bugIssues, 4);
+    const inClass = (key) => (t.classes.find((c) => c.key === key)?.issues || []).map((i) => i.ref);
+    assert.ok(inClass('concurrency').includes('#1'));
+    assert.ok(!inClass('ui').includes('#1'), 'a double charge is not a display problem');
+    assert.ok(inClass('ui').includes('#3'));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

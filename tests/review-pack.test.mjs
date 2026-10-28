@@ -137,6 +137,10 @@ test('the three questions are counted from the record, not written by hand', () 
   assert.equal(ins.harness.met, pack.worksheet.filter((r) => r.id.startsWith('H-') && r.result === 'meets').length);
   assert.deepEqual(ins.harness.recommend.map((k) => k.id).sort(), ['integration', 'scan', 'self-check', 'unit', 'visual']);
   assert.equal(ins.harness.recommend.find((k) => k.id === 'unit').verb, 'Add', 'no unit test suite in the project');
+  assert.equal(ins.harness.recommend.find((k) => k.id === 'integration').verb, 'Run in CI and extend', 'the review scripts exist but CI does not run them');
+  const weights = ins.harness.recommend.map((k) => k.weight);
+  assert.deepEqual(weights, [...weights].sort((a, b) => b - a), 'most needed first');
+  assert.equal(ins.harness.notMet + ins.harness.unverified + ins.harness.met, ins.harness.total);
   assert.equal(ins.performance.answer, 'Partly');
   assert.equal(ins.performance.run, pack.performance.coverage.filter((e) => e.result !== 'not-run').length);
   assert.equal(ins.hidden.answer, 'Yes');
@@ -182,7 +186,9 @@ test('the written report follows the inspection order: summary, method, results,
   const at = (h) => { const i = md.indexOf(h); assert.ok(i >= 0, h); return i; };
   const order = ['## 1. Summary: evidence and conclusions', '## 2. How the inspection was done', '## 3. Results', '### 3.1 Is the test harness properly set up? No', '### 3.2 Are the performance tests comprehensive? Partly', '### 3.3 Does the architecture review cover hidden problems? Yes', '## 4. Recommendations', '### Strengthen the test harness', '### Skills and tools the team can use', '## 5. Limits', '## Appendix A. Every open problem'];
   order.reduce((prev, h) => { const i = at(h); assert.ok(i > prev, `${h} comes later`); return i; }, -1);
-  assert.match(md, /\*\*Add visual tests\*\* for: Screen behaviour no test looked at closely/);
+  assert.match(md, /\*\*Add visual tests\.\*\* Would catch: Screen behaviour no test looked at closely\./);
+  assert.match(md, /\*These answers measure how complete the testing and the inspection are, not whether the app is ready/);
+  assert.match(md, /- \*\*Done when:\*\* /, 'the developer appendix says how to tell a fix is done');
   assert.match(md, /\| Issue tracker or tickets \| No \| None exists/);
 });
 

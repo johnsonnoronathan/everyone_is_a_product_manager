@@ -177,7 +177,7 @@ An inspection answers three questions before delivery. Besides the criteria, it 
 | ID | Kind of test | What it proves | Needed from |
 |---|---|---|---|
 | `load` | **Load at the target and above it** | It holds the expected traffic, and shows where it breaks. | Tier 2 |
-| `repeat` | **Repeated runs, all kept** | The result is not luck: the same test passes more than once, and failed runs are kept too. | Tier 2 |
+| `repeat` | **Repeated runs, all kept** | The same test run at least twice gives the same answer, and failed runs are kept too. Its result says whether the runs agreed. | Tier 2 |
 | `rush` | **Rush on something limited** | Many people buying or booking the last items at the same moment never oversell or pay twice. Only if the product sells or allocates something limited (stock, seats, coupons, slots) or takes payments, issues refunds or credits, or holds balances. | Tier 1 |
 | `slow-partner` | **Slow or failing partner** | When payment, email or an AI service is slow or down, nobody is charged twice or left stuck. Only if the product takes payments, issues refunds or credits, or holds balances or calls an AI model at runtime. | Tier 2 |
 | `overload` | **Beyond capacity** | Past its limit it turns people away politely and recovers, instead of crashing. | Tier 3 |
@@ -199,7 +199,7 @@ An inspection answers three questions before delivery. Besides the criteria, it 
 | `limits` | **What runs out first** | Connection pools, queues, memory, rate limits, a single server: what runs out first under load, and what happens then. | A-06, P-07, P-08 |
 | `data-rules` | **Data that can become wrong** | Rules the data must obey (stock, money, one per customer) enforced where they cannot be bypassed: in the database or one transaction, not only on the screen. | D-01, D-02, D-03, D-04, D-12 |
 | `time` | **Time and dates** | Time zones, opening times, timers and schedules, dates typed by people, clocks that differ between machines. | D-09, A-09 |
-| `background` | **Background jobs and queues** | Jobs that retry, run twice, get stuck or fail silently: emails, settlements and clean-ups that never finish. | — |
+| `background` | **Background jobs and queues** | Jobs that retry, run twice, get stuck or fail silently: emails, settlements and clean-ups that never finish. With no jobs at all, look at the work that should be one (sending email or settling payments inside the request). | — |
 
 ### Kinds of automatic test (7)
 

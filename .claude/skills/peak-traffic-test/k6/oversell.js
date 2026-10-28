@@ -52,10 +52,11 @@ export const options = {
   },
   setupTimeout: '300s',
   teardownTimeout: `${SETTLE_SECONDS + 60}s`,
-  // Declared so the counters appear in the summary even when they stay at zero.
+  // Declared so the counters appear in the summary even when they stay at zero. The first two are the pass rule, so k6
+  // exits with an error (and a CI job fails) when it oversells or charges anyone twice.
   thresholds: {
-    buy_success: ['count>=0'],
-    buyers_with_multiple_successes: ['count>=0'],
+    buy_success: [`count<=${STOCK}`],
+    buyers_with_multiple_successes: ['count==0'],
     buy_accepted_responses: ['count>=0'],
     buy_rejected: ['count>=0'],
     buy_pending: ['count>=0'],

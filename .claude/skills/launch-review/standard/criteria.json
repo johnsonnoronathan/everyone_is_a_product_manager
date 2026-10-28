@@ -971,7 +971,7 @@
     {
       "id": "repeat",
       "name": "Repeated runs, all kept",
-      "proves": "The result is not luck: the same test passes more than once, and failed runs are kept too.",
+      "proves": "The same test run at least twice gives the same answer, and failed runs are kept too. Its result says whether the runs agreed.",
       "tier": 2,
       "criteria": [
         "P-03"
@@ -1122,7 +1122,7 @@
     {
       "id": "background",
       "name": "Background jobs and queues",
-      "look": "Jobs that retry, run twice, get stuck or fail silently: emails, settlements and clean-ups that never finish.",
+      "look": "Jobs that retry, run twice, get stuck or fail silently: emails, settlements and clean-ups that never finish. With no jobs at all, look at the work that should be one (sending email or settling payments inside the request).",
       "criteria": []
     }
   ],
