@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.3.0 (2026-10-28): the inspection report
+
+### The inspection report
+- **Three questions, answered first and counted by software:**
+  - *Is the test harness properly set up?* From the harness checklist, plus the kinds of test that would have caught each problem that came back.
+  - *Are the performance tests comprehensive?* From every kind of performance test the product needs (load, repeated runs, rush, slow partner, beyond capacity, long run, page speed, production-like), each passed, failed or not run.
+  - *Does the architecture review cover hidden problems?* From the nine places hidden problems usually sit, each examined or not, with what was found.
+- **The report reads like an inspection:** evidence and conclusions first, then how the inspection was done (every source of evidence, used or why not, and the skills used), the results, the recommendations, the limits and the appendices. The review page follows the same order.
+- **`REPORT.md` is generated** (`review-pack.mjs report`) from the same record as the page, so every inspection reads the same way; the skill no longer writes it by hand.
+- **Harness recommendations from the problems that came back:** each recurring problem names the kinds of test that would catch it (unit, integration, end-to-end, visual, self-check, load, scan), each test suite has a type, and the report says which kinds to add or strengthen, with skills and tools that help (this repository's skills, Anthropic's `webapp-testing`, Superpowers' `test-driven-development`, Playwright screenshot comparison).
+- **New gate counts:** sources of evidence, kinds of performance test, places hidden problems sit, test-suite types, and the kinds of test for each recurring problem. The lens files for performance and architecture carry their part (`merge` puts it in place).
+- `acceptance-test`: guidance for visual checks with Playwright's screenshot comparison.
+- The demo's worked example has the new records, and its written report is `demo/flash-sale/review/REPORT.md`.
+- `demo/flash-sale/pilot-issues.json`: a simulated issue-tracker export for the naive version, to show how an inspection uses tickets.
+- From a fresh inspection test of the naive version ([scorecard](demo/flash-sale/sample-reports/SCORECARD.md#inspection-test-28-october-2026)):
+  - the report's wording stays within its evidence, and says the three answers measure thoroughness, not readiness;
+  - the harness recommendations are numbered, most needed first;
+  - every finding carries its evidence, location and "done when";
+  - `template --stage review` lays out a reviewer's record when nothing was handed in;
+  - the instructions are clearer where the reviewer had to guess.
+- `demo/flash-sale/sample-reports/naive-inspection/`: that fresh inspection of the naive version (report, page and record).
+- `history-scan.mjs` reads security, performance and display tickets, and no longer files a ticket as a display problem because it mentions a page or a button.
+- `peak-traffic-test`:
+  - the race test now exits with an error when it oversells or charges anyone twice, so CI fails;
+  - the load test warns when a step mostly measured "sold out" answers;
+  - the slow-partner settings work for apps with no time limit;
+  - there is a command to watch the load generator.
+
 ## 0.2.0 (2026-10-28): the review standard
 
 ### Review standard

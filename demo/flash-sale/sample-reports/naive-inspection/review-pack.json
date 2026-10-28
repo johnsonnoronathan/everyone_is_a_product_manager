@@ -1,0 +1,3067 @@
+{
+  "standard": "1.0",
+  "stage": "review",
+  "project": {
+    "name": "Holiday flash sale",
+    "summary": "A one-page web shop for a midnight sneaker drop: 100 pairs of limited-edition sneakers at $49.99, one pair per customer. Shoppers sign in with their email address, enter a shipping address and press Buy now; the server charges the card through a payment provider and confirms the order. About 3,000 visitors are expected in the first minute after an email announcement. Status: built and piloted with staff on 16 October 2026; not live. No review pack was handed in: the author's sections of this pack were filled in by the reviewer from the repository and are marked as such.",
+    "repository": "ws-inspect (local git repository, branch main)",
+    "commit": "bb6c41e891268d70b1ba4f7d3d584b725e08e838",
+    "versionNote": "branch main, \"Holiday flash sale\"; the issue export `handover/issues.json` is not committed",
+    "date": "2026-10-27",
+    "author": "Shop team (commit author), handed over by the architect",
+    "riskTier": 3,
+    "riskReason": "the app's own server charges cards through the payment provider's charge API, it opens with a rush (3,000 visitors in the first minute on limited stock), and it stores customers' email and home addresses",
+    "features": [
+      "accounts",
+      "personalData",
+      "money",
+      "limitedStock",
+      "adminArea",
+      "launchSpike",
+      "aiAssisted"
+    ],
+    "reviewer": "Claude (launch-review skill), in a separate session that did not write or change this code",
+    "reviewedOn": "2026-10-28"
+  },
+  "verdict": {
+    "decision": "NO-GO",
+    "reason": "The shop cannot be delivered as it is. Under the expected midnight rush it sells far more pairs than it has and charges people twice, anyone can read customers' addresses or wipe all orders, one bad request or a restart takes the sale down and loses paid orders, and it is not connected to a real payment provider.",
+    "blockers": [
+      {
+        "text": "Make the purchase safe: the price comes from the server, stock is reserved atomically before charging, one pair per customer is enforced in the database, every purchase carries one idempotency key, a time-out leaves the order pending, and a job settles and reconciles payments.",
+        "who": "Developer",
+        "effort": "L (about 1 to 2 weeks)",
+        "why": "Today a rush oversells and double-charges, and money can move with no order.",
+        "refs": [
+          "ARC-01",
+          "ARC-02",
+          "ARC-03",
+          "ARC-04",
+          "ARC-07"
+        ]
+      },
+      {
+        "text": "Close access: a real sign-in with signed sessions, an ownership check on every order, admin routes removed or behind an admin role, and the search route fixed or removed.",
+        "who": "Developer",
+        "effort": "M (2 to 4 days)",
+        "why": "Anyone can read or change other customers' data and wipe the sale.",
+        "refs": [
+          "SEC-01",
+          "SEC-02",
+          "SEC-03",
+          "SEC-04"
+        ]
+      },
+      {
+        "text": "Rotate the payment key that is written in the code, move it to a secret setting and remove it from the history.",
+        "who": "Developer, with whoever owns the payment provider account",
+        "effort": "S (hours)",
+        "why": "Anyone with a copy of the code holds the key.",
+        "refs": [
+          "SEC-05"
+        ]
+      },
+      {
+        "text": "Keep orders safe across crashes and deploys: a persistent database with backups and migrations, no deletion at start-up, error handling that answers 400 instead of crashing, and a graceful shutdown.",
+        "who": "Developer, with the hosting provider",
+        "effort": "M to L (about 1 week)",
+        "why": "One bad request or a restart takes the site down and erases every order.",
+        "refs": [
+          "ARC-05",
+          "ARC-06",
+          "OPS-02"
+        ]
+      },
+      {
+        "text": "Connect the real payment provider and try a purchase, a decline and a refund in its test mode, then one small live purchase and refund.",
+        "who": "Developer, with the product owner (choice of provider)",
+        "effort": "L (about 1 week)",
+        "why": "As delivered, the shop cannot take real money.",
+        "refs": [
+          "ARC-12"
+        ]
+      },
+      {
+        "text": "Add the sale opening time (date, time and time zone) and a pause switch on the server.",
+        "who": "Developer",
+        "effort": "M (1 to 2 days)",
+        "why": "Anyone can buy before midnight, and the sale cannot be stopped safely.",
+        "refs": [
+          "ARC-08"
+        ]
+      },
+      {
+        "text": "Make the page hold the expected crowd and keep bots out: one query per page view with a short cache, a waiting room or busy page, and limits on sign-ins and purchases; then pass the load and race tests on a staging copy.",
+        "who": "Developer, with the hosting provider",
+        "effort": "M (3 to 5 days)",
+        "why": "The page slows to 2 to 8 seconds from half the expected crowd, and scripts can buy without limit.",
+        "refs": [
+          "PERF-01",
+          "SEC-08"
+        ]
+      },
+      {
+        "text": "Prepare to run the sale: health checks, error tracking and alerts to a named person, clean logs, backups and a rollback that have been tried, and a rehearsed launch runbook.",
+        "who": "Developer, with the hosting provider and the product owner",
+        "effort": "M (2 to 4 days)",
+        "why": "Nobody would notice problems, and there is no plan for when they happen.",
+        "refs": [
+          "OPS-01",
+          "OPS-03"
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "text": "Show plain error messages instead of the code's internals, add security headers and drop the open CORS header.",
+        "who": "Developer",
+        "effort": "S",
+        "when": "Before delivery",
+        "refs": [
+          "SEC-06",
+          "SEC-07"
+        ]
+      },
+      {
+        "text": "Check every field of a purchase on the server, including a required shipping address.",
+        "who": "Developer",
+        "effort": "S",
+        "when": "Before delivery",
+        "refs": [
+          "ARC-09"
+        ]
+      },
+      {
+        "text": "Read every setting in one place, refuse to start with missing or test values, and list them in the README.",
+        "who": "Developer",
+        "effort": "S",
+        "when": "Before delivery",
+        "refs": [
+          "ARC-10",
+          "R-04"
+        ]
+      },
+      {
+        "text": "Send the confirmation email from a background worker, and set request size and time limits.",
+        "who": "Developer",
+        "effort": "M",
+        "when": "Before delivery",
+        "refs": [
+          "ARC-11",
+          "PERF-02",
+          "PERF-03"
+        ]
+      },
+      {
+        "text": "Add the agent instruction file, CI that runs the tests and scans on every change, and the missing tests (malformed requests, restarts, admin access, repeat purchase, sign-in box hidden, race test).",
+        "who": "Developer",
+        "effort": "M",
+        "when": "Before delivery",
+        "refs": [
+          "HAR-01",
+          "HAR-02",
+          "HAR-03"
+        ]
+      },
+      {
+        "text": "Close bugs only with a fix and a test; give every open ticket a severity, owner and due date.",
+        "who": "Product owner, with the developer",
+        "effort": "S",
+        "when": "Before delivery",
+        "refs": [
+          "HIS-01",
+          "Q-07"
+        ]
+      },
+      {
+        "text": "Set up a staging copy, write down the missing requirements and who agreed them, record the approval of the acceptance criteria, and hand in the review pack.",
+        "who": "Architect (author), with the product owner",
+        "effort": "M",
+        "when": "Before the re-inspection",
+        "refs": [
+          "R-03",
+          "R-06",
+          "R-07",
+          "U-01"
+        ]
+      },
+      {
+        "text": "Book an independent penetration test, arrange on-call cover and a way to tell customers about problems during the sale.",
+        "who": "Product owner",
+        "effort": "S",
+        "when": "Before the sale",
+        "refs": [
+          "S-15",
+          "O-10"
+        ]
+      },
+      {
+        "text": "Fix the sign-in box that stays on screen.",
+        "who": "Developer",
+        "effort": "S",
+        "when": "After launch is acceptable",
+        "refs": [
+          "HIS-02"
+        ]
+      }
+    ],
+    "signedBy": "",
+    "signedOn": "",
+    "ifLaunchedNow": "Within the first minute, hundreds of customers would be charged for sneakers that do not exist and many would be charged twice, while the page took several seconds to load. Anyone could download every buyer's email and home address, buy at a price they choose, or delete all orders with one request; a single malformed request would stop the sale for everyone, and the restart would erase every paid order. The client would face refunds, chargebacks, a personal-data breach to report, and angry customers on launch night.",
+    "decisions": [
+      {
+        "text": "Choose the payment provider, the email provider and the hosting (with a staging copy).",
+        "refs": [
+          "ARC-12",
+          "R-06"
+        ]
+      },
+      {
+        "text": "Set the sale date, the time zone of \"midnight\", and whether a virtual waiting room (a paid service) is worth it for a 100-pair drop.",
+        "refs": [
+          "ARC-08",
+          "PERF-02"
+        ]
+      },
+      {
+        "text": "Agree how much order data may be lost and how quickly the shop must be back after an outage.",
+        "refs": [
+          "R-07"
+        ]
+      },
+      {
+        "text": "Decide how long customers' email and home addresses are kept after the sale.",
+        "refs": [
+          "D-11"
+        ]
+      },
+      {
+        "text": "Confirm whether AI coding assistants are used on this code; if not, the agent-instruction checks no longer apply.",
+        "refs": [
+          "HAR-01"
+        ]
+      }
+    ],
+    "estimate": "Estimate only: about three to four weeks of developer work for the blockers, plus a staging copy and a re-inspection, so delivery is realistic no earlier than late November 2026 if work starts now.",
+    "noticeable": [
+      "Paying for sneakers that never arrive, because more pairs were sold than exist.",
+      "Two charges for one pair after a double-click or a reload.",
+      "A sale page that takes 2 to 8 seconds to load at midnight, or shows \"We are very busy\".",
+      "A Buy button that spins for half a minute and then shows technical text.",
+      "The whole site going down, and paid orders disappearing after it comes back.",
+      "Their email and home address visible to strangers.",
+      "The sign-in box still on screen after signing in."
+    ],
+    "signer": "The product owner (the client)"
+  },
+  "product": {
+    "users": "Public shoppers (consumers) on phones and computers, signing in with an email address; the shop team, who reset the sale and read the sales figures. Expected: about 3,000 visitors in the first minute after midnight. (Reviewer-built from the README and `peak-brief.json`.)",
+    "outOfScope": [
+      "The payment-provider simulator and the database simulation (`shared/fake-payment-provider.mjs`, `shared/db.mjs`): infrastructure stand-ins, not code under review.",
+      "Choosing the real payment provider, email provider and hosting (not done yet; see decisions)."
+    ],
+    "journeys": [
+      {
+        "id": "J1",
+        "name": "Buy one pair",
+        "who": "A signed-in shopper",
+        "steps": [
+          "Open the sale page",
+          "Type an email address and press Sign in",
+          "Type a shipping address",
+          "Press Buy now"
+        ],
+        "expected": "An order confirmation for $49.99, the sign-in box gone, and the order in the shopper's history.",
+        "actual": "The order is confirmed for $49.99, but the sign-in box stays on screen and Buy now stays active, so pressing it again buys and charges a second pair.",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-02-test-finished-1.png",
+            "caption": "After buying: confirmation shown, sign-in box still visible (AC-02 run 1)"
+          }
+        ],
+        "criteria": [
+          "AC-01",
+          "AC-02"
+        ]
+      },
+      {
+        "id": "J2",
+        "name": "See that it is sold out",
+        "who": "Any visitor",
+        "steps": [
+          "Open the sale page when no pairs are left"
+        ],
+        "expected": "\"Sold out\" and a disabled button.",
+        "actual": "As expected.",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-05-test-finished-1.png",
+            "caption": "Sold-out page (AC-05 run 1)"
+          }
+        ],
+        "criteria": [
+          "AC-05"
+        ]
+      },
+      {
+        "id": "J3",
+        "name": "Double-click Buy now",
+        "who": "A signed-in shopper",
+        "steps": [
+          "Sign in and type an address",
+          "Double-click Buy now"
+        ],
+        "expected": "Exactly one order and one charge.",
+        "actual": "Two orders and two charges.",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-04-test-failed-1.png",
+            "caption": "After a double-click (AC-04 run 1, failed)"
+          }
+        ],
+        "criteria": [
+          "AC-04"
+        ]
+      },
+      {
+        "id": "J4",
+        "name": "Someone else asks for my order",
+        "who": "Another shopper, or a visitor who is not signed in",
+        "steps": [
+          "Alice buys a pair",
+          "Bob, then a logged-out visitor, request Alice's order by its number"
+        ],
+        "expected": "\"Not found\" and none of Alice's details.",
+        "actual": "Both got Alice's order with her address (HTTP 200).",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-06-evidence.json",
+            "caption": "Request and answer saved by AC-06 (failed)"
+          }
+        ],
+        "criteria": [
+          "AC-06"
+        ]
+      },
+      {
+        "id": "J5",
+        "name": "Pay while the payment provider is not responding",
+        "who": "A signed-in shopper",
+        "steps": [
+          "The payment provider stops answering",
+          "The shopper presses Buy now"
+        ],
+        "expected": "Within 5 seconds: \"we are confirming your payment\"; later exactly one paid order and one charge.",
+        "actual": "The page stays on \"Placing your order…\" and, after 30 seconds, the server answers with an error.",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-08-test-failed-1.png",
+            "caption": "Stuck on \"Placing your order…\" (AC-08 run 1, failed)"
+          }
+        ],
+        "criteria": [
+          "AC-08"
+        ]
+      }
+    ]
+  },
+  "run": {
+    "prerequisites": [
+      "Node.js 22.13 or later (reviewed with 22.22.0)",
+      "For the tests: npm, and Chromium for Playwright 1.56.1"
+    ],
+    "setup": [
+      "No packages for the app",
+      "cd acceptance && npm ci && npx playwright install chromium"
+    ],
+    "start": "node run.mjs app   (PORT and PAYMENT_PORT change the ports)",
+    "open": "http://127.0.0.1:3000",
+    "test": [
+      "cd acceptance && npx playwright test --repeat-each=3   (APP_PORT / PAYMENT_PORT for other ports)"
+    ],
+    "reset": "curl -X POST http://127.0.0.1:3000/api/admin/reset -H \"content-type: application/json\" -d '{\"stock\":100}'   (not in the README; the route is open to anyone, see SEC-03)",
+    "staging": null,
+    "accounts": [
+      {
+        "role": "Shopper",
+        "how": "Any email address; no password (see SEC-02)"
+      },
+      {
+        "role": "Admin",
+        "how": "No admin accounts exist; the admin routes check nothing (see SEC-03)"
+      }
+    ],
+    "settings": [
+      {
+        "name": "PORT",
+        "purpose": "Port the shop listens on",
+        "secret": false,
+        "production": "Unknown",
+        "example": "3000"
+      },
+      {
+        "name": "PAYMENT_URL",
+        "purpose": "Address of the payment provider (set by `run.mjs` from PAYMENT_PORT)",
+        "secret": false,
+        "production": "yes",
+        "example": "http://127.0.0.1:4100"
+      },
+      {
+        "name": "PAYMENT_PORT",
+        "purpose": "Port of the payment simulator (run.mjs, tests)",
+        "secret": false,
+        "production": "no",
+        "example": "4100"
+      },
+      {
+        "name": "PAYMENT_SECRET_KEY",
+        "purpose": "Set by run.mjs but never read: the app uses a key written in `app/server.mjs:10` (SEC-05)",
+        "secret": true,
+        "production": "yes",
+        "example": "(test key)"
+      },
+      {
+        "name": "TOKEN_SECRET",
+        "purpose": "Set by run.mjs but never read: tokens are not signed (SEC-02)",
+        "secret": true,
+        "production": "Unknown",
+        "example": ""
+      },
+      {
+        "name": "ADMIN_TOKEN",
+        "purpose": "Set by run.mjs but never read: admin routes check nothing (SEC-03)",
+        "secret": true,
+        "production": "Unknown",
+        "example": ""
+      },
+      {
+        "name": "DEMO_LOGIN",
+        "purpose": "Set by run.mjs but never read",
+        "secret": false,
+        "production": "Unknown",
+        "example": "1"
+      },
+      {
+        "name": "ENABLE_TEST_ROUTES",
+        "purpose": "Set by run.mjs but never read: test routes are always on",
+        "secret": false,
+        "production": "Unknown",
+        "example": "1"
+      },
+      {
+        "name": "SEED_DEMO_DATA",
+        "purpose": "Set by run.mjs but never read: demo data is always seeded and all data deleted at start",
+        "secret": false,
+        "production": "Unknown",
+        "example": "1"
+      },
+      {
+        "name": "DB_POOL_SIZE, DB_LATENCY_MS",
+        "purpose": "Database simulation: pool size (10) and delay per query (3 ms)",
+        "secret": false,
+        "production": "no",
+        "example": "10, 3"
+      },
+      {
+        "name": "PAYMENT_MIN_MS, PAYMENT_MAX_MS, PAYMENT_HANG_RATE, PAYMENT_HANG_MS, PAYMENT_DECLINE_RATE",
+        "purpose": "Payment simulator behaviour",
+        "secret": false,
+        "production": "no",
+        "example": "80, 200, 0.02, 30000, 0"
+      },
+      {
+        "name": "APP_PORT, VARIANT, PW_CHROMIUM_PATH",
+        "purpose": "Acceptance-test settings",
+        "secret": false,
+        "production": "no",
+        "example": "3000, app, (path)"
+      }
+    ]
+  },
+  "requirements": [
+    {
+      "id": "RQ-1",
+      "text": "Expected crowd at the opening",
+      "target": "3,000 visitors in 60 s, peak factor 3: 450 product-page views and 150 purchases per second",
+      "agreedBy": "Owner (their brief, per the architect)",
+      "agreedOn": "Not recorded",
+      "source": "`peak-brief.json`"
+    },
+    {
+      "id": "RQ-2",
+      "text": "Response times",
+      "target": "Product page: 95% under 500 ms. Purchase: 95% under 1,500 ms",
+      "agreedBy": "Owner (their brief, per the architect)",
+      "agreedOn": "Not recorded",
+      "source": "`peak-brief.json`"
+    },
+    {
+      "id": "RQ-3",
+      "text": "Stock and limits",
+      "target": "100 pairs, $49.99, one pair per customer",
+      "agreedBy": "Not agreed yet (stated in the README)",
+      "agreedOn": "Not recorded",
+      "source": "README"
+    },
+    {
+      "id": "RQ-4",
+      "text": "Opening time",
+      "target": "Midnight; date and time zone not agreed yet",
+      "agreedBy": "Not agreed yet",
+      "agreedOn": "",
+      "source": "README, product description"
+    },
+    {
+      "id": "RQ-5",
+      "text": "Acceptable data loss",
+      "target": "Not agreed yet",
+      "agreedBy": "Not agreed yet",
+      "agreedOn": ""
+    },
+    {
+      "id": "RQ-6",
+      "text": "Recovery time after an outage",
+      "target": "Not agreed yet",
+      "agreedBy": "Not agreed yet",
+      "agreedOn": ""
+    }
+  ],
+  "architecture": {
+    "summary": "One Node.js process serves the page and a small JSON API from an in-memory SQLite database (wrapped to behave like a hosted database with a pool of 10 connections). A purchase reads the stock, charges the card through the payment provider, writes the stock and the order, and sends an email, all inside the request. The payment provider and email are simulators. (Reviewer-built: the author handed in no architecture; full map in `01-system-map.md`.)",
+    "diagram": "flowchart LR\n  B[Shopper browser] --> R[Router: no auth layer]\n  X[Anyone] --> R\n  R --> L[/api/login: unsigned token/]\n  R --> P[/api/products, /api/search/]\n  R --> BUY[/api/buy: check, charge, write/]\n  R --> O[/api/orders/:id, /api/my-orders/]\n  R --> ADM[/api/admin/reset, /stats: no check/]\n  P --> DB[(SQLite in memory)]\n  BUY --> DB\n  O --> DB\n  ADM --> DB\n  BUY -- no time limit --> PAY[(Payment provider)]\n  BUY --> MAIL[Email, in the request]",
+    "components": [
+      {
+        "name": "Sale page",
+        "job": "Shows the product, signs in, sends the purchase",
+        "tech": "HTML, CSS, plain JavaScript (`shared/public/`)"
+      },
+      {
+        "name": "API server",
+        "job": "Sign-in, product, purchase, orders, admin",
+        "tech": "Node.js 22 `http` (`app/server.mjs`)"
+      },
+      {
+        "name": "Database",
+        "job": "Products, reviews, orders (in memory)",
+        "tech": "`node:sqlite` via `shared/db.mjs`"
+      },
+      {
+        "name": "Payment provider (simulator)",
+        "job": "Charges cards",
+        "tech": "`shared/fake-payment-provider.mjs`"
+      },
+      {
+        "name": "Starter",
+        "job": "Starts the provider and the app with demo settings",
+        "tech": "`run.mjs`"
+      }
+    ],
+    "entryPoints": [
+      {
+        "entry": "`GET /`, `/app.js`, `/style.css`",
+        "caller": "Anyone",
+        "guard": "None needed",
+        "touches": "Page files"
+      },
+      {
+        "entry": "`POST /api/login`",
+        "caller": "Anyone",
+        "guard": "None: any email gets a token",
+        "touches": "Nothing stored"
+      },
+      {
+        "entry": "`GET /api/products/:id`",
+        "caller": "Anyone",
+        "guard": "None needed",
+        "touches": "products, reviews, users"
+      },
+      {
+        "entry": "`GET /api/search?q=`",
+        "caller": "Anyone (not used by the page)",
+        "guard": "None",
+        "touches": "products (and, through injection, every table)"
+      },
+      {
+        "entry": "`POST /api/buy`",
+        "caller": "Anyone with any token",
+        "guard": "Token present (unsigned)",
+        "touches": "products, orders, payment provider, email"
+      },
+      {
+        "entry": "`GET /api/orders/:id`",
+        "caller": "Anyone",
+        "guard": "None",
+        "touches": "orders (email, address)"
+      },
+      {
+        "entry": "`GET /api/my-orders`",
+        "caller": "Anyone with any token",
+        "guard": "Token present (unsigned)",
+        "touches": "orders for the email in the token"
+      },
+      {
+        "entry": "`POST /api/admin/reset`",
+        "caller": "Anyone",
+        "guard": "None",
+        "touches": "Deletes all data, resets stock, resets the provider's counters"
+      },
+      {
+        "entry": "`GET /api/admin/stats`",
+        "caller": "Anyone",
+        "guard": "None",
+        "touches": "products, orders, provider totals"
+      }
+    ],
+    "dataStores": [
+      {
+        "name": "SQLite in memory: orders",
+        "holds": "Customer email, shipping address, amount, status, time",
+        "sensitivity": "Personal data; lost on every restart"
+      },
+      {
+        "name": "SQLite in memory: products, users, reviews",
+        "holds": "Stock, price, reviewer first names, review text",
+        "sensitivity": "Stock is business-critical"
+      },
+      {
+        "name": "Browser sessionStorage",
+        "holds": "The sign-in token and email",
+        "sensitivity": "The token grants access to that email's orders"
+      }
+    ],
+    "services": [
+      {
+        "name": "Payment provider (simulator; real one not chosen)",
+        "purpose": "Charge the card",
+        "timeout": "None",
+        "onFailure": "Error page with a stack trace; a charge that went through is never recorded"
+      },
+      {
+        "name": "Email (simulated, 250 ms)",
+        "purpose": "Order confirmation",
+        "timeout": "None",
+        "onFailure": "A paid order would answer with an error"
+      }
+    ],
+    "decisions": [],
+    "hiddenChecks": [
+      {
+        "area": "at-once",
+        "result": "found",
+        "how": "Ran the race test twice (1,000 buyers, two clicks each, 100 pairs) and a two-click test by hand; read the purchase handler for read-decide-write steps.",
+        "refs": [
+          "ARC-01",
+          "ARC-02"
+        ]
+      },
+      {
+        "area": "partners",
+        "result": "found",
+        "how": "Set the payment simulator to 3 s, 8 s, 3 to 10 s and \"stuck for 30 s\"; compared the provider's charges with orders; read every outgoing call for time limits and idempotency keys.",
+        "refs": [
+          "ARC-07",
+          "ARC-04",
+          "ARC-12"
+        ]
+      },
+      {
+        "area": "restarts",
+        "result": "found",
+        "how": "Restarted the app after a purchase, crashed it and sent SIGTERM in the middle of a payment with the provider running separately, and read the start-up code.",
+        "refs": [
+          "ARC-05",
+          "ARC-04",
+          "OPS-02"
+        ]
+      },
+      {
+        "area": "settings",
+        "result": "found",
+        "how": "Searched the code for every setting, compared with `run.mjs` and the README, and started the app with a wrong payment address and no secrets.",
+        "refs": [
+          "ARC-10",
+          "SEC-05"
+        ]
+      },
+      {
+        "area": "bad-input",
+        "result": "found",
+        "how": "Sent malformed JSON, a bad Host header, a 20 MB body, a missing address, a tampered price and a broken token to the local copy.",
+        "refs": [
+          "ARC-06",
+          "ARC-09",
+          "SEC-06",
+          "PERF-03"
+        ]
+      },
+      {
+        "area": "limits",
+        "result": "found",
+        "how": "Two staged load tests up to twice the target while sampling CPU and memory; read the database pool and request limits.",
+        "refs": [
+          "PERF-01",
+          "PERF-02",
+          "PERF-03"
+        ]
+      },
+      {
+        "area": "data-rules",
+        "result": "found",
+        "how": "Checked each business rule for where it is enforced (database, transaction or code) and broke each one with a direct request.",
+        "refs": [
+          "ARC-03",
+          "ARC-01",
+          "ARC-02",
+          "ARC-09"
+        ]
+      },
+      {
+        "area": "time",
+        "result": "found",
+        "how": "Looked for the opening time on the server and in the page, tried to set it (`POST /api/admin/sale`), bought outside any window, and checked how order times are stored.",
+        "refs": [
+          "ARC-08"
+        ]
+      },
+      {
+        "area": "background",
+        "result": "found",
+        "how": "Looked for jobs, queues and schedulers: there are none. The work that needs one (sending emails, settling unknown payments, reconciling charges with orders) runs inside the request or not at all.",
+        "refs": [
+          "ARC-11",
+          "ARC-04"
+        ]
+      }
+    ]
+  },
+  "rules": [
+    {
+      "id": "BR-1",
+      "rule": "Never sell more than the stock (100 pairs)",
+      "enforcedBy": "A check, then a separate write of a number read earlier (`app/server.mjs:108-111`): not enforced under load",
+      "provenBy": "AC-07 (race test, not in the repository): fails"
+    },
+    {
+      "id": "BR-2",
+      "rule": "One pair per customer",
+      "enforcedBy": "Nothing",
+      "provenBy": "AC-04 (double-click only): fails"
+    },
+    {
+      "id": "BR-3",
+      "rule": "The shop sets the price ($49.99)",
+      "enforcedBy": "Nothing: the price comes from the browser",
+      "provenBy": "AC-03: fails"
+    },
+    {
+      "id": "BR-4",
+      "rule": "Every charge has exactly one order, and every paid order exactly one charge",
+      "enforcedBy": "Nothing: the card is charged before the order is recorded, with no idempotency key",
+      "provenBy": "AC-08 (partly): fails"
+    },
+    {
+      "id": "BR-5",
+      "rule": "Customers see only their own orders",
+      "enforcedBy": "Nothing on `GET /api/orders/:id`; an unsigned token on `/api/my-orders`",
+      "provenBy": "AC-06: fails"
+    },
+    {
+      "id": "BR-6",
+      "rule": "Every order has a shipping address",
+      "enforcedBy": "The page only (10 characters)",
+      "provenBy": "AC-11: fails"
+    },
+    {
+      "id": "BR-7",
+      "rule": "Nobody can buy before the sale opens at midnight",
+      "enforcedBy": "Nothing on the server",
+      "provenBy": "AC-12: fails"
+    }
+  ],
+  "harness": {
+    "agentFile": null,
+    "suites": [
+      {
+        "name": "Acceptance tests (Playwright)",
+        "type": "end-to-end",
+        "kind": "Browser and API tests, one per acceptance criterion, with axe accessibility check",
+        "covers": "AC-01 to AC-13 except AC-07",
+        "command": "cd acceptance && npx playwright test --repeat-each=3",
+        "lastRun": "2026-10-28 by the reviewer: 15 passed, 21 failed (7 criteria fail in every run)",
+        "inCI": false
+      }
+    ],
+    "ci": [],
+    "checks": [
+      "None configured: no linter, type checker, secret scan or dependency scan."
+    ]
+  },
+  "performance": {
+    "target": "600 requests per second at the peak: 450 product-page views (95% under 500 ms) and 150 purchases (95% under 1,500 ms), from the owner's brief (3,000 visitors in 60 s, peak factor 3).",
+    "environment": "The reviewer's local copy on one 4-core cloud container, with k6 on the same machine (machine on average about a quarter busy during the runs, so the load generator was not the limit). Simulated database (pool of 10, 3 ms per query) and payment provider (80 to 200 ms, 2% of calls stuck for 30 s). Not production-like: no staging exists.",
+    "runs": [
+      {
+        "label": "Load run 1 (2026-10-28 10:38 UTC)",
+        "result": "Fail at 50% of target",
+        "pass": false,
+        "note": "Product page 95th percentile 2.38 s at 50%; `peak-traffic/run1/load-summary.md`"
+      },
+      {
+        "label": "Load run 2 (2026-10-28 10:40 UTC)",
+        "result": "Fail at 50% of target",
+        "pass": false,
+        "note": "Product page 95th percentile 2.35 s at 50%; `peak-traffic/run2/load-summary.md`"
+      },
+      {
+        "label": "Race test 1 (1,000 buyers × 2 clicks, 100 pairs)",
+        "result": "Oversold",
+        "pass": false,
+        "note": "1,957 orders confirmed; `peak-traffic/oversell1/oversell-summary.md`"
+      },
+      {
+        "label": "Race test 2",
+        "result": "Oversold",
+        "pass": false,
+        "note": "1,956 orders confirmed; `peak-traffic/oversell2/oversell-summary.md`"
+      },
+      {
+        "label": "Slow-partner race test (payments 3 to 10 s; 200 buyers × 2 clicks)",
+        "result": "Every click charged",
+        "pass": false,
+        "note": "400 charges, 200 buyers charged twice; `peak-traffic/slow-partner/oversell-summary.md`"
+      }
+    ],
+    "stepsTitle": "Per step, load run 1",
+    "steps": [
+      {
+        "step": "50%",
+        "endpoint": "Product page",
+        "target": "225/s",
+        "achieved": "204.8/s",
+        "p95": "2.38 s (500 ms)",
+        "errors": "0.0%",
+        "pass": false
+      },
+      {
+        "step": "50%",
+        "endpoint": "Buy",
+        "target": "75/s",
+        "achieved": "75.1/s",
+        "p95": "947 ms (1.50 s)",
+        "errors": "2.6%",
+        "pass": false
+      },
+      {
+        "step": "100%",
+        "endpoint": "Product page",
+        "target": "450/s",
+        "achieved": "212.9/s",
+        "p95": "5.07 s (500 ms)",
+        "errors": "0.0%",
+        "pass": false
+      },
+      {
+        "step": "100%",
+        "endpoint": "Buy",
+        "target": "150/s",
+        "achieved": "150.1/s",
+        "p95": "1.53 s (1.50 s)",
+        "errors": "0.73%",
+        "pass": false
+      },
+      {
+        "step": "150%",
+        "endpoint": "Product page",
+        "target": "675/s",
+        "achieved": "236.9/s",
+        "p95": "6.82 s (500 ms)",
+        "errors": "0.0%",
+        "pass": false
+      },
+      {
+        "step": "150%",
+        "endpoint": "Buy",
+        "target": "225/s",
+        "achieved": "225.1/s",
+        "p95": "500 ms (1.50 s)",
+        "errors": "0.0%",
+        "pass": true
+      },
+      {
+        "step": "200%",
+        "endpoint": "Product page",
+        "target": "900/s",
+        "achieved": "230.8/s",
+        "p95": "7.69 s (500 ms)",
+        "errors": "0.0%",
+        "pass": false
+      },
+      {
+        "step": "200%",
+        "endpoint": "Buy",
+        "target": "300/s",
+        "achieved": "300.1/s",
+        "p95": "557 ms (1.50 s)",
+        "errors": "0.0%",
+        "pass": true
+      }
+    ],
+    "race": {
+      "summary": "1,000 buyers each clicked Buy twice at the same moment for 100 pairs. Every click was either accepted or failed; none was refused as sold out or already ordered.",
+      "rows": [
+        {
+          "measure": "Clicks sent",
+          "value": "2,000"
+        },
+        {
+          "measure": "Purchases confirmed",
+          "value": "1,957"
+        },
+        {
+          "measure": "Server errors or time-outs",
+          "value": "43"
+        },
+        {
+          "measure": "Refused (sold out, already ordered)",
+          "value": "0"
+        },
+        {
+          "measure": "Buyers charged twice",
+          "value": "957"
+        },
+        {
+          "measure": "Orders in the database",
+          "value": "1,957"
+        },
+        {
+          "measure": "Stock counter afterwards",
+          "value": "93"
+        }
+      ]
+    },
+    "slowPartner": "With the provider taking 3 to 10 seconds per charge, 200 buyers clicking twice produced 400 charges and 400 orders for 100 pairs, and the stock counter ended at 99. With the provider stuck, a shopper waited 30 seconds and got an error page; in the acceptance test the page stayed on \"Placing your order…\".",
+    "conclusion": "Not ready for the expected crowd: the sale page slows to 2 to 8 seconds from half the expected traffic, and under a rush the shop confirms and charges far more orders than it has pairs. The purchase steps \"pass\" at 150% and 200% only because the stock counter had reached zero, so most purchases were quick \"sold out\" answers. Note: the purchase speed at the higher steps is not meaningful for the same reason.",
+    "coverage": [
+      {
+        "kind": "load",
+        "result": "fail",
+        "by": "reviewer",
+        "note": "Stepped test at 50%, 100%, 150% and 200% of 600 requests per second: the product page missed its 500 ms budget from the first step (95th percentile 2.38 s) and served at most about 237 views per second."
+      },
+      {
+        "kind": "repeat",
+        "result": "fail",
+        "by": "reviewer",
+        "note": "The full plan ran twice and both runs are kept; both failed the same way (2.38 s and 2.35 s at 50% of the target), so the failure is not luck."
+      },
+      {
+        "kind": "rush",
+        "result": "fail",
+        "by": "reviewer",
+        "note": "Race test run twice: 1,957 and 1,956 orders confirmed for 100 pairs; 957 and 956 buyers charged twice."
+      },
+      {
+        "kind": "slow-partner",
+        "result": "fail",
+        "by": "reviewer",
+        "note": "Payments at 3 to 10 s: 400 charges for 400 clicks by 200 buyers. Payments stuck for 30 s: the shopper waited 30 s and got an error page."
+      },
+      {
+        "kind": "overload",
+        "result": "fail",
+        "by": "reviewer",
+        "note": "At 150% and 200% of the target nobody was turned away politely (no 429 or 503); everyone waited up to 8 s and thousands of page views were never served. The app did not crash and recovered after the test."
+      },
+      {
+        "kind": "long-run",
+        "result": "not-run",
+        "by": "reviewer",
+        "note": "Not run: an hour at normal traffic means little until the capacity and data-loss blockers are fixed. Memory grew from 66 MB to 201 MB in one two-minute run, so this test should be run after the fixes."
+      },
+      {
+        "kind": "page-speed",
+        "result": "pass",
+        "by": "reviewer",
+        "note": "Lighthouse mobile on the local copy: score 98, Largest Contentful Paint 1.6 s, layout shift 0.085, no blocking time."
+      },
+      {
+        "kind": "production-like",
+        "result": "not-run",
+        "by": "reviewer",
+        "note": "Not run: there is no staging copy and no hosting has been chosen; all numbers come from one laptop-sized machine with simulated payments and database delay."
+      }
+    ]
+  },
+  "history": {
+    "period": "Pilot sale with staff, 16 and 17 October 2026 (tickets), and the single commit of 27 October 2026",
+    "sources": [
+      "Issue tracker export `handover/issues.json`: 16 tickets (13 open, 3 closed), 16 to 17 October 2026, read in full",
+      "Git history: 1 commit (`bb6c41e`), no fix commits or reverts (`history/history.md`)",
+      "The code behind each ticket, read and, for most tickets, reproduced on a local copy"
+    ],
+    "stats": [],
+    "classes": [
+      {
+        "name": "Customers charged twice for one purchase",
+        "occurrences": [
+          {
+            "ref": "#1",
+            "text": "Charged twice for one pair (closed: \"could not reproduce by clicking once\")",
+            "byFix": false
+          },
+          {
+            "ref": "#2",
+            "text": "Double charge again: clicked once, then reloaded while the page was loading",
+            "byFix": false
+          }
+        ],
+        "rootCause": "A purchase has no identity: each request is a new purchase, with no idempotency key sent to the provider and no rule that a customer has one order per product. The ticket was closed because a single click could not reproduce it, and nobody tested a double click or a reload during payment.",
+        "control": "A unique rule on (customer, product) in the database, an idempotency key per purchase attempt passed to the provider, and the double-click acceptance test (AC-04) plus the race test with two clicks per buyer, run on every change.",
+        "controlCheck": "Run against this commit: AC-04 fails in all three runs (2 orders after a double-click) and the race test reports 957 buyers charged twice, so both tests catch it. Neither runs automatically yet.",
+        "agentRule": "Every purchase carries one idempotency key from the page to the provider; never create an order without it. AC-04 and the race test must pass.",
+        "catchWith": [
+          "end-to-end",
+          "load",
+          "integration"
+        ],
+        "status": "partly controlled"
+      },
+      {
+        "name": "More sold than in stock, and more than one pair per customer",
+        "occurrences": [
+          {
+            "ref": "#3",
+            "text": "One person bought 3 pairs although the limit is one per customer",
+            "byFix": false
+          },
+          {
+            "ref": "#4",
+            "text": "Pilot stock was 20 pairs; 37 paid orders",
+            "byFix": false
+          }
+        ],
+        "rootCause": "The business rules live only as an if-statement in application code, followed by a separate write of a number read earlier; the database has no constraint, and the card is charged between the check and the write, which widens the gap. Nobody tested many buyers at once.",
+        "control": "An atomic reservation (`UPDATE … SET stock = stock - 1 WHERE stock > 0`), `CHECK (stock >= 0)` and a unique (customer, product) rule in the database, proven by the race test in CI.",
+        "controlCheck": "The race test on this commit: 1,957 orders for 100 pairs (it catches it). The Semgrep rule `stock-lost-update-sql` also fired on `app/server.mjs:111`.",
+        "agentRule": "Stock and per-customer limits are enforced only by the database (atomic update, constraints); never check-then-write in code. The race test must pass.",
+        "catchWith": [
+          "load",
+          "integration",
+          "scan"
+        ],
+        "status": "open"
+      },
+      {
+        "name": "Customers charged but no order recorded",
+        "occurrences": [
+          {
+            "ref": "#7",
+            "text": "After a restart, two testers who had paid had no order",
+            "byFix": false
+          },
+          {
+            "ref": "#10",
+            "text": "Card charged, the page said sold out, and no order",
+            "byFix": false
+          }
+        ],
+        "rootCause": "The purchase charges the card before it records anything, keeps orders only in memory and deletes them at start-up, and has no \"pending\" state or reconciliation with the provider. Any interruption between charge and record (crash, deploy, error) loses the order while the money is taken.",
+        "control": "A pending order written before the charge, a durable database with no destructive start-up, a settlement and reconciliation job that alerts on any difference, and an integration test that interrupts a purchase and restarts the app.",
+        "controlCheck": "No control exists. The reviewer's reproduction (`evidence/probes-charged-no-order.txt`) shows the gap and can become that test.",
+        "agentRule": "Never charge before a pending order is stored; never delete data at start-up; every provider charge must have an order (reconciliation must report zero differences).",
+        "catchWith": [
+          "integration",
+          "self-check",
+          "load"
+        ],
+        "status": "open"
+      },
+      {
+        "name": "The server trusts the browser: someone else's data, the price, admin functions",
+        "occurrences": [
+          {
+            "ref": "#8",
+            "text": "Changing the number in an order link showed another customer's name and address",
+            "byFix": false
+          },
+          {
+            "ref": "#9",
+            "text": "An order was paid at $0.01",
+            "byFix": false
+          },
+          {
+            "ref": "#16",
+            "text": "Anyone can open the sales stats page",
+            "byFix": false
+          }
+        ],
+        "rootCause": "There is no server-side authority: identity is an unsigned token the browser can write, the price is whatever the browser sends, and each route decides for itself whether to check anything, so some check nothing at all.",
+        "control": "Signed sessions verified in one place for every route, a deny-by-default rule for admin routes, prices read from the database, and tests that call every route as nobody, as another customer and with a tampered price; the Semgrep rules `unverified-token-decode`, `price-from-client` and `admin-route-inventory` in CI.",
+        "controlCheck": "AC-03 and AC-06 fail on this commit (they catch the price and privacy problems); the three Semgrep rules fired on lines 46, 105, 132 and 139. No test calls the admin routes without credentials.",
+        "agentRule": "Every route checks a signed session on the server; prices and permissions come from the database, never from the request. AC-03, AC-06 and the admin-access test must pass.",
+        "catchWith": [
+          "integration",
+          "end-to-end",
+          "scan"
+        ],
+        "status": "partly controlled"
+      },
+      {
+        "name": "Errors crash the site or show the code to visitors",
+        "occurrences": [
+          {
+            "ref": "#5",
+            "text": "Site down for 10 minutes; last log line a SyntaxError from JSON.parse (closed: \"restarted, working again\")",
+            "byFix": false
+          },
+          {
+            "ref": "#6",
+            "text": "Site crashed again with the same error",
+            "byFix": false
+          },
+          {
+            "ref": "#15",
+            "text": "A failed purchase showed a long technical error with file names and line numbers",
+            "byFix": false
+          }
+        ],
+        "rootCause": "There is no single place that turns errors into safe answers: request bodies are parsed outside the error handling, so one bad request kills the process, and the error handler that does exist sends the raw stack to the visitor. The outage ticket was closed after a restart, without looking for the cause.",
+        "control": "One error-handling layer (parse bodies and URLs inside it, answer 400 or a plain 500 with a request id), a supervisor that restarts the process, an integration test that sends malformed requests and checks the site still answers, and the Semgrep rules `json-parse-in-stream-callback`, `url-parse-outside-try` and `stack-trace-to-client` in CI.",
+        "controlCheck": "The three Semgrep rules fired on this commit (lines 38, 166, 174), so the scan catches it; the malformed-request test does not exist yet (`evidence/probes-restarts.txt` part A shows the crash).",
+        "agentRule": "All input parsing happens inside the error handler; visitors never see stack traces. The malformed-request test and the Semgrep rules must pass.",
+        "catchWith": [
+          "integration",
+          "scan",
+          "unit"
+        ],
+        "status": "open"
+      },
+      {
+        "name": "Slow pages and long waits under load or with a slow payment provider",
+        "occurrences": [
+          {
+            "ref": "#11",
+            "text": "Product page took 5 to 8 seconds with about 60 staff on it",
+            "byFix": false
+          },
+          {
+            "ref": "#12",
+            "text": "Buy button spun for about 30 seconds, then an error, while the provider was slow",
+            "byFix": false
+          }
+        ],
+        "rootCause": "Nothing was measured before the pilot: the product page makes one database query per review, nothing is cached, and neither the database pool nor the payment call has a time limit, so waiting is unbounded.",
+        "control": "The staged load test and the slow-partner test from the owner's brief, run before every release with fixed budgets; time limits on every outside call; AC-08 in CI.",
+        "controlCheck": "The load test fails on this commit at 50% of the target and AC-08 fails in all three runs, so both catch it; neither runs automatically.",
+        "agentRule": "Every outside call has a time limit and every hot read is cached or a single query; the load test from `peak-brief.json` must stay within budget.",
+        "catchWith": [
+          "load",
+          "integration"
+        ],
+        "status": "partly controlled"
+      },
+      {
+        "name": "Sign-in box does not go away after signing in",
+        "occurrences": [
+          {
+            "ref": "#13",
+            "text": "Sign-in box still showing after signing in (closed: \"works for me\")",
+            "byFix": false
+          },
+          {
+            "ref": "#14",
+            "text": "Same on an Android phone",
+            "byFix": false
+          }
+        ],
+        "rootCause": "The page hides elements with the `hidden` attribute, but the stylesheet's `form { display: flex }` overrides it, and no test checks that something disappears. The first ticket was closed as \"works for me\".",
+        "control": "A browser test that checks the sign-in form is hidden after sign-in, and screenshot comparisons of the signed-in page on a computer and a phone.",
+        "controlCheck": "No control: AC-02 passes while its own screenshot shows the problem (`evidence/acceptance/AC-02-test-finished-1.png`).",
+        "agentRule": "When the page hides something, a test checks it is hidden (`toBeHidden()`), on desktop and phone.",
+        "catchWith": [
+          "visual",
+          "end-to-end"
+        ],
+        "status": "open"
+      }
+    ],
+    "hotspots": [
+      {
+        "file": "app/server.mjs",
+        "fixes": "0 (1 commit)",
+        "note": "Behind 14 of the 16 tickets; the purchase handler `POST /api/buy` (lines 102-118) alone is behind 8. Needs restructuring (reserve, charge, confirm) and tests."
+      },
+      {
+        "file": "shared/public/style.css",
+        "fixes": "0 (1 commit)",
+        "note": "Behind the two sign-in box tickets (#13, #14)."
+      }
+    ],
+    "known": [
+      {
+        "id": "ARC-02",
+        "text": "#2 Double charge for one order (open); #1 closed without a fix",
+        "severity": "Critical",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "ARC-02",
+        "text": "#3 One person bought 3 pairs",
+        "severity": "Critical",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "ARC-01",
+        "text": "#4 Sold 37 pairs of 20",
+        "severity": "Critical",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "ARC-06",
+        "text": "#6 Site crashed again with the same error; #5 closed after a restart",
+        "severity": "Critical",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "ARC-05",
+        "text": "#7 Restart lost two paid orders",
+        "severity": "Critical",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "SEC-01",
+        "text": "#8 Order page shows another customer's address",
+        "severity": "Critical",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "ARC-03",
+        "text": "#9 An order paid at $0.01",
+        "severity": "Critical",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "ARC-04",
+        "text": "#10 Card charged, page said sold out, no order",
+        "severity": "Critical",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "PERF-01",
+        "text": "#11 Product page takes more than 5 seconds at the opening",
+        "severity": "High",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "ARC-07",
+        "text": "#12 Buy button spins for half a minute",
+        "severity": "High",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "HIS-02",
+        "text": "#14 Sign-in box does not go away (also #13, closed \"works for me\")",
+        "severity": "Low",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "SEC-06",
+        "text": "#15 Error page shows the code's internals",
+        "severity": "Medium",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      },
+      {
+        "id": "SEC-03",
+        "text": "#16 Anyone can open the sales stats page",
+        "severity": "Critical",
+        "owner": "Not assigned",
+        "due": "Not set",
+        "status": "Open"
+      }
+    ]
+  },
+  "acceptance": {
+    "criteriaVersion": "1.1 (`acceptance/criteria.md`)",
+    "agreedBy": "v1.0 \"agreed with the product owner\" (no name or date); v1.1 approval not recorded",
+    "run": "Re-run by the reviewer on 2026-10-28: Playwright 1.56.1, three runs per test, no retries; AC-07 by the race test (`acceptance/ACCEPTANCE.md`, `logs/acceptance-run.txt`)",
+    "rows": [
+      {
+        "id": "AC-01",
+        "priority": "Must",
+        "criterion": "Shopper sees the product, price and stock",
+        "status": "pass",
+        "runs": "3/3",
+        "note": "",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-01-test-finished-1.png",
+            "caption": "AC-01: screenshot"
+          }
+        ]
+      },
+      {
+        "id": "AC-02",
+        "priority": "Must",
+        "criterion": "Signed-in shopper can buy and gets a confirmation",
+        "status": "pass",
+        "runs": "3/3",
+        "note": "Passes, but its screenshot shows the sign-in box still on screen after signing in (tickets #13, #14): the test does not check it.",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-02-test-finished-1.png",
+            "caption": "AC-02: screenshot"
+          }
+        ]
+      },
+      {
+        "id": "AC-03",
+        "priority": "Must",
+        "criterion": "Customers always pay the listed price",
+        "status": "fail",
+        "runs": "0/3",
+        "note": "",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-03-evidence.json",
+            "caption": "AC-03: saved request and answer"
+          }
+        ]
+      },
+      {
+        "id": "AC-04",
+        "priority": "Must",
+        "criterion": "One pair per customer, even on double-click",
+        "status": "fail",
+        "runs": "0/3",
+        "note": "",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-04-test-failed-1.png",
+            "caption": "AC-04: screenshot"
+          }
+        ]
+      },
+      {
+        "id": "AC-05",
+        "priority": "Must",
+        "criterion": "Sold-out state is clear",
+        "status": "pass",
+        "runs": "3/3",
+        "note": "",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-05-test-finished-1.png",
+            "caption": "AC-05: screenshot"
+          }
+        ]
+      },
+      {
+        "id": "AC-06",
+        "priority": "Must",
+        "criterion": "Orders are private",
+        "status": "fail",
+        "runs": "0/3",
+        "note": "",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-06-evidence.json",
+            "caption": "AC-06: saved request and answer"
+          }
+        ]
+      },
+      {
+        "id": "AC-07",
+        "priority": "Must",
+        "criterion": "Never sell more than the stock, even in a rush",
+        "status": "fail",
+        "runs": "",
+        "note": "Checked by the race test (k6), not a browser test: 1,957 and 1,956 orders confirmed for 100 pairs in two runs (`peak-traffic/oversell1`, `oversell2`).",
+        "evidence": []
+      },
+      {
+        "id": "AC-08",
+        "priority": "Must",
+        "criterion": "Slow or failing payments never charge twice or lose the pair",
+        "status": "fail",
+        "runs": "0/3",
+        "note": "",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-08-test-failed-1.png",
+            "caption": "AC-08: screenshot"
+          }
+        ]
+      },
+      {
+        "id": "AC-09",
+        "priority": "Should",
+        "criterion": "Sale page is accessible",
+        "status": "pass",
+        "runs": "3/3",
+        "note": "",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-09-test-finished-1.png",
+            "caption": "AC-09: screenshot"
+          }
+        ]
+      },
+      {
+        "id": "AC-10",
+        "priority": "Should",
+        "criterion": "Works on a phone",
+        "status": "pass",
+        "runs": "3/3",
+        "note": "",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-10-test-finished-1.png",
+            "caption": "AC-10: screenshot"
+          }
+        ]
+      },
+      {
+        "id": "AC-11",
+        "priority": "Must",
+        "criterion": "Every order has a shipping address",
+        "status": "fail",
+        "runs": "0/3",
+        "note": "",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-11-test-failed-1.png",
+            "caption": "AC-11: screenshot"
+          },
+          {
+            "path": "evidence/acceptance/AC-11-evidence.json",
+            "caption": "AC-11: saved request and answer"
+          }
+        ]
+      },
+      {
+        "id": "AC-12",
+        "priority": "Must",
+        "criterion": "Nobody can buy before the sale opens",
+        "status": "fail",
+        "runs": "0/3",
+        "note": "Fails at its first step: the route to set the opening time or pause the sale does not exist (HTTP 404).",
+        "evidence": [
+          {
+            "path": "evidence/acceptance/AC-12-test-failed-1.png",
+            "caption": "AC-12: screenshot"
+          }
+        ]
+      },
+      {
+        "id": "AC-13",
+        "priority": "Should",
+        "criterion": "The sale can be paused without losing orders",
+        "status": "fail",
+        "runs": "0/3",
+        "note": "Fails at its first step: the route to set the opening time or pause the sale does not exist (HTTP 404).",
+        "evidence": []
+      }
+    ]
+  },
+  "areaNotes": {
+    "S": "Access control is missing almost everywhere: anyone can act as any customer, read any order, use the admin functions and dump the order table through the search route. A key named like a live payment key is in the code. These need fixing before anything else.",
+    "A": "The design keeps everything in one process's memory and does the whole purchase (check, charge, write, email) inside one request, with the card charged first. That is why it oversells, double-charges and loses paid orders on any restart.",
+    "D": "None of the seven business rules is enforced where it cannot be bypassed; every one of them was broken with a direct request or a race test.",
+    "P": "The sale page manages about half the expected opening crowd, and the rush breaks the stock and one-per-customer rules. Page speed for a single phone visitor is good.",
+    "O": "Nothing is in place to notice, survive or recover from problems on the night: no monitoring, health checks, backups, rollback, runbook or graceful restart.",
+    "H": "The acceptance suite is a good start: one test per criterion, outcomes checked, three runs without retries. But it fails on the delivered commit, nothing runs it automatically, and it misses crashes, restarts, admin access and what should disappear from the screen.",
+    "Q": "Every one of the 16 pilot tickets traces to a design gap, not bad luck. Three tickets were closed without a fix, and each problem came back.",
+    "R": "The app starts from the README in a minute, but there is no review pack, no staging copy, no agreed recovery targets, and the settings described in the README do not match the code.",
+    "U": "The agreed criteria are good and numbered; six of the Must criteria fail in every run and the never-oversell criterion fails the race test."
+  },
+  "findings": [
+    {
+      "id": "SEC-01",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "Anyone can read any customer's order, including their home address",
+      "where": "`app/server.mjs:120-124` (`GET /api/orders/:id`): no sign-in or ownership check. **Evidence:** With no token, `curl -s localhost:3310/api/orders/1` returned Alice's email, address and amount with HTTP 200 (`evidence/probes-access.txt`, step 1). Acceptance test AC-06 failed in all three runs: Bob and a logged-out visitor both got HTTP 200. **Tickets:** #8.",
+      "impact": "Anyone can collect every buyer's email address and home address by trying order numbers 1, 2, 3 and so on.",
+      "evidence": "With no token, `curl -s localhost:3310/api/orders/1` returned Alice's email, address and amount with HTTP 200 (`evidence/probes-access.txt`, step 1). Acceptance test AC-06 failed in all three runs: Bob and a logged-out visitor both got HTTP 200.",
+      "fix": "Require a signed-in customer and look the order up by id and customer together (`WHERE id = ? AND customer = ?`); answer 404 otherwise.",
+      "who": "Developer",
+      "doneWhen": "AC-06 passes three runs in a row, and the request in `evidence/probes-access.txt` step 1 answers 401 or 404.",
+      "status": "Open",
+      "effort": "S",
+      "reference": "OWASP A01:2025 Broken Access Control · CWE-639",
+      "tickets": [
+        "#8"
+      ]
+    },
+    {
+      "id": "SEC-02",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "Anyone can act as any customer: the sign-in \"token\" is just the email address, unsigned",
+      "where": "`app/server.mjs:79-83` (`POST /api/login` returns base64 of whatever email it is given) and `app/server.mjs:42-47` (`currentUser` decodes the token without checking a signature); `TOKEN_SECRET` (`run.mjs:21`) is never read. **Evidence:** A token made by hand (`printf '{\"email\":\"alice@example.test\"}' | base64`), without signing in, returned Alice's orders from `GET /api/my-orders` (`evidence/probes-access.txt`, step 2). Semgrep `unverified-token-decode` at `app/server.mjs:46`.",
+      "impact": "Anyone who knows or guesses a customer's email address can see their orders and address, or buy in their name. There is no password, email link or code.",
+      "evidence": "A token made by hand (`printf '{\"email\":\"alice@example.test\"}' | base64`), without signing in, returned Alice's orders from `GET /api/my-orders` (`evidence/probes-access.txt`, step 2). Semgrep `unverified-token-decode` at `app/server.mjs:46`.",
+      "fix": "Use a proven sign-in method (an email link or one-time code from an auth provider, or a hosted auth service) and signed, expiring session tokens whose secret comes from the environment; verify the token on every request.",
+      "who": "Developer",
+      "doneWhen": "A hand-made or edited token gets 401 from `/api/my-orders` and `/api/buy`, and an automated test proves it.",
+      "status": "Open",
+      "effort": "M",
+      "reference": "OWASP A07:2025 Authentication Failures · CWE-287",
+      "tickets": []
+    },
+    {
+      "id": "SEC-03",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "Admin functions are open to everyone: one request deletes every order",
+      "where": "`app/server.mjs:132-137` (`POST /api/admin/reset`) and `app/server.mjs:139-150` (`GET /api/admin/stats`) check nothing; the `x-admin-token` header the tests send is ignored and `ADMIN_TOKEN` (`run.mjs:22`) is never read. **Evidence:** Without any token, `POST /api/admin/reset` answered `{\"ok\":true}` and Alice's orders went from 3 to none; `GET /api/admin/stats` answered HTTP 200 with sales and payment totals (`evidence/probes-access.txt`, steps 7 and 10). **Tickets:** #16.",
+      "impact": "Anyone on the internet can delete all orders and set the stock to any number in the middle of the sale, and anyone can read the sales figures.",
+      "evidence": "Without any token, `POST /api/admin/reset` answered `{\"ok\":true}` and Alice's orders went from 3 to none; `GET /api/admin/stats` answered HTTP 200 with sales and payment totals (`evidence/probes-access.txt`, steps 7 and 10).",
+      "fix": "Remove the reset route from anything that faces the internet (test builds only, behind a setting production refuses); put the stats behind an admin role with personal accounts.",
+      "who": "Developer",
+      "doneWhen": "Both routes answer 401 or 404 without an admin session, checked by an automated test that calls them with no credentials.",
+      "status": "Open",
+      "effort": "S",
+      "reference": "OWASP A01:2025 Broken Access Control · CWE-306",
+      "tickets": [
+        "#16"
+      ]
+    },
+    {
+      "id": "SEC-04",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "The search address hands out every customer's email and address (SQL injection)",
+      "where": "`app/server.mjs:96-100` (`GET /api/search`): the search text is pasted into the SQL statement. The page never uses this route.. **Evidence:** `q=zzz' UNION SELECT id, customer || ' / ' || address, amount_cents FROM orders --` returned every order's email and address (`evidence/probes-access.txt`, step 8). Semgrep `sql-built-from-strings-js` at `app/server.mjs:98`.",
+      "impact": "One crafted search returns every buyer's email and home address, and the same hole could change or delete data.",
+      "evidence": "`q=zzz' UNION SELECT id, customer || ' / ' || address, amount_cents FROM orders --` returned every order's email and address (`evidence/probes-access.txt`, step 8). Semgrep `sql-built-from-strings-js` at `app/server.mjs:98`.",
+      "fix": "Delete the unused route, or pass the search text as a parameter (`WHERE name LIKE ?`).",
+      "who": "Developer",
+      "doneWhen": "The request in step 8 returns an empty list or 400, and Semgrep `sql-built-from-strings-js` no longer fires on line 98.",
+      "status": "Open",
+      "effort": "S",
+      "reference": "OWASP A05:2025 Injection · CWE-89",
+      "tickets": []
+    },
+    {
+      "id": "SEC-05",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "A payment key named like a live key is written in the code and in the git history",
+      "where": "`app/server.mjs:10` (`PAYMENT_SECRET_KEY = 'pay_…'`, redacted), committed in `bb6c41e`; the `PAYMENT_SECRET_KEY` setting in `run.mjs:20` is ignored. **Evidence:** Gitleaks rule `generic-api-key` fired on `app/server.mjs:10` in the current files and in the git history (`scans/gitleaks-files.json`, `scans/gitleaks-history.json`).",
+      "impact": "Anyone who gets a copy of the code (contractors, the client's staff, a leaked backup) could charge or refund through the shop's payment account. Every copy of the app uses the same key.",
+      "evidence": "Gitleaks rule `generic-api-key` fired on `app/server.mjs:10` in the current files and in the git history (`scans/gitleaks-files.json`, `scans/gitleaks-history.json`).",
+      "fix": "Rotate the key at the payment provider now. Read it from a secret setting, refuse to start without it, keep test and live keys apart, and remove it from the history before the repository is handed over.",
+      "who": "Developer, with whoever owns the payment provider account",
+      "doneWhen": "The old key is revoked at the provider, Gitleaks finds nothing in the files, and the app refuses to start without `PAYMENT_SECRET_KEY`.",
+      "status": "Open",
+      "effort": "S",
+      "reference": "CWE-798",
+      "tickets": []
+    },
+    {
+      "id": "SEC-06",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "Error pages show the code's internals",
+      "where": "`app/server.mjs:171-175` sends `err.stack` to the visitor. **Evidence:** A token that is not valid returned a `SyntaxError` with file paths (`evidence/probes-access.txt`, step 9); a stuck payment returned \"Error: Payment failed with status 504 at chargeCard (./app/server.mjs:55:22)\" (`evidence/probes-charged-no-order.txt`, part G). Semgrep `stack-trace-to-client` at line 174. **Tickets:** #15.",
+      "impact": "Shoppers see a wall of technical text with file names and line numbers instead of a clear message, and attackers learn how the server is built.",
+      "evidence": "A token that is not valid returned a `SyntaxError` with file paths (`evidence/probes-access.txt`, step 9); a stuck payment returned \"Error: Payment failed with status 504 at chargeCard (./app/server.mjs:55:22)\" (`evidence/probes-charged-no-order.txt`, part G). Semgrep `stack-trace-to-client` at line 174.",
+      "fix": "Log the error with a request id and send a plain message (`{\"error\":\"Something went wrong\",\"requestId\":…}`).",
+      "who": "Developer",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "S",
+      "reference": "CWE-209",
+      "tickets": [
+        "#15"
+      ]
+    },
+    {
+      "id": "SEC-07",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "No security headers, and any website may call the shop from a visitor's browser",
+      "where": "`app/server.mjs:29-32` (`access-control-allow-origin: *` on every API answer) and `app/server.mjs:66-77` (pages without security headers). **Evidence:** Header check on the local copy: Content-Security-Policy, X-Content-Type-Options and frame protection missing; CORS `*` on the API (`scans/headers.json`, `scans/headers-api.json`). Semgrep `cors-wildcard` at line 30.",
+      "impact": "Weaker protection against injected scripts and against other sites framing the shop page.",
+      "evidence": "Header check on the local copy: Content-Security-Policy, X-Content-Type-Options and frame protection missing; CORS `*` on the API (`scans/headers.json`, `scans/headers-api.json`). Semgrep `cors-wildcard` at line 30.",
+      "fix": "Add Content-Security-Policy, `X-Content-Type-Options: nosniff`, `frame-ancestors 'none'`, Referrer-Policy and HSTS (at the host); drop the CORS header, since the page calls its own server.",
+      "who": "Developer",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "S",
+      "reference": "OWASP A02:2025 Security Misconfiguration",
+      "tickets": []
+    },
+    {
+      "id": "SEC-08",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "title": "Nothing slows down scripts: bots can sign in and buy as fast as they like",
+      "where": "`app/server.mjs:79-118`: no rate limit or bot check on `POST /api/login` or `POST /api/buy`. **Evidence:** 60 sign-ins in a row from one address all answered 200 (`evidence/probes-access.txt`, step 12); 1,000 scripted buyers placed 1,957 orders in the race test (`peak-traffic/oversell1/oversell-summary.md`).",
+      "impact": "In a sneaker drop, scripts buy faster than people. With no limits and no bot protection, resellers can take the stock before real customers finish loading the page.",
+      "evidence": "60 sign-ins in a row from one address all answered 200 (`evidence/probes-access.txt`, step 12); 1,000 scripted buyers placed 1,957 orders in the race test (`peak-traffic/oversell1/oversell-summary.md`).",
+      "fix": "Limit sign-ins and purchases per account and per address in a shared store, and put bot protection or a virtual waiting room in front of the sale.",
+      "who": "Developer, with the hosting provider for edge protection",
+      "doneWhen": "The 60-request burst gets 429 after the limit, and a waiting room or bot check sits in front of checkout during the sale.",
+      "status": "Open",
+      "effort": "M",
+      "reference": "OWASP API6:2023 Unrestricted Access to Sensitive Business Flows",
+      "tickets": []
+    },
+    {
+      "id": "ARC-01",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "It sells far more pairs than exist when many people buy at once",
+      "where": "`app/server.mjs:107-111`: reads the stock, charges the card, then writes `stock = <the number read earlier> - 1`; nothing in the database stops the stock going below zero. **Evidence:** Race test, two runs: 1,957 and 1,956 orders for 100 pairs, stock counter left at 93 (`peak-traffic/oversell1/oversell-summary.md`, `peak-traffic/oversell2/oversell-summary.md`). Load run 1 ended with 2,939 paid orders for 100 pairs (`peak-traffic/run1/stats-after.txt`). Semgrep `stock-lost-update-sql` at line 111. **Tickets:** #4.",
+      "impact": "In the race test, 1,957 purchases were confirmed and charged for 100 pairs: 1,857 customers would pay for sneakers that do not exist.",
+      "evidence": "Race test, two runs: 1,957 and 1,956 orders for 100 pairs, stock counter left at 93 (`peak-traffic/oversell1/oversell-summary.md`, `peak-traffic/oversell2/oversell-summary.md`). Load run 1 ended with 2,939 paid orders for 100 pairs (`peak-traffic/run1/stats-after.txt`). Semgrep `stock-lost-update-sql` at line 111.",
+      "fix": "Reserve first with one atomic update (`UPDATE products SET stock = stock - 1 WHERE id = ? AND stock > 0`, and check that one row changed), then charge, then confirm; give the pair back only when the payment definitely failed; add `CHECK (stock >= 0)`.",
+      "who": "Developer",
+      "doneWhen": "The race test with the same plan shows at most 100 sold, and sold + awaiting payment + remaining = 100.",
+      "status": "Open",
+      "effort": "M",
+      "reference": "OWASP A06:2025 Insecure Design · CWE-362",
+      "tickets": [
+        "#4"
+      ]
+    },
+    {
+      "id": "ARC-02",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "One pair per customer is not enforced: double clicks and repeat purchases charge again",
+      "where": "`app/server.mjs:102-118` (no check for an existing order, no unique rule on `orders`) and `app/server.mjs:49-57` (no idempotency key sent to the payment provider). **Evidence:** Two clicks at the same moment gave Dave 2 orders and 2 charges; Alice bought 3 pairs (`evidence/probes-access.txt`, steps 5 and 6). AC-04 failed in all three runs (2 orders after a double-click). Race test: 957 buyers charged twice (`peak-traffic/oversell1`). **Tickets:** #1, #2, #3.",
+      "impact": "A shopper who double-clicks, reloads or presses Buy again pays again for another pair, and one person can buy as many pairs as they like.",
+      "evidence": "Two clicks at the same moment gave Dave 2 orders and 2 charges; Alice bought 3 pairs (`evidence/probes-access.txt`, steps 5 and 6). AC-04 failed in all three runs (2 orders after a double-click). Race test: 957 buyers charged twice (`peak-traffic/oversell1`).",
+      "fix": "Enforce one live order per customer and product in the database (a unique index). Give each purchase attempt an id from the page, reuse it on retries, store it with the order and pass it to the provider as `Idempotency-Key`; answer a repeat with the existing order.",
+      "who": "Developer",
+      "doneWhen": "AC-04 passes three runs in a row, and the race test shows no buyer charged twice.",
+      "status": "Open",
+      "effort": "M",
+      "reference": "CWE-837",
+      "tickets": [
+        "#1",
+        "#2",
+        "#3"
+      ]
+    },
+    {
+      "id": "ARC-03",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "Customers set their own price",
+      "where": "`app/server.mjs:105`, `:110`, `:114`: the `price` sent by the browser is charged and stored; the page sends it at `shared/public/app.js:121`. **Evidence:** Bob's purchase with `\"price\":1` was confirmed as `amountCents: 1` and the provider charged one cent (`evidence/probes-access.txt`, step 3; provider total 29,995 cents = 6 × 4,999 + 1). AC-03 failed in all three runs. Semgrep `price-from-client` at line 105. **Tickets:** #9.",
+      "impact": "Anyone can buy the $49.99 sneakers for one cent by editing the request.",
+      "evidence": "Bob's purchase with `\"price\":1` was confirmed as `amountCents: 1` and the provider charged one cent (`evidence/probes-access.txt`, step 3; provider total 29,995 cents = 6 × 4,999 + 1). AC-03 failed in all three runs. Semgrep `price-from-client` at line 105.",
+      "fix": "Take the price from the product record on the server and ignore any price from the browser (or refuse a request whose price differs).",
+      "who": "Developer",
+      "doneWhen": "AC-03 passes three runs in a row.",
+      "status": "Open",
+      "effort": "S",
+      "reference": "OWASP A06:2025 Insecure Design · CWE-602",
+      "tickets": [
+        "#9"
+      ]
+    },
+    {
+      "id": "ARC-04",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "A crash or deploy during payment leaves customers charged with no order",
+      "where": "`app/server.mjs:110-115`: the card is charged first, and only then are the stock and the order written; nothing records the attempt before the charge, and nothing compares the provider's charges with the orders. **Evidence:** With the payment provider running on its own and answering in 3 seconds, one malformed request (a crash) and a SIGTERM (a deploy), each sent 1 second into a purchase: the provider recorded the charge and the app had no order (`evidence/probes-charged-no-order.txt`, parts D and E). **Tickets:** #7, #10.",
+      "impact": "Customers pay and get nothing, and the shop has no record that they paid; it finds out only when they complain.",
+      "evidence": "With the payment provider running on its own and answering in 3 seconds, one malformed request (a crash) and a SIGTERM (a deploy), each sent 1 second into a purchase: the provider recorded the charge and the app had no order (`evidence/probes-charged-no-order.txt`, parts D and E).",
+      "fix": "Record a pending order (with the reserved pair and the idempotency key) before charging, and mark it paid or failed afterwards. A background job settles pending orders with the provider and compares the provider's charges with the orders, raising an alert on any difference.",
+      "who": "Developer",
+      "doneWhen": "Both reproductions end with a paid or refunded order for every provider charge, and a reconciliation run reports no differences.",
+      "status": "Open",
+      "effort": "L",
+      "reference": "",
+      "tickets": [
+        "#7",
+        "#10"
+      ]
+    },
+    {
+      "id": "ARC-05",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "Every restart deletes all orders and puts the 100 pairs back on sale",
+      "where": "`app/server.mjs:13` (`openDb()` opens an in-memory database) and `app/server.mjs:14-27` (`CREATE TABLE` and `seed()`, which runs `DELETE FROM orders`, on every start). **Evidence:** One paid order before a restart, none after it, and the stock back at 100 (`evidence/probes-restarts.txt`, part C). **Tickets:** #7.",
+      "impact": "A crash, a deploy or a host restart during the sale erases every paid order (who bought and where to ship) and lets another 100 pairs be sold.",
+      "evidence": "One paid order before a restart, none after it, and the stock back at 100 (`evidence/probes-restarts.txt`, part C).",
+      "fix": "Use a persistent database (managed Postgres, or a SQLite file on a persistent disk) with automatic backups; create tables through versioned migrations; seed demo data only in tests and never delete data at start-up.",
+      "who": "Developer, with the hosting provider",
+      "doneWhen": "An order placed before a restart is still there after it, start-up code contains no `DELETE`, and a backup has been restored once.",
+      "status": "Open",
+      "effort": "L",
+      "reference": "Twelve-Factor App, IX Disposability",
+      "tickets": [
+        "#7"
+      ]
+    },
+    {
+      "id": "ARC-06",
+      "severity": "Critical",
+      "confidence": "Confirmed",
+      "title": "One malformed request takes the whole site down",
+      "where": "`app/server.mjs:34-40` (`JSON.parse` inside the request's end callback, outside any error handling) and `app/server.mjs:166` (the address is parsed from the `Host` header outside the error handling); `run.mjs:38-43` then stops the payment provider too, and nothing restarts either. **Evidence:** A body of `{not json` sent to `/api/login`, and a request with `Host: bad host`, each made the server exit with code 1; the site stopped answering (`evidence/probes-restarts.txt`, parts A and B). Semgrep `json-parse-in-stream-callback` (line 38) and `url-parse-outside-try` (line 166). **Tickets:** #5, #6.",
+      "impact": "Anyone, or one buggy browser, can stop the sale for everyone with a single request, as often as they like.",
+      "evidence": "A body of `{not json` sent to `/api/login`, and a request with `Host: bad host`, each made the server exit with code 1; the site stopped answering (`evidence/probes-restarts.txt`, parts A and B). Semgrep `json-parse-in-stream-callback` (line 38) and `url-parse-outside-try` (line 166).",
+      "fix": "Parse bodies inside error handling and answer 400; build the URL inside the error handling (or answer 400 on a bad `Host`); limit body size; run the app under a supervisor that restarts it.",
+      "who": "Developer",
+      "doneWhen": "Both requests get 400 and the site keeps answering, checked by an automated test.",
+      "status": "Open",
+      "effort": "S",
+      "reference": "OWASP A10:2025 Mishandling of Exceptional Conditions · CWE-248",
+      "tickets": [
+        "#5",
+        "#6"
+      ]
+    },
+    {
+      "id": "ARC-07",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "title": "When the payment provider is slow, shoppers wait up to 30 seconds and then get an error",
+      "where": "`app/server.mjs:49-57`: the call to the provider has no time limit and no idempotency key, and any answer other than success becomes a 500 error. **Evidence:** Provider stuck for 30 s: the shopper got HTTP 500 with a stack trace after 30.0 s (`evidence/probes-charged-no-order.txt`, part G). Provider at 8 s: the purchase took 8.3 s (`evidence/probes-restarts.txt`, part F). AC-08 failed in all three runs (page stuck on \"Placing your order…\"). Slow-partner race test (3 to 10 s per charge): 400 charges for 400 clicks by 200 buyers (`peak-traffic/slow-partner/`). Semgrep `fetch-without-timeout` at lines 50, 135, 142. **Tickets:** #12.",
+      "impact": "When the provider slows down at midnight, the Buy button spins for up to 30 seconds and then shows technical text; shoppers try again and may pay twice. There is no \"we are confirming your payment\" state.",
+      "evidence": "Provider stuck for 30 s: the shopper got HTTP 500 with a stack trace after 30.0 s (`evidence/probes-charged-no-order.txt`, part G). Provider at 8 s: the purchase took 8.3 s (`evidence/probes-restarts.txt`, part F). AC-08 failed in all three runs (page stuck on \"Placing your order…\"). Slow-partner race test (3 to 10 s per charge): 400 charges for 400 clicks by 200 buyers (`peak-traffic/slow-partner/`). Semgrep `fetch-without-timeout` at lines 50, 135, 142.",
+      "fix": "Give the call a time limit (2 to 5 seconds). On a time-out keep the order pending (not failed), answer \"we are confirming your payment\", settle it with the provider's lookup or webhook, and reuse one idempotency key per purchase attempt.",
+      "who": "Developer",
+      "doneWhen": "AC-08 passes three runs in a row, and the slow-partner test shows provider charges equal to paid orders with no buyer charged twice.",
+      "status": "Open",
+      "effort": "M",
+      "reference": "AWS Well-Architected, Reliability pillar",
+      "tickets": [
+        "#12"
+      ]
+    },
+    {
+      "id": "ARC-08",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "title": "Nothing stops people buying before midnight, and the sale cannot be paused",
+      "where": "`app/server.mjs` has no opening time, no pause switch and no `/api/admin/sale` route; the page's opening-time logic (`shared/public/app.js:44-60`) waits for a `sale` field the server never sends. **Evidence:** AC-12 and AC-13 failed in all three runs at their first step: `POST /api/admin/sale` answered 404; `GET /api/products/1` has no `sale` field; purchases succeed at any time (`evidence/probes-access.txt`, step 11).",
+      "impact": "Anyone who finds the page before midnight (resellers watch for it) can buy the stock before the email goes out. If something goes wrong during the sale, the only way to stop it is to shut the site down, which today deletes every order.",
+      "evidence": "AC-12 and AC-13 failed in all three runs at their first step: `POST /api/admin/sale` answered 404; `GET /api/products/1` has no `sale` field; purchases succeed at any time (`evidence/probes-access.txt`, step 11).",
+      "fix": "Add a sale window on the server: the opening time as a full date, time and time zone from one setting, logged at start-up and sent to the page, and a pause switch that needs no deploy. `POST /api/buy` refuses (403) before opening and while paused.",
+      "who": "Developer, with the product owner for the date and time zone",
+      "doneWhen": "AC-12 and AC-13 pass three runs in a row.",
+      "status": "Open",
+      "effort": "M",
+      "reference": "",
+      "tickets": []
+    },
+    {
+      "id": "ARC-09",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "Orders can be paid without a shipping address",
+      "where": "`app/server.mjs:105` and `:114` (`address ?? ''`); no check on the address, the product id or the price type. **Evidence:** Carol's purchase without an address was confirmed (`evidence/probes-access.txt`, step 4). AC-11 failed in all three runs (HTTP 200 instead of 400).",
+      "impact": "Paid orders that cannot be shipped; support has to contact and refund those customers.",
+      "evidence": "Carol's purchase without an address was confirmed (`evidence/probes-access.txt`, step 4). AC-11 failed in all three runs (HTTP 200 instead of 400).",
+      "fix": "Check every field on the server (address required with a sensible length, product id an existing number) and answer 400 when one is wrong.",
+      "who": "Developer",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "S",
+      "reference": "OWASP A10:2025 Mishandling of Exceptional Conditions",
+      "tickets": []
+    },
+    {
+      "id": "ARC-10",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "Settings are written in the code or ignored, and the app starts with wrong ones",
+      "where": "`app/server.mjs:8-10` reads only `PORT` and `PAYMENT_URL`; `run.mjs:17-25` also sets `PAYMENT_SECRET_KEY`, `TOKEN_SECRET`, `ADMIN_TOKEN`, `DEMO_LOGIN`, `ENABLE_TEST_ROUTES` and `SEED_DEMO_DATA`, which the app never reads. The README says the app reads its other settings from the environment.. **Evidence:** Started with `PAYMENT_URL=http://127.0.0.1:1`: the server started normally and the first purchase failed with HTTP 500 \"fetch failed\" (`evidence/probes-restarts.txt`, part I). A search for `process.env` in the code (system map).",
+      "impact": "The team may believe it can switch off test routes and demo data and set secrets for production; none of those switches exist. A wrong payment address is noticed only when the first customer pays.",
+      "evidence": "Started with `PAYMENT_URL=http://127.0.0.1:1`: the server started normally and the first purchase failed with HTTP 500 \"fetch failed\" (`evidence/probes-restarts.txt`, part I). A search for `process.env` in the code (system map).",
+      "fix": "Read every setting in one place, check them at start-up and refuse to start in production with missing, placeholder or test values; delete the unused ones; list them in the README.",
+      "who": "Developer",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "S",
+      "reference": "Twelve-Factor App, III Config",
+      "tickets": []
+    },
+    {
+      "id": "ARC-11",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "The confirmation email is sent while the shopper waits",
+      "where": "`app/server.mjs:116` (`await sendConfirmationEmail(...)` inside `POST /api/buy`), `app/server.mjs:59-63`. **Evidence:** The code; Semgrep `email-in-request-path` at line 116.",
+      "impact": "Every purchase takes a quarter of a second longer, and when the email service is slow or down a paid order answers with an error, so shoppers try again.",
+      "evidence": "The code; Semgrep `email-in-request-path` at line 116.",
+      "fix": "Write the email to an outbox table together with the order and send it from a background worker that retries.",
+      "who": "Developer",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "M",
+      "reference": "",
+      "tickets": []
+    },
+    {
+      "id": "ARC-12",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "title": "No real payment provider is connected or tested",
+      "where": "`app/server.mjs:49-57` calls only the local simulator's `/charge`; the README says payments and email are simulators. **Evidence:** The code and the README; no provider library, webhook route or refund path exists.",
+      "impact": "As delivered, the shop cannot take real money, and the real provider's behaviour (declines, card checks, refunds, limits, notifications) has never been tried.",
+      "evidence": "The code and the README; no provider library, webhook route or refund path exists.",
+      "fix": "Choose the provider, connect its hosted checkout or payment API with amounts set on the server and idempotency keys, verify its notifications, and try a purchase, a decline and a refund in its test mode, then one small real purchase and refund before launch.",
+      "who": "Developer, with the product owner (choice of provider)",
+      "doneWhen": "The provider's test-mode records of a purchase, a decline and a refund match the app's orders, and one small live purchase and refund are done before launch.",
+      "status": "Open",
+      "effort": "L",
+      "reference": "",
+      "tickets": []
+    },
+    {
+      "id": "PERF-01",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "title": "The sale page slows to 2 to 8 seconds at half the expected crowd",
+      "where": "`app/server.mjs:85-94` (`GET /api/products/:id`: one query for the product, one for the reviews, then one per review author, so 14 per page view), no caching, and a pool of 10 database connections that waits forever. **Evidence:** Two load runs (`peak-traffic/run1/load-summary.md`, `peak-traffic/run2/load-summary.md`): product page 95th percentile 2.38 s and 2.35 s at 50% of the target (budget 500 ms), 5.07 to 5.20 s at 100%, 7.69 to 8.14 s at 200%; it served 205 to 237 page views per second against a target of 450. Semgrep `db-query-in-loop-js` at line 90. **Tickets:** #11.",
+      "impact": "At midnight shoppers wait 2 to 8 seconds for the page, and the server manages only about half of the page views it is asked for, so many people see \"We are very busy. Retrying…\".",
+      "evidence": "Two load runs (`peak-traffic/run1/load-summary.md`, `peak-traffic/run2/load-summary.md`): product page 95th percentile 2.38 s and 2.35 s at 50% of the target (budget 500 ms), 5.07 to 5.20 s at 100%, 7.69 to 8.14 s at 200%; it served 205 to 237 page views per second against a target of 450. Semgrep `db-query-in-loop-js` at line 90.",
+      "fix": "Read the reviews with their authors in one query (a JOIN); cache the product answer for 1 to 2 seconds (the stock on the page may lag; the purchase stays exact); serve the page files from a CDN.",
+      "who": "Developer",
+      "doneWhen": "The same load plan passes at 100% and 150% of the target (product page under 500 ms for 95% of requests, under 1% errors).",
+      "status": "Open",
+      "effort": "M",
+      "reference": "",
+      "tickets": [
+        "#11"
+      ]
+    },
+    {
+      "id": "PERF-02",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "Past its limit the site makes everyone wait instead of turning some people away politely",
+      "where": "`app/server.mjs:13` opens the database without a time limit for getting a connection; no request time limits; no \"busy\" answer (429 or 503) or waiting page. **Evidence:** At 200% of the target, 13,385 and 13,404 page requests were never sent because every simulated shopper was stuck waiting, with no 429 or 503 answers (`peak-traffic/run1`, `peak-traffic/run2`).",
+      "impact": "When more people arrive than it can serve, everyone waits longer (about 8 seconds at twice the target), and thousands of page loads are never served at all, instead of a clear \"you are in line\" page.",
+      "evidence": "At 200% of the target, 13,385 and 13,404 page requests were never sent because every simulated shopper was stuck waiting, with no 429 or 503 answers (`peak-traffic/run1`, `peak-traffic/run2`).",
+      "fix": "Set a time limit for getting a database connection and answer 503 with Retry-After when it runs out; put a virtual waiting room in front of the sale.",
+      "who": "Developer, with the hosting provider",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "M",
+      "reference": "",
+      "tickets": []
+    },
+    {
+      "id": "PERF-03",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "No limits on request size or waiting time",
+      "where": "`app/server.mjs:34-40` (bodies read with no size limit), `app/server.mjs:165-178` (no request, header or keep-alive time-outs set), `app/server.mjs:66-77` (page files read from disk on every request). **Evidence:** A 20 MB sign-in request was accepted with HTTP 200 (`evidence/probes-restarts.txt`, part H); the app's memory grew from 66 MB to 201 MB during one two-minute load run (`peak-traffic/run1/cpu.csv`). Semgrep `sync-io-in-request-handler` at lines 68, 72, 76.",
+      "impact": "A handful of very large requests can use up the server's memory, and the server is not tuned for whatever load balancer it will sit behind.",
+      "evidence": "A 20 MB sign-in request was accepted with HTTP 200 (`evidence/probes-restarts.txt`, part H); the app's memory grew from 66 MB to 201 MB during one two-minute load run (`peak-traffic/run1/cpu.csv`). Semgrep `sync-io-in-request-handler` at lines 68, 72, 76.",
+      "fix": "Limit request bodies (for example 10 kB, answer 413), set the server's request, header and keep-alive time-outs to fit the host's load balancer, and keep page files in memory or on a CDN.",
+      "who": "Developer",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "S",
+      "reference": "",
+      "tickets": []
+    },
+    {
+      "id": "OPS-01",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "title": "Nobody would notice problems: no health check, monitoring or alerts, and the logs hold customers' email addresses",
+      "where": "No health route (`GET /health` answers 404), no error tracking, metrics or alerts anywhere in the repository; `app/server.mjs:62` logs customer email addresses; `app/server.mjs:172` logs raw errors; no request id. **Evidence:** `GET /health` answered 404 (`evidence/probes-access.txt`, step 11); no monitoring or alerting code or configuration in the 15 files of commit `bb6c41e`.",
+      "impact": "During the sale, crashes, slow pages and payment failures would be discovered by customers, not by the team, and the logs would hold personal data.",
+      "evidence": "`GET /health` answered 404 (`evidence/probes-access.txt`, step 11); no monitoring or alerting code or configuration in the 15 files of commit `bb6c41e`.",
+      "fix": "Add a liveness check and a readiness check (database and payment provider), error tracking, dashboards for requests, errors and response times, and alerts that reach a named on-call person; write structured logs with a request id and no personal data.",
+      "who": "Developer, with the hosting provider",
+      "doneWhen": "A test alert reaches the on-call person, both health checks answer, and a log line from a purchase carries a request id and no email address.",
+      "status": "Open",
+      "effort": "M",
+      "reference": "OWASP A09:2025 Security Logging and Alerting Failures",
+      "tickets": []
+    },
+    {
+      "id": "OPS-02",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "title": "A deploy or restart cuts off purchases in progress",
+      "where": "`app/server.mjs` does not handle SIGTERM (no `server.close()`), and `run.mjs:35-37` passes SIGTERM straight on. **Evidence:** SIGTERM sent 1 second into a 3-second payment: the app exited at once (code 143), the shopper got no answer, the provider recorded the charge and no order existed (`evidence/probes-charged-no-order.txt`, part E).",
+      "impact": "Every deploy during the sale cuts off shoppers who are paying: they are charged, get no answer and have no order (see ARC-04).",
+      "evidence": "SIGTERM sent 1 second into a 3-second payment: the app exited at once (code 143), the shopper got no answer, the provider recorded the charge and no order existed (`evidence/probes-charged-no-order.txt`, part E).",
+      "fix": "On SIGTERM stop taking new requests, finish those in progress (allowing longer than the payment time limit), then exit; deploy one instance at a time behind a health check.",
+      "who": "Developer",
+      "doneWhen": "A restart under load drops no requests, and every provider charge has an order.",
+      "status": "Open",
+      "effort": "S",
+      "reference": "Twelve-Factor App, IX Disposability",
+      "tickets": []
+    },
+    {
+      "id": "OPS-03",
+      "severity": "High",
+      "confidence": "Confirmed",
+      "title": "No backups, rollback plan, runbook or launch-day plan",
+      "where": "The repository and the hand-over: no hosting chosen, no deploy or rollback configuration, no backups (the database lives in memory), no runbook. **Evidence:** The 15 files of commit `bb6c41e` and the README: none covers deploys, backups, rollback or incidents.",
+      "impact": "If anything goes wrong at midnight nobody knows what to do, and there is nothing to restore the orders from.",
+      "evidence": "The 15 files of commit `bb6c41e` and the README: none covers deploys, backups, rollback or incidents.",
+      "fix": "Choose hosting; turn on automatic backups and try a restore; tag releases and try a rollback on a staging copy; write a one-page launch and incident runbook (pause the sale, roll back, rotate a key, who to call) and rehearse it once.",
+      "who": "Developer, with the hosting provider and the product owner",
+      "doneWhen": "A restore log, a rollback log and a runbook rehearsal log from the staging copy exist.",
+      "status": "Open",
+      "effort": "M",
+      "reference": "",
+      "tickets": []
+    },
+    {
+      "id": "HAR-01",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "AI coding assistants get no project rules",
+      "where": "No `AGENTS.md`, `CLAUDE.md` or similar file at the root of the repository. **Evidence:** The repository's file list (commit `bb6c41e`). Assumed: AI assistants wrote or will change the code (see scope).",
+      "impact": "The next AI-written change will not know the business rules (stock, one per customer, the price comes from the server) or the lessons from the pilot, so the same bugs are likely to come back.",
+      "evidence": "The repository's file list (commit `bb6c41e`). Assumed: AI assistants wrote or will change the code (see scope).",
+      "fix": "Add an instruction file: how to run and test, the business rules, where money and secrets are handled, files never edited by hand, and one rule per recurring problem (see Quality history), each pointing at the test that enforces it.",
+      "who": "Developer",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "S",
+      "reference": "agents.md format",
+      "tickets": []
+    },
+    {
+      "id": "HAR-02",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "Delivered with a failing test suite and nothing that runs the tests on each change",
+      "where": "No CI configuration, linter, type checker, secret scan or dependency scan in the repository; the acceptance suite fails on the delivered commit. **Evidence:** `npx playwright test --repeat-each=3` on commit `bb6c41e`: 21 failed, 15 passed (`logs/acceptance-run.txt`, `acceptance/ACCEPTANCE.md`); no `.github/` or other CI files.",
+      "impact": "Changes reach the client without anyone running the tests; the failing suite shows the tests were not run before hand-over.",
+      "evidence": "`npx playwright test --repeat-each=3` on commit `bb6c41e`: 21 failed, 15 passed (`logs/acceptance-run.txt`, `acceptance/ACCEPTANCE.md`); no `.github/` or other CI files.",
+      "fix": "Add CI that runs the acceptance suite, the race test, the Semgrep rules, Gitleaks and OSV-Scanner on every change, and protect the main branch; add a linter and type checks.",
+      "who": "Developer",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "M",
+      "reference": "",
+      "tickets": []
+    },
+    {
+      "id": "HAR-03",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "The tests miss failure paths and things that should disappear",
+      "where": "`acceptance/tests/flash-sale.spec.mjs`: no test sends a malformed request, restarts the app, calls the admin routes without credentials, or buys twice as the same customer in separate visits; AC-02 and AC-10 do not check that the sign-in box disappears; AC-07 has no test in the repository. **Evidence:** AC-02 passed in all three runs while its own screenshot shows the sign-in box still on screen (`evidence/acceptance/AC-02-test-finished-1.png`).",
+      "impact": "The crash, lost-orders and sign-in-box problems from the pilot would pass the suite again.",
+      "evidence": "AC-02 passed in all three runs while its own screenshot shows the sign-in box still on screen (`evidence/acceptance/AC-02-test-finished-1.png`).",
+      "fix": "Add tests: a malformed body and a bad Host answer 400 and the site keeps answering; orders survive a restart; admin routes refuse anonymous callers; a second purchase by the same customer is refused; the sign-in form is hidden after sign-in; commit the race test with the traffic brief.",
+      "who": "Developer",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "M",
+      "reference": "",
+      "tickets": []
+    },
+    {
+      "id": "HIS-01",
+      "severity": "Medium",
+      "confidence": "Confirmed",
+      "title": "Tickets were closed without a fix, and the problems came back",
+      "where": "Issue tracker export `handover/issues.json`: #1 closed \"could not reproduce by clicking once\", #5 closed \"restarted, working again\", #13 closed \"works for me\"; #2, #6 and #14 report the same problems again. Open tickets have no severity, owner or due date.. **Evidence:** `handover/issues.json`; `history/history.md`. **Tickets:** #1, #5, #13.",
+      "impact": "Known bugs reach customers because a ticket is closed when the symptom goes away, not when the cause is fixed and tested.",
+      "evidence": "`handover/issues.json`; `history/history.md`.",
+      "fix": "Close a bug only with a fix that adds a test which fails without it; give every open ticket a severity, an owner and a due date; review the recurring kinds of problem before each release.",
+      "who": "Product owner, with the developer",
+      "when": "Before delivery",
+      "status": "Open",
+      "effort": "S",
+      "reference": "Google SRE: postmortem culture",
+      "tickets": [
+        "#1",
+        "#5",
+        "#13"
+      ]
+    },
+    {
+      "id": "HIS-02",
+      "severity": "Low",
+      "confidence": "Confirmed",
+      "title": "The sign-in box stays on screen after signing in",
+      "where": "`shared/public/style.css:6` (`form { display: flex }` overrides the `hidden` attribute that `shared/public/app.js:67` sets on the sign-in form). **Evidence:** AC-02 screenshot (`evidence/acceptance/AC-02-test-finished-1.png`). **Tickets:** #13, #14.",
+      "impact": "Shoppers see the sign-in box next to \"Signed in as …\" and may think signing in failed (reported twice, on a computer and on an Android phone).",
+      "evidence": "AC-02 screenshot (`evidence/acceptance/AC-02-test-finished-1.png`).",
+      "fix": "Add `[hidden] { display: none !important; }` to the stylesheet and a test that the form is hidden after sign-in.",
+      "who": "Developer",
+      "when": "After launch is acceptable",
+      "status": "Open",
+      "effort": "S",
+      "reference": "",
+      "tickets": [
+        "#13",
+        "#14"
+      ]
+    }
+  ],
+  "worksheet": [
+    {
+      "id": "R-01",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Low",
+      "evidence": "README.md says what is sold, how many, the price, the one-per-customer limit and the expected crowd, but not the product's status (prototype, beta, live) or which user journeys matter most.",
+      "fix": "Add the status and the main journeys (sign in, buy one pair, see sold out) to the README.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "R-02",
+      "result": "meets",
+      "grade": "A",
+      "evidence": "A clean clone started with `node run.mjs app` and answered on the first try, in under a minute; `npm ci` in `acceptance/` worked (`evidence/clean-checkout-run.txt`).",
+      "note": "`npx playwright install chromium` was not run: the browsers for Playwright 1.56.1 were already installed and downloads were not allowed here."
+    },
+    {
+      "id": "R-03",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "No `review/review-pack.json` or `review/index.html` was handed in and the README links to no review page. The pack in `launch-review/` was built by the reviewer.",
+      "fix": "The author runs the `prepare-review` skill and hands in the pack and page with the next submission.",
+      "owner": "Architect (author)",
+      "due": "Before delivery"
+    },
+    {
+      "id": "R-04",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "ARC-10",
+      "evidence": "The README points to \"the top of `app/server.mjs`\", which reads 2 settings; `run.mjs` sets 6 more the app never reads; the payment key is written in the code; `DB_POOL_SIZE` and the simulator settings are undocumented (search of `process.env`).",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "R-05",
+      "result": "does-not-meet",
+      "grade": "A",
+      "severity": "Low",
+      "evidence": "Any email address signs in (used by the reviewer) and payments and email are simulators (README). The only way to reset test data is the open `POST /api/admin/reset`, which the README does not mention (it is in `peak-brief.json`).",
+      "fix": "Document test accounts and a reset command that is not reachable in production.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "R-06",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "There is no staging copy (owner's statement); nothing in the repository describes one.",
+      "fix": "Set up a staging copy with its own database and test-mode keys, on the same hosting as production, before the re-inspection.",
+      "owner": "Developer, with the hosting provider",
+      "due": "Before delivery"
+    },
+    {
+      "id": "R-07",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "Traffic and response-time numbers exist in `peak-brief.json`; acceptable data loss, recovery time and the sale date are not written down, and no named person or date of agreement is recorded.",
+      "fix": "Write the missing requirements with numbers and record who agreed them and when.",
+      "owner": "Product owner",
+      "due": "Before delivery"
+    },
+    {
+      "id": "R-08",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Low",
+      "evidence": "The issue export (`handover/issues.json`, not committed) was handed over, but the README declares no known problems, limits or out-of-scope items, and the open tickets have no severity or owner.",
+      "fix": "Add a known-problems register (severity, owner, date) and an out-of-scope list to the hand-in.",
+      "owner": "Architect (author)",
+      "due": "Before delivery"
+    },
+    {
+      "id": "R-09",
+      "result": "meets",
+      "grade": "B",
+      "evidence": "README states Node.js 22.13 or later; `acceptance/package-lock.json` is committed with exact versions (`@playwright/test` 1.56.1, `@axe-core/playwright` 4.10.2); the app itself has no packages."
+    },
+    {
+      "id": "H-01",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HAR-01",
+      "evidence": "No `AGENTS.md`, `CLAUDE.md` or equivalent in the repository.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-02",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HAR-01",
+      "evidence": "There is no instruction file whose commands could be checked. (The README commands were run and work; see R-02.)",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-03",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HAR-01",
+      "evidence": "No file tells agents the rules that must never be broken (stock, one per customer, server-side price, never delete orders at start-up).",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-04",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HAR-01",
+      "evidence": "None of the recurring problems from the pilot is recorded as a rule for agents.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-05",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HAR-01",
+      "evidence": "No instruction file exists to be lean and safe.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-06",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HAR-03",
+      "evidence": "Every Must criterion except AC-07 has a test in `acceptance/tests/flash-sale.spec.mjs`; AC-07 (never oversell) relies on a race test that is not in the repository. Rules without a test: one per customer across separate purchases, orders survive a restart, admin routes closed.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-07",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HAR-03",
+      "evidence": "Most tests count orders, amounts and charges (good), but none checks what should disappear: AC-02 passed while the sign-in box stayed on screen (`evidence/acceptance/AC-02-test-finished-1.png`).",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-08",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HAR-03",
+      "evidence": "Tests cover tampering (AC-03), another user's data (AC-06), double submission (AC-04), a stuck provider (AC-08) and a missing address (AC-11); none covers malformed requests, restarts or admin access.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-09",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "HAR-02",
+      "evidence": "Three runs with retries off: the same 7 tests failed in every run (21 failures, 15 passes, no flaky results) (`logs/acceptance-run.txt`).",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-10",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HAR-02",
+      "evidence": "No CI configuration in the repository; the delivered commit fails its own tests.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-11",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "HAR-02",
+      "evidence": "No linter, formatter or type checker is configured (no ESLint, Prettier or TypeScript configuration, no `check` script).",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-12",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HAR-02",
+      "evidence": "No secret scanning or dependency scanning in CI or in commit hooks.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "H-13",
+      "result": "cannot-verify",
+      "needed": "The pull-request history with reviews from the code host. The repository holds a single commit by \"Shop team\" with no merge commits, which suggests no review step, but reviews would live on the code host, which was not shared."
+    },
+    {
+      "id": "A-01",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "No system map was handed in; the README names no routes. The reviewer's map (`01-system-map.md`) found an unused public search route and two open admin routes nobody had listed.",
+      "fix": "Keep the entry-point table from `01-system-map.md` in the hand-in and update it with every new route.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "A-02",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "Business rules are split between the browser and nowhere: the price comes from the page (`shared/public/app.js:121`), the opening time and the 10-character address check exist only in the page (`app.js:44-60`, `:114`), one per customer exists only as text.",
+      "fix": "Move every business rule to the server, in one place in the purchase flow; the page only displays what the server decides.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "A-03",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "No decision records: why an in-memory database, which hosting, which payment provider, where state is kept.",
+      "fix": "Write a short record for each major decision with the reason, the alternatives and the downsides.",
+      "owner": "Architect (author)",
+      "due": "Before delivery"
+    },
+    {
+      "id": "A-04",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-07",
+      "evidence": "The payment call has no time limit, no retry rule and no defined outcome on time-out (30 s wait, then 500; `evidence/probes-charged-no-order.txt`, part G)."
+    },
+    {
+      "id": "A-05",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "ARC-11",
+      "evidence": "The confirmation email is awaited inside the purchase request (`app/server.mjs:116`).",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "A-06",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "ARC-05",
+      "evidence": "Stock, orders and everything else live in the memory of one process; a second server would have its own stock. No one-server limit is written down or accepted."
+    },
+    {
+      "id": "A-07",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "SEC-05",
+      "evidence": "There is one environment; the same payment key, written in the code, would be used everywhere."
+    },
+    {
+      "id": "A-08",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-10",
+      "evidence": "Started with a wrong payment address and no secrets: the server started and failed only at the first purchase (`evidence/probes-restarts.txt`, part I).",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "A-09",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-08",
+      "evidence": "The opening time is not a setting at all; price and stock are constants in `shared/seed-data.mjs`, and stock can be changed by anyone through the open reset route. Tried: `POST /api/admin/sale` answers 404."
+    },
+    {
+      "id": "A-10",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "ARC-05",
+      "evidence": "Tables are created and all data deleted at every start (`app/server.mjs:14-27`); no migrations."
+    },
+    {
+      "id": "A-11",
+      "result": "meets",
+      "grade": "B",
+      "evidence": "The app has no packages. The test packages `@playwright/test` 1.56.1 (Microsoft) and `@axe-core/playwright` 4.10.2 (Deque) exist in the npm registry under those names and are needed by the acceptance suite (checked with `npm view`)."
+    },
+    {
+      "id": "A-12",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "The payment and email providers are not chosen, so their rate limits and costs are unknown; the brief's purchase target is 150 purchases per second at the peak.",
+      "fix": "Once the providers are chosen, compare their documented limits (test and live mode) with the target and ask for a temporary increase if needed.",
+      "owner": "Product owner, with the developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "D-01",
+      "result": "meets",
+      "grade": "B",
+      "evidence": "The rules are written in plain words in the README (100 pairs, one per customer, $49.99, opens at midnight) and as numbered acceptance criteria (`acceptance/criteria.md` AC-03, AC-04, AC-06, AC-07, AC-11, AC-12)."
+    },
+    {
+      "id": "D-02",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-01",
+      "evidence": "Stock and one-per-customer are enforced by a check followed by a separate write, or not at all; no database constraint. Race test: 1,957 orders for 100 pairs. See also ARC-02."
+    },
+    {
+      "id": "D-03",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-03",
+      "evidence": "A tampered price of 1 cent was charged (`evidence/probes-access.txt`, step 3)."
+    },
+    {
+      "id": "D-04",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Low",
+      "evidence": "Amounts are whole cents (`price_cents`, `amount_cents` INTEGER), but no currency is stored or stated and there are no rounding rules.",
+      "fix": "Store the currency with every amount (USD) and state it in the business rules.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "D-05",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-02",
+      "evidence": "A double submit created two orders and two charges (`evidence/probes-access.txt`, step 6; AC-04)."
+    },
+    {
+      "id": "D-06",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-04",
+      "evidence": "Interrupted between charge and record, the purchase left a charge with no order (`evidence/probes-charged-no-order.txt`, parts D and E)."
+    },
+    {
+      "id": "D-07",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-07",
+      "evidence": "A payment time-out becomes a 500 error after 30 s; nothing settles it later (`evidence/probes-charged-no-order.txt`, part G; AC-08)."
+    },
+    {
+      "id": "D-08",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-06",
+      "evidence": "A malformed body crashed the server instead of getting a 400; a missing address was accepted (ARC-09)."
+    },
+    {
+      "id": "D-09",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "ARC-08",
+      "evidence": "Order times are stored in UTC (`datetime('now')`), but the business time that matters, \"midnight\", has no date, time zone or setting anywhere on the server."
+    },
+    {
+      "id": "D-10",
+      "result": "does-not-meet",
+      "grade": "A",
+      "severity": "Medium",
+      "evidence": "After the reviewer reset the sale through the admin route, nothing recorded who did it or what was deleted (`evidence/probes-access.txt`, step 10); stock changes are not recorded either.",
+      "fix": "Record every change to stock, orders and sale settings (who, what, when) in an audit table that the app never deletes.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "D-11",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "Emails and addresses are kept with no stated purpose, retention period or deletion path.",
+      "fix": "State what personal data is kept, why and for how long, and add a way to delete a customer's data on request.",
+      "owner": "Product owner, with the developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "D-12",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-04",
+      "evidence": "No routine compares the provider's charges with orders. Run by hand after the load test: the provider and the app agreed on 2,939 charges, but for 100 pairs (`peak-traffic/run1/stats-after.txt`)."
+    },
+    {
+      "id": "D-13",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "ARC-12",
+      "evidence": "Only the local payment simulator is called; no real provider, test-mode records or refunds."
+    },
+    {
+      "id": "S-01",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "SEC-05",
+      "evidence": "Gitleaks found a key in `app/server.mjs:10` in the files and in the history; the page's JavaScript (`shared/public/app.js`) holds no key."
+    },
+    {
+      "id": "S-02",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "SEC-01",
+      "evidence": "A logged-out visitor read Alice's order; a hand-made token read her order list (`evidence/probes-access.txt`, steps 1 and 2; AC-06 failed in all three runs). See also SEC-02."
+    },
+    {
+      "id": "S-03",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "SEC-03",
+      "evidence": "Reset and stats answered without any credentials (`evidence/probes-access.txt`, steps 7 and 10)."
+    },
+    {
+      "id": "S-05",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "SEC-04",
+      "evidence": "SQL injection through `/api/search` returned every order (`evidence/probes-access.txt`, step 8). The other queries use parameters; lines 23-25 build SQL from fixed seed values, not visitor input."
+    },
+    {
+      "id": "S-06",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "SEC-02",
+      "evidence": "Sign-in accepts any email with no proof; the token is unsigned and never expires (`evidence/probes-access.txt`, step 2)."
+    },
+    {
+      "id": "S-07",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "SEC-08",
+      "evidence": "60 sign-ins in a row all answered 200; no limit on purchases (`evidence/probes-access.txt`, step 12)."
+    },
+    {
+      "id": "S-08",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "SEC-07",
+      "evidence": "Header check on the local copy: CSP, nosniff and frame protection missing, CORS `*` on the API (`scans/headers.json`, `scans/headers-api.json`). HTTPS could not be checked: no hosting exists yet.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "S-09",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "SEC-06",
+      "evidence": "A bad token and a stuck payment each returned a stack trace with file paths (`evidence/probes-access.txt`, step 9).",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "S-10",
+      "result": "meets",
+      "grade": "A",
+      "evidence": "OSV-Scanner 2.2.3 checked `acceptance/package-lock.json` (7 packages): no known vulnerabilities (`scans/osv.json`, `scans/osv-console.txt`); the app itself has no packages."
+    },
+    {
+      "id": "S-14",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "OPS-01",
+      "severity": "Medium",
+      "evidence": "The server logs every buyer's email address (`app/server.mjs:62`) and full errors; personal data is also exposed through SEC-01, SEC-02 and SEC-04.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "S-15",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "Nothing in the hand-over shows an independent penetration test done or booked, which tier 3 requires.",
+      "fix": "Book an independent penetration test for after the blockers are fixed and before the sale.",
+      "owner": "Product owner",
+      "due": "Before delivery"
+    },
+    {
+      "id": "P-01",
+      "result": "meets",
+      "grade": "B",
+      "evidence": "The owner's brief (`peak-brief.json`) works the target out from business numbers: 3,000 visitors in 60 s, peak factor 3, so 450 product-page views and 150 purchases per second, with 500 ms and 1,500 ms budgets (`peak-traffic/plan.txt`).",
+      "note": "The brief records no name or date of agreement; see R-07."
+    },
+    {
+      "id": "P-02",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "PERF-01",
+      "evidence": "Stepped load test to 200% of the target on a local copy: fails from the first step (50%); per-step results in `peak-traffic/run1/load-summary.md`."
+    },
+    {
+      "id": "P-03",
+      "result": "meets",
+      "grade": "A",
+      "evidence": "The reviewer ran the full plan twice and kept both runs, both failures (`peak-traffic/run1/`, `peak-traffic/run2/`), and the race test twice (`peak-traffic/oversell1/`, `peak-traffic/oversell2/`).",
+      "note": "The author handed in no load-test results."
+    },
+    {
+      "id": "P-04",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-01",
+      "evidence": "Race test: 1,957 orders for 100 pairs and 957 buyers charged twice (`peak-traffic/oversell1/oversell-summary.md`)."
+    },
+    {
+      "id": "P-05",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-07",
+      "evidence": "With 3 to 10 s payments every click was charged (400 charges, 200 buyers charged twice); with a stuck provider the shopper waited 30 s for an error (`peak-traffic/slow-partner/`, `evidence/probes-charged-no-order.txt`)."
+    },
+    {
+      "id": "P-06",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "PERF-01",
+      "evidence": "14 queries per product-page view (one per review author), no cache (`app/server.mjs:85-94`)."
+    },
+    {
+      "id": "P-07",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "PERF-03",
+      "evidence": "No body size limit (20 MB accepted), no request time-outs, no time limit on getting a database connection.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "P-08",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "PERF-02",
+      "evidence": "At 150% and 200% of the target the site slowed everyone down (95th percentile up to 8.14 s) and never answered 429 or 503.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "P-09",
+      "result": "meets",
+      "grade": "A",
+      "evidence": "Lighthouse 12.8.2, mobile, simulated throttling, on the local copy: performance score 98, Largest Contentful Paint 1.6 s, Cumulative Layout Shift 0.085, Total Blocking Time 0 ms (`scans/lighthouse/main.report.html`).",
+      "note": "Laboratory measurement on the reviewer's machine, without load; real hosting and real phones under load may differ."
+    },
+    {
+      "id": "P-10",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "No capacity plan: nothing says what to scale first, how fast, or what the peak costs.",
+      "fix": "Write a one-page capacity plan once hosting is chosen: what to scale first (database connections, app instances), how quickly, and the cost of the peak.",
+      "owner": "Developer, with the hosting provider",
+      "due": "Before delivery"
+    },
+    {
+      "id": "O-01",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "OPS-01",
+      "evidence": "`GET /health` answers 404; there is no readiness check (`evidence/probes-access.txt`, step 11)."
+    },
+    {
+      "id": "O-02",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "OPS-02",
+      "evidence": "SIGTERM in the middle of a payment dropped the request and lost the order (`evidence/probes-charged-no-order.txt`, part E)."
+    },
+    {
+      "id": "O-03",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "ARC-05",
+      "evidence": "The database lives in memory: there is nothing to back up, and a restart deletes everything."
+    },
+    {
+      "id": "O-04",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "OPS-03",
+      "evidence": "No release tags, deploy configuration or rollback procedure in the hand-over; no rollback has been tried."
+    },
+    {
+      "id": "O-05",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "OPS-01",
+      "evidence": "No error tracking, metrics or alerts in the repository."
+    },
+    {
+      "id": "O-06",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "OPS-01",
+      "severity": "Medium",
+      "evidence": "Logs are plain text without a request id and contain customers' email addresses (`app/server.mjs:62`) and full error stacks.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "O-07",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "OPS-03",
+      "evidence": "No launch or incident runbook in the hand-over."
+    },
+    {
+      "id": "O-08",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "ARC-08",
+      "evidence": "There is no pause switch; the pause route the tests use does not exist (AC-13 failed in all three runs)."
+    },
+    {
+      "id": "O-09",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "PERF-03",
+      "evidence": "Node defaults are used (keep-alive 5 s, no body limit); no load balancer or hosting exists to fit them to.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "O-10",
+      "result": "cannot-verify",
+      "needed": "The on-call rota, escalation contacts and the way customers will be told about problems during the sale, from the product owner."
+    },
+    {
+      "id": "Q-01",
+      "result": "meets",
+      "grade": "B",
+      "evidence": "`history/history.md`: git history (1 commit) and the issue export (16 tickets from the pilot sale of 16 and 17 October 2026) were collected; sources listed under Quality history.",
+      "note": "An earlier launch review is mentioned in `acceptance/criteria.md` but was not handed over (see Sources of evidence)."
+    },
+    {
+      "id": "Q-02",
+      "result": "meets",
+      "grade": "B",
+      "evidence": "Every one of the 16 tickets was read and grouped by cause into the recurring problems under Quality history; the keyword grouping in `history/history.md` was corrected by hand (it put double charges under \"Screens\" and left out tickets #8, #11, #13, #14 and #16)."
+    },
+    {
+      "id": "Q-03",
+      "result": "meets",
+      "grade": "B",
+      "evidence": "Each recurring problem has a root cause found by reading the code behind it and, for most, reproducing it (`evidence/probes-*.txt`, `peak-traffic/`). There were no fix commits to read: the history is one commit."
+    },
+    {
+      "id": "Q-04",
+      "result": "does-not-meet",
+      "grade": "A",
+      "finding": "HAR-02",
+      "evidence": "Controls that would catch several classes exist but do not run on change: AC-03, AC-04, AC-06 and AC-08 fail on this commit (they catch the problem), and the kit's Semgrep rule `json-parse-in-stream-callback` fired on the crash; nothing runs them automatically, and no control exists for lost orders or the sign-in box.",
+      "owner": "Developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "Q-05",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HIS-01",
+      "evidence": "No bug fix exists in the history; three tickets were closed without a code change or test, and each problem came back.",
+      "owner": "Product owner, with the developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "Q-06",
+      "result": "meets",
+      "grade": "B",
+      "evidence": "`app/server.mjs`, behind most tickets, was read in full and every route was probed (`evidence/probes-access.txt`, `evidence/probes-restarts.txt`); the purchase handler (`POST /api/buy`) is the main hotspot and needs the restructuring described in ARC-01 to ARC-04."
+    },
+    {
+      "id": "Q-07",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HIS-01",
+      "severity": "Medium",
+      "evidence": "Open tickets in `handover/issues.json` have labels but no severity, owner or due date; the reviewer's register under Quality history fills in severity but has no owners or dates.",
+      "owner": "Product owner",
+      "due": "Before delivery"
+    },
+    {
+      "id": "Q-08",
+      "result": "does-not-meet",
+      "grade": "B",
+      "finding": "HIS-01",
+      "evidence": "No reverts. Three problems came back after their tickets were closed without explanation of the cause (#1 then #2, #5 then #6, #13 then #14).",
+      "owner": "Product owner, with the developer",
+      "due": "Before delivery"
+    },
+    {
+      "id": "Q-09",
+      "result": "cannot-verify",
+      "needed": "A previous review's counts per kind of problem. This is the first inspection handed over; its counts per class (Quality history) are the baseline for the next one."
+    },
+    {
+      "id": "U-01",
+      "result": "does-not-meet",
+      "grade": "B",
+      "severity": "Medium",
+      "evidence": "`acceptance/criteria.md` is numbered and versioned (1.1) and says v1.0 was agreed with the product owner, but names no one and gives no date, and says the v1.1 changes still need the owner's approval.",
+      "fix": "Record who approved v1.0 and v1.1 and when, in the criteria file.",
+      "owner": "Product owner",
+      "due": "Before delivery"
+    },
+    {
+      "id": "U-02",
+      "result": "does-not-meet",
+      "grade": "A",
+      "severity": "Critical",
+      "evidence": "Three runs with retries off: AC-03, AC-04, AC-06, AC-08, AC-11 and AC-12 failed every time; AC-07 failed in the race test (`acceptance/ACCEPTANCE.md`, `peak-traffic/oversell1/`).",
+      "fix": "Fix the blockers, then run the acceptance suite three times and the race test again; every Must criterion must pass."
+    },
+    {
+      "id": "U-03",
+      "result": "meets",
+      "grade": "A",
+      "evidence": "Every browser test saved a screenshot and every API test saved its request and answer; copies are in `evidence/acceptance/` and linked from each acceptance result."
+    },
+    {
+      "id": "U-04",
+      "result": "cannot-verify",
+      "needed": "A reading test with the owner: the reviewer wrote this report and cannot judge its readability alone."
+    },
+    {
+      "id": "U-05",
+      "result": "cannot-verify",
+      "needed": "A reading test with the owner: the reviewer wrote this report and cannot judge its readability alone."
+    },
+    {
+      "id": "U-06",
+      "result": "meets",
+      "grade": "B",
+      "evidence": "On the review page each checklist result and each finding card names its evidence file (probes, scans, load summaries, screenshots), and the Not checked list names what was not looked at.",
+      "note": "REPORT.md lists the open problems without their evidence; it points to the review page, which carries it."
+    },
+    {
+      "id": "U-07",
+      "result": "meets",
+      "grade": "B",
+      "evidence": "The record gives the commit (`bb6c41e`), the date, the reviewer and every tool with its version (How the inspection was done)."
+    },
+    {
+      "id": "U-08",
+      "result": "meets",
+      "grade": "A",
+      "evidence": "axe-core (WCAG 2.1 A and AA rules) on the sale page: no serious or critical violations in three runs (AC-09, `evidence/acceptance/AC-09-test-finished-1.png`).",
+      "note": "Only the one page exists; the signed-in state was not scanned separately."
+    }
+  ],
+  "notChecked": [
+    "Production-like hosting, HTTPS, a real database and more than one app instance: none exists yet, so every measurement comes from a local copy with simulated database delay.",
+    "The real payment and email providers (not chosen): their limits, declines, card checks, refunds and notifications.",
+    "A one-hour run at normal traffic.",
+    "Backups, monitoring, alerting and on-call arrangements, which do not exist yet or were not shared.",
+    "Pull-request reviews on the code host, and the earlier launch review mentioned in `acceptance/criteria.md` (neither shared).",
+    "Legal and privacy obligations (privacy notice, consent, data retention): flagged, not assessed.",
+    "Accessibility of the signed-in state and of error messages (the axe check ran on the sale page as first loaded).",
+    "Whether the issue export is complete: only the 16 tickets in `handover/issues.json` were seen."
+  ],
+  "glossary": [
+    {
+      "term": "race test",
+      "meaning": "Many simulated shoppers press Buy at the same instant, to see whether the shop sells more than it has or charges anyone twice."
+    },
+    {
+      "term": "load test",
+      "meaning": "Simulated visitors arriving at a set rate, stepped up to and beyond the expected crowd, to measure how fast the site answers."
+    },
+    {
+      "term": "95th percentile",
+      "meaning": "95% of requests were faster than this time."
+    },
+    {
+      "term": "idempotency key",
+      "meaning": "A unique code sent with a payment so that if the same request arrives twice, the provider charges only once."
+    },
+    {
+      "term": "SQL injection",
+      "meaning": "Typing database commands into a form or address so the server runs them."
+    },
+    {
+      "term": "token",
+      "meaning": "The proof of sign-in the browser sends with each request. Here it is just the email address, so anyone can make one."
+    },
+    {
+      "term": "staging copy",
+      "meaning": "A separate copy of the shop, set up like the real one, for testing without risk."
+    },
+    {
+      "term": "CI",
+      "meaning": "Continuous integration: a service that runs the tests and checks automatically on every change."
+    },
+    {
+      "term": "rate limit",
+      "meaning": "A cap on how many requests one person or address may make in a short time."
+    },
+    {
+      "term": "waiting room",
+      "meaning": "A queue page that lets visitors into the sale a few at a time when too many arrive."
+    },
+    {
+      "term": "reconciliation",
+      "meaning": "Comparing the payment provider's charges with the shop's orders and flagging any difference."
+    },
+    {
+      "term": "graceful shutdown",
+      "meaning": "When the server is told to stop, it finishes the requests in progress before exiting."
+    },
+    {
+      "term": "health check",
+      "meaning": "An address the hosting platform calls to see whether the app is running and can reach what it needs."
+    },
+    {
+      "term": "Semgrep",
+      "meaning": "A tool that searches code for risky patterns."
+    },
+    {
+      "term": "Gitleaks",
+      "meaning": "A tool that searches code and its history for passwords and keys."
+    },
+    {
+      "term": "k6",
+      "meaning": "The tool used to run the load and race tests."
+    },
+    {
+      "term": "Lighthouse",
+      "meaning": "A Google tool that measures how fast a page loads on a simulated phone."
+    },
+    {
+      "term": "axe",
+      "meaning": "A tool that checks a page for accessibility problems."
+    },
+    {
+      "term": "SIGTERM",
+      "meaning": "The signal a hosting platform sends to tell the app to stop, for example during a deploy."
+    },
+    {
+      "term": "CORS",
+      "meaning": "A browser rule about which other websites may call the shop's server from a visitor's browser."
+    }
+  ],
+  "method": {
+    "sources": [
+      {
+        "source": "code",
+        "used": true,
+        "detail": "All 15 files of commit `bb6c41e` (branch main), read in full; `app/server.mjs` line by line."
+      },
+      {
+        "source": "history",
+        "used": true,
+        "detail": "Git history: 1 commit (27 October 2026), no fix commits or reverts (`history/history.md`)."
+      },
+      {
+        "source": "issues",
+        "used": true,
+        "detail": "`handover/issues.json`: 16 tickets from the pilot sale, 16 to 17 October 2026 (13 open, 3 closed), each read and grouped by cause."
+      },
+      {
+        "source": "user-reports",
+        "used": true,
+        "detail": "The tickets are reports by staff testers in the pilot sale; there are no reports from real customers or support, as the shop has not launched."
+      },
+      {
+        "source": "earlier-reviews",
+        "used": false,
+        "detail": "`acceptance/criteria.md` says version 1.1 \"follows the first launch review\", but that review and any incident notes were not handed over."
+      },
+      {
+        "source": "project-tests",
+        "used": true,
+        "detail": "The acceptance suite (Playwright 1.56.1), run three times per test with retries off on 28 October 2026 (`logs/acceptance-run.txt`, `acceptance/ACCEPTANCE.md`)."
+      },
+      {
+        "source": "running-app",
+        "used": true,
+        "detail": "Local copies started with `node run.mjs app` (and from a clean clone); every route probed with curl, including crashes, restarts and a slow provider (`evidence/probes-*.txt`)."
+      },
+      {
+        "source": "measurements",
+        "used": true,
+        "detail": "Two staged load tests, two race tests and one slow-partner race test with k6 v1.3.0 against the owner's brief, and Lighthouse 12.8.2 on the sale page (`peak-traffic/`, `scans/lighthouse/`)."
+      },
+      {
+        "source": "scans",
+        "used": true,
+        "detail": "Gitleaks 8.28.0 (files and history), OSV-Scanner 2.2.3, Semgrep 1.181.0 with the kit's own rules, the data-access-rules check, and the header check on the local copy (`scans/coverage.md`). Trivy not installed (no Docker or infrastructure files to scan)."
+      },
+      {
+        "source": "people",
+        "used": false,
+        "detail": "Nobody was available to answer questions. The owner's brief (`peak-brief.json`) and the architect's instructions (no staging copy; load and race tests allowed on a local copy only; payments and email are simulators) were used, and every other answer is marked as an assumption in `00-scope.md`."
+      }
+    ],
+    "skills": [
+      {
+        "name": "launch-review (this inspection)",
+        "how": "Scope, system map, scanners (`run-scanners.sh`), quality history (`history-scan.mjs --issues`), the five lenses, verification, gates and this report (`review-pack.mjs`)."
+      },
+      {
+        "name": "peak-traffic-test",
+        "how": "Turned the owner's brief into a load plan (`capacity.mjs`), ran the smoke test, two staged load tests (`k6/load.js`), two race tests and a slow-partner race test (`k6/oversell.js`)."
+      },
+      {
+        "name": "acceptance-test",
+        "how": "Re-ran the project's acceptance suite three times and generated the pass/fail report (`ac-report.mjs`)."
+      },
+      {
+        "name": "k6 v1.3.0",
+        "how": "Load and race tests."
+      },
+      {
+        "name": "Playwright 1.56.1 with axe-core (@axe-core/playwright 4.10.2)",
+        "how": "The project's acceptance tests and accessibility check."
+      },
+      {
+        "name": "Lighthouse 12.8.2",
+        "how": "Mobile page speed of the sale page (run with npx and the installed Chromium)."
+      },
+      {
+        "name": "Gitleaks 8.28.0, OSV-Scanner 2.2.3, Semgrep 1.181.0",
+        "how": "Secrets in files and history, vulnerable dependencies, risky code patterns (the kit's own rules only)."
+      },
+      {
+        "name": "curl and bash scripts",
+        "how": "Access, crash, restart and slow-partner reproductions on local copies (`evidence/probes-*.txt`)."
+      }
+    ]
+  },
+  "scans": {
+    "output": "scans",
+    "triage": [
+      {
+        "tool": "semgrep",
+        "rule": "sql-built-from-strings-js",
+        "where": "app/server.mjs:98 (reported); :23, :24, :25 build SQL from fixed seed values, not visitor input",
+        "outcome": "reported",
+        "ref": "SEC-04"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "cors-wildcard",
+        "where": "app/server.mjs:30",
+        "outcome": "reported",
+        "ref": "SEC-07"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "json-parse-in-stream-callback",
+        "where": "app/server.mjs:38",
+        "outcome": "reported",
+        "ref": "ARC-06"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "unverified-token-decode",
+        "where": "app/server.mjs:46",
+        "outcome": "reported",
+        "ref": "SEC-02"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "fetch-without-timeout",
+        "where": "app/server.mjs:50, :135, :142",
+        "outcome": "reported",
+        "ref": "ARC-07"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "sync-io-in-request-handler",
+        "where": "app/server.mjs:68, :72, :76",
+        "outcome": "reported",
+        "ref": "PERF-03"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "db-query-in-loop-js",
+        "where": "app/server.mjs:90",
+        "outcome": "reported",
+        "ref": "PERF-01"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "price-from-client",
+        "where": "app/server.mjs:105",
+        "outcome": "reported",
+        "ref": "ARC-03"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "stock-lost-update-sql",
+        "where": "app/server.mjs:111",
+        "outcome": "reported",
+        "ref": "ARC-01"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "email-in-request-path",
+        "where": "app/server.mjs:116",
+        "outcome": "reported",
+        "ref": "ARC-11"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "admin-route-inventory",
+        "where": "app/server.mjs:132, :139 (reported); shared/fake-payment-provider.mjs:55 is the simulator's test control, not part of the shop",
+        "outcome": "reported",
+        "ref": "SEC-03"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "url-parse-outside-try",
+        "where": "app/server.mjs:166",
+        "outcome": "reported",
+        "ref": "ARC-06"
+      },
+      {
+        "tool": "semgrep",
+        "rule": "stack-trace-to-client",
+        "where": "app/server.mjs:174",
+        "outcome": "reported",
+        "ref": "SEC-06"
+      },
+      {
+        "tool": "gitleaks",
+        "rule": "generic-api-key",
+        "where": "app/server.mjs:10 (files and history)",
+        "outcome": "reported",
+        "ref": "SEC-05"
+      }
+    ]
+  }
+}

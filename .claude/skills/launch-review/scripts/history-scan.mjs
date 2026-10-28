@@ -24,13 +24,14 @@ export const AI_TRAILER = /co-authored-by:.*\b(claude|copilot|cursor|codex|gemin
 // Problem classes, in the order they are reported. A defect can fall into several.
 export const CLASSES = [
   { key: 'input', name: 'Bad input and crashes', re: /\b(crash\w*|malformed|invalid|validat\w*|pars(e|es|ed|ing|er)|null|undefined|nan|exception|unhandled|500|bad request|sanitis\w*|sanitiz\w*|encoding|escap\w*)\b/i },
-  { key: 'concurrency', name: 'Concurrency, duplicates and double actions', re: /\b(race|concurren\w*|double|duplicat\w*|idempoten\w*|oversell\w*|oversold|deadlock|lock(s|ing)?|atomic\w*|twice|in parallel|simultaneous)\b/i },
-  { key: 'external', name: 'Outside services, time-outs and retries', re: /\b(time-?outs?|timed out|hang(s|ing)?|slow (payment|provider|api|response)|provider|webhooks?|third[- ]party|upstream|retr(y|ies|ied)|backoff|network|unreachable)\b/i },
+  { key: 'concurrency', name: 'Concurrency, duplicates and double actions', re: /\b(race|concurren\w*|double|duplicat\w*|idempoten\w*|oversell\w*|oversold|sold more|more than (we had|in stock)|deadlock|lock(s|ing)?|atomic\w*|twice|in parallel|simultaneous)\b/i },
+  { key: 'external', name: 'Outside services, time-outs and retries', re: /\b(time-?outs?|timed out|hang(s|ing)?|slow (payment|provider|api|response)|provider|webhooks?|third[- ]party|upstream|retr(y|ies|ied)|backoff|network|unreachable|charged but|spins?|spinning)\b/i },
   { key: 'access', name: 'Access control, sign-in and secrets', re: /\b(auth\w*|permission\w*|access control|unauthori[sz]ed|forbidden|role|idor|secret\w*|tokens?|password\w*|csrf|xss|injection|cors|session\w*|login|sign[- ]?in|security|vulnerab\w*|cve-\d+)\b/i },
-  { key: 'config', name: 'Configuration, start-up and deploys', re: /\b(config\w*|env(ironment)?( var(iable)?s?)?|settings?|feature flags?|start-?up|boot|deploy\w*|migrations?|schema|rollback|roll back|production mode|\.env)\b/i },
+  { key: 'config', name: 'Configuration, start-up and deploys', re: /\b(config\w*|env(ironment)?( var(iable)?s?)?|settings?|feature flags?|start-?up|restart\w*|boot|deploy\w*|migrations?|schema|rollback|roll back|production mode|\.env)\b/i },
   { key: 'data', name: 'Wrong data and calculations', re: /\b(wrong|incorrect|totals?|prices?|amounts?|round(ing)?|currenc\w*|time ?zones?|dates?|stock|inventory|balances?|calculat\w*|mismatch\w*|inconsisten\w*|off[- ]by[- ]one|precision)\b/i },
   { key: 'performance', name: 'Performance and resources', re: /\b(perf\w*|slow(ness)?|memory|leaks?|n\+1|cach\w*|latency|cpu|throughput|pool|overload\w*|scal(e|ing))\b/i },
-  { key: 'ui', name: 'Screens and display', re: /\b(ui|ux|css|layout|display\w*|button|render\w*|mobile|style\w*|screen|page|form|modal|dark mode|responsive|accessib\w*|a11y)\b/i },
+  // Only words about how things look: "page" and "button" appear in almost every ticket and would pull everything in here.
+  { key: 'ui', name: 'Screens and display', re: /\b(ui|ux|css|layout|display\w*|render\w*|mobile|phone|style\w*|modal|dark mode|responsive|accessib\w*|a11y|visible|invisible|hidden|overlap\w*|disappear\w*|go(es)? away|still show\w*|misaligned|cut off|font)\b/i },
   { key: 'tests', name: 'Tests, tooling and CI', re: /\b(flak(y|iness)|tests?|ci|lint\w*|build|type ?check\w*|types?|compile\w*|tooling)\b/i },
 ];
 
@@ -55,7 +56,15 @@ export function readCommits(dir, { since, path } = {}) {
 }
 
 const labelNames = (labels) => (labels || []).map((l) => (typeof l === 'string' ? l : l.name || '')).filter(Boolean);
-const isBugIssue = (i) => labelNames(i.labels).some((l) => /bug|defect|incident|regression|crash/i.test(l)) || /\b(bug|crash(es)?|broken|error|fails?|wrong|regression)\b/i.test(i.title || '');
+// A ticket is a defect lead unless it is plainly a request: security, performance, display and outage tickets are defects too.
+const DEFECT_LABEL = /bug|defect|incident|regression|crash|outage|security|vulnerab|perf|ui|ux|a11y|accessib|payment|stock|data/i;
+const REQUEST_LABEL = /enhancement|feature|request|question|doc|chore|idea|proposal/i;
+const isBugIssue = (i) => {
+  const labels = labelNames(i.labels);
+  if (labels.some((l) => DEFECT_LABEL.test(l))) return true;
+  if (labels.some((l) => REQUEST_LABEL.test(l))) return false;
+  return /\b(bug|crash(es|ed)?|broken|error|fails?|failed|wrong|regression|charged|lost|missing|slow|down|can't|cannot|doesn't|won't|again)\b/i.test(`${i.title || ''} ${i.body || ''}`);
+};
 
 // Hotspots count code, not documentation or reports, unless allFiles is set.
 export const CODE_FILE = /\.(m?[jt]sx?|cjs|py|rb|go|java|kt|cs|php|rs|swift|scala|sql|vue|svelte|css|scss|html?|sh|ya?ml|toml|tf|prisma|graphql|gql|rules)$|(^|\/)(Dockerfile|Procfile|Makefile)$/i;

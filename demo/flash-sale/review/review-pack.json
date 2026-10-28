@@ -186,6 +186,78 @@
     ],
     "estimate": "An estimate, not a promise: about two to three weeks of developer work once the providers are chosen, most of it connecting real payments, plus the time to book a security test. Set the sale date after that."
   },
+  "method": {
+    "sources": [
+      {
+        "source": "code",
+        "used": true,
+        "detail": "`demo/flash-sale/fixed/` at commit `fa296a2`, with the shared simulators in `shared/`."
+      },
+      {
+        "source": "history",
+        "used": true,
+        "detail": "10 commits of `demo/flash-sale/` (2026-10-16 to 2026-10-18), scanned with `history-scan.mjs`. The fixes are bundled a round at a time, so the review reports are the defect record."
+      },
+      {
+        "source": "issues",
+        "used": false,
+        "detail": "None exists for the demo. In a real project this is the first place to look for problems that came back."
+      },
+      {
+        "source": "user-reports",
+        "used": false,
+        "detail": "The shop hasn't launched, so there are no users or support tickets yet."
+      },
+      {
+        "source": "earlier-reviews",
+        "used": true,
+        "detail": "Three review reports: the first version (30 problems), round 1 (23) and round 2 (the 23 re-checked, plus 13 new), in `sample-reports/`."
+      },
+      {
+        "source": "project-tests",
+        "used": true,
+        "detail": "The acceptance suite (12 browser tests, each run 3 times) and the race test, as CI runs them."
+      },
+      {
+        "source": "running-app",
+        "used": true,
+        "detail": "Run locally with `run.mjs`; the journeys tried by hand and through the browser tests, with screenshots."
+      },
+      {
+        "source": "measurements",
+        "used": true,
+        "detail": "Load test (3 runs and a baseline), race test and slow-partner test; see Performance."
+      },
+      {
+        "source": "scans",
+        "used": true,
+        "detail": "Gitleaks, OSV-Scanner and Semgrep with this project's rules; every rule that fired is accounted for under Security."
+      },
+      {
+        "source": "people",
+        "used": true,
+        "detail": "The owner's brief (`peak-brief.json`): the crowd, the speed budgets and the sale rules. A demo, so no interview with a real owner."
+      }
+    ],
+    "skills": [
+      {
+        "name": "`launch-review` (this repository)",
+        "how": "This inspection: the checklist, the scanners, the quality history and this page."
+      },
+      {
+        "name": "`peak-traffic-test` (this repository)",
+        "how": "The load plan from the brief, the staged load test, the race test and the slow-partner test."
+      },
+      {
+        "name": "`acceptance-test` (this repository)",
+        "how": "The agreed criteria as browser tests, each run three times, with screenshots."
+      },
+      {
+        "name": "Gitleaks 8.28.0, OSV-Scanner 2.2.3, Semgrep 1.181.0, k6, Playwright 1.56.1",
+        "how": "The scanners and test runners the skills call."
+      }
+    ]
+  },
   "product": {
     "users": "Public shoppers (about 3,000 in the first 60 seconds), the small team running the sale, and admins with a shared token.",
     "journeys": [
@@ -642,6 +714,82 @@
         "alternatives": "A migration step in the deploy pipeline",
         "downsides": "The previous release can't start against the new schema (OPS-09)"
       }
+    ],
+    "hiddenChecks": [
+      {
+        "area": "at-once",
+        "result": "none-found",
+        "how": "Read the buy route and the payment and email jobs, and ran the race test (1,000 buyers × 2 clicks for 100 pairs): 100 sold, nobody charged twice."
+      },
+      {
+        "area": "partners",
+        "result": "found",
+        "refs": [
+          "ARC-10"
+        ],
+        "how": "Read every call to the payment provider and ran it slow (about 3 s), very slow and failing; followed a charge that never resolves."
+      },
+      {
+        "area": "restarts",
+        "result": "found",
+        "refs": [
+          "ARC-16",
+          "OPS-09"
+        ],
+        "how": "Started the app in production mode without its settings and restarted it mid-sale; tried the runbook's rollback against the new database."
+      },
+      {
+        "area": "settings",
+        "result": "found",
+        "refs": [
+          "ARC-11",
+          "SEC-04"
+        ],
+        "how": "Listed every setting the app reads, changed the opening time between starts, and started the shop without `NODE_ENV=production`."
+      },
+      {
+        "area": "bad-input",
+        "result": "found",
+        "refs": [
+          "ARC-12"
+        ],
+        "how": "Sent malformed paths and bodies (all refused with 400) and shipping addresses in Japanese, Russian and Greek."
+      },
+      {
+        "area": "limits",
+        "result": "found",
+        "refs": [
+          "ARC-06",
+          "PERF-03"
+        ],
+        "how": "Read the pool, queue and rate-limit settings, and sent unlimited signed-in reads during checkout."
+      },
+      {
+        "area": "data-rules",
+        "result": "found",
+        "refs": [
+          "SEC-03"
+        ],
+        "how": "Compared each business rule with where it is enforced, and bought a second pair with another mailbox for the same address."
+      },
+      {
+        "area": "time",
+        "result": "found",
+        "refs": [
+          "ARC-11",
+          "PERF-04"
+        ],
+        "how": "Tried opening times without a time zone and as text like \"Nov 27\", and a countdown more than 25 days long."
+      },
+      {
+        "area": "background",
+        "result": "found",
+        "refs": [
+          "ARC-07",
+          "ARC-13"
+        ],
+        "how": "Read the email and settlement jobs: queued emails are never sent, and one failing email would block the rest once sending is added."
+      }
     ]
   },
   "rules": [
@@ -697,7 +845,8 @@
         "covers": "13 agreed criteria: 12 in the browser, AC-07 through the race test",
         "command": "VARIANT=fixed npx playwright test --repeat-each=3",
         "lastRun": "2026-10-17: 12 tests × 3 runs, all passed, none flaky",
-        "inCI": true
+        "inCI": true,
+        "type": "end-to-end"
       },
       {
         "name": "Race test",
@@ -705,7 +854,8 @@
         "covers": "1,000 buyers × 2 clicks for 100 pairs",
         "command": "k6 run -e PLAN=plan.json .claude/skills/peak-traffic-test/k6/oversell.js",
         "lastRun": "2026-10-17: pass, 100 sold",
-        "inCI": true
+        "inCI": true,
+        "type": "load"
       },
       {
         "name": "Load test",
@@ -713,7 +863,8 @@
         "covers": "50% to 200% of 600 requests/s",
         "command": "k6 run -e PLAN=plan.json .claude/skills/peak-traffic-test/k6/load.js",
         "lastRun": "2026-10-17: target passed in 3 of 3 runs",
-        "inCI": false
+        "inCI": false,
+        "type": "load"
       },
       {
         "name": "Review scripts",
@@ -721,6 +872,16 @@
         "covers": "Slow payment, busy database, crash mid-payment, restart, rollback, malformed input",
         "command": "`sample-reports/fixed-round2/launch-review/verification/`",
         "lastRun": "2026-10-17, by the reviewer",
+        "inCI": false,
+        "type": "integration"
+      },
+      {
+        "name": "Start-up checks (in the app)",
+        "type": "self-check",
+        "kind": "Built into the server",
+        "covers": "In production the server refuses demo switches and placeholder secrets; `/healthz` answers for the database. It does not refuse a missing database or payment address (ARC-16).",
+        "command": "Runs on every start",
+        "lastRun": "2026-10-27",
         "inCI": false
       }
     ],
@@ -875,7 +1036,53 @@
       ]
     },
     "slowPartner": "With the payment provider answering in about 3 seconds: 40 charges for 40 paid orders, and 60 for 60 in a second run; repeat clicks were refused. The previous version charged 57 times for 39 pairs.",
-    "conclusion": "The expected peak passes in every run, with p95 at or under 5 ms. 150% passed in two of three runs, so headroom of 1.5× and above isn't reliably proven on this machine: repeat the test on production-sized machines, with the load generator on its own machine."
+    "conclusion": "The expected peak passes in every run, with p95 at or under 5 ms. 150% passed in two of three runs, so headroom of 1.5× and above isn't reliably proven on this machine: repeat the test on production-sized machines, with the load generator on its own machine.",
+    "coverage": [
+      {
+        "kind": "load",
+        "result": "pass",
+        "by": "reviewer",
+        "note": "The product page held the target in 3 of 3 runs and 200% in 2 of 3 (one failed at 150%), all on one 4-core machine shared with the test tools, so the capacity number itself is not proven. Most buy answers in the load test were \"sold out\", so buying under a rush is judged by the race test instead."
+      },
+      {
+        "kind": "repeat",
+        "result": "pass",
+        "by": "reviewer",
+        "note": "Three runs and a same-day run of the previous version, all kept, including the one that failed."
+      },
+      {
+        "kind": "rush",
+        "result": "pass",
+        "by": "reviewer",
+        "note": "1,000 buyers × 2 clicks for 100 pairs: 100 sold, nobody charged twice, nothing left pending. CI runs it on every change."
+      },
+      {
+        "kind": "slow-partner",
+        "result": "pass",
+        "by": "reviewer",
+        "note": "Payment provider answering in about 3 seconds: 40 charges for 40 orders, then 60 for 60; repeat clicks refused."
+      },
+      {
+        "kind": "overload",
+        "result": "not-run",
+        "note": "No test past 200% of the target, and no waiting room to measure."
+      },
+      {
+        "kind": "long-run",
+        "result": "not-run",
+        "note": "No run longer than a few minutes."
+      },
+      {
+        "kind": "page-speed",
+        "result": "not-run",
+        "note": "No Lighthouse run on a phone profile."
+      },
+      {
+        "kind": "production-like",
+        "result": "not-run",
+        "note": "Everything ran on one laptop with SQLite standing in for the hosted database; there is no staging copy."
+      }
+    ]
   },
   "history": {
     "period": "Three reviews, 2026-10-16 to 2026-10-17, and the git history of `demo/flash-sale/` (10 commits, 2026-10-16 to 2026-10-18).",
@@ -927,7 +1134,10 @@
         "control": "A realistic payment simulator (finishes abandoned charges, hangs 2% of calls), used by acceptance test AC-08 in CI and by the slow-provider runs.",
         "controlCheck": "AC-08 fails on the round-1 code and passes on round 2; slow provider: 40 charges for 40 orders.",
         "agentRule": "Every outside call: a time limit, a repeat-safe key, and an explicit \"unknown\" state settled by the reconciler with the same key, with a deadline.",
-        "status": "partly controlled"
+        "status": "partly controlled",
+        "catchWith": [
+          "integration"
+        ]
       },
       {
         "name": "Bad input crashes the app or is quietly accepted",
@@ -967,7 +1177,11 @@
         "control": "Code-scanning rules `url-parse-outside-try` and `json-parse-in-stream-callback`; the reviewer's malformed-path script (7 paths, all answered 400).",
         "controlCheck": "The rules' own tests run in CI, but the rules aren't run against the app in CI, and the malformed-input script isn't in the test suite.",
         "agentRule": "Parse every input once, strictly, at the edge; refuse rather than guess; add each new input to the malformed-input test.",
-        "status": "partly controlled"
+        "status": "partly controlled",
+        "catchWith": [
+          "unit",
+          "scan"
+        ]
       },
       {
         "name": "Settings and data that must survive restarts and deploys",
@@ -1012,7 +1226,11 @@
         "control": "Versioned migrations; production refuses demo switches and placeholder secrets; the reviewer's restart script with a saved database.",
         "controlCheck": "A restart keeps orders (verified in round 2), but no restart or rollback test runs in CI, and ARC-11 and OPS-09 are still open.",
         "agentRule": "Any change to start-up, settings or the database needs a test that starts the app twice on the same data, and one that starts the previous release.",
-        "status": "open"
+        "status": "open",
+        "catchWith": [
+          "self-check",
+          "integration"
+        ]
       },
       {
         "name": "Business rules checked in code instead of enforced by the database",
@@ -1052,7 +1270,11 @@
         "control": "Atomic stock update, unique indexes and `CHECK (stock >= 0)`, with the race test in CI.",
         "controlCheck": "Race test in CI on every change: 1,000 buyers, 100 sold, 0 charged twice.",
         "agentRule": "Enforce limits with constraints or atomic updates, never check-then-write; the race test must pass.",
-        "status": "partly controlled"
+        "status": "partly controlled",
+        "catchWith": [
+          "unit",
+          "integration"
+        ]
       },
       {
         "name": "Screen behaviour no test looked at closely",
@@ -1087,7 +1309,10 @@
         "control": "Guidance \"assert what should disappear, too\" added to the acceptance-test skill.",
         "controlCheck": "Not applied to this suite yet: no test checks that the sign-in box hides.",
         "agentRule": "For every change of state on the page, test what appears and what disappears.",
-        "status": "open"
+        "status": "open",
+        "catchWith": [
+          "visual"
+        ]
       },
       {
         "name": "Operations promised on paper but not in tools",
@@ -1122,7 +1347,10 @@
         "control": "Checklist rule: every runbook step must be backed by a tool that exists and has been tried.",
         "controlCheck": "No rehearsal has been run yet.",
         "agentRule": "Don't add a runbook step without the command that performs it and a log of it being tried.",
-        "status": "open"
+        "status": "open",
+        "catchWith": [
+          "self-check"
+        ]
       }
     ],
     "hotspots": [

@@ -25,6 +25,8 @@ This repository holds Claude Code skills that check whether an app built with AI
 - The race test counted accepted clicks as rejected. Every response goes into exactly one bucket, and the summary checks the buckets add up to the clicks sent.
 - A review saw a problem in its own scanner output and never reported it. The review gate now counts every scanner rule that fired.
 - An open Critical finding didn't lower the verdict. The verdict ceiling now counts open findings as well as failing checklist items.
+- The race test printed FAIL but exited with success, so a CI job built on it would pass. A test that judges must exit with an error when it fails.
+- The report once claimed more than its evidence ("every hidden problem was missed by the tests"). Conclusions are generated from the counts, and their wording must say no more than the counts show.
 
 ## Before you finish
 - Run `npm test` and say what you ran.

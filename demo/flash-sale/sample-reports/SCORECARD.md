@@ -153,6 +153,36 @@ P7 is a dropped lead, not a lack of knowledge, so the review gate now counts it.
 
 **Limits of these tests.** The testers are AI agents playing a role, so their reading is a minimum bar, not proof that a real owner understands the page. All three test apps come from this repository. The scores are single runs, and a second run would vary. Reviewer agents weren't allowed to write some report files in this environment, so they returned that text to us. That is a limit of the test setup, not of the skill.
 
+## Inspection test (28 October 2026)
+
+The review was rebuilt as a pre-delivery inspection: three questions answered first and counted by software, then how the inspection was done, the results, the recommendations and the evidence, with `REPORT.md` generated instead of written by hand. A fresh agent then inspected `naive/` with the new skill, as the demo README suggests, with no access to the answer key or earlier reviews. This time it also had [`pilot-issues.json`](../pilot-issues.json), 16 simulated tickets from a pilot sale. The tickets point at many planted problems, so this run tested the report, not detection, and its findings aren't compared with the answer key.
+
+- **Result:** NO-GO, and every count in the final gate passed (22 checks).
+- **The three answers:**
+  - test harness: No, 0 of 13 checks met;
+  - performance tests: Partly, 6 of 8 kinds run, 1 passed and 5 failed;
+  - hidden problems: Yes, 9 of 9 places examined.
+- **The tickets** became 7 recurring problems, each with the kinds of test that would catch it. Three tickets had been closed as "could not reproduce" and filed again. The report recommended unit, integration, browser, visual, self-check, load and race tests and automatic scans, each with the skills that help.
+- **Cost:** about 33 minutes and 400,000 tokens.
+
+**What it exposed, and what changed:**
+- **The report said more than the evidence.** It claimed every hidden problem had been missed by the tests, but the project's failing tests had caught some. It counted a check that couldn't be verified as not met, and it showed the "needed to verify" text as if it were evidence. All three are fixed.
+- **Green answers next to a NO-GO read as good news.** The report now says the answers measure how complete the testing and the inspection are, not whether the app is ready.
+- **The harness recommendations ran together.** They are now numbered, most needed first. The wording also separates "add", "strengthen" and "run in CI".
+- **The developer appendix couldn't be acted on.** It had no location, evidence or "done when". Each finding now has all of them, on the page too.
+- **The ticket scan dropped tickets.** It read only 11 of the 16, dropping those labelled security, performance or ui, and filed double charges under display problems because they mentioned "page" or "button". It now reads all 16 and groups them sensibly; the reviewer still regroups them by root cause.
+- **The race test exited "success" even when it failed,** so a CI job built on it would pass. It now fails on overselling or double charges.
+- **The load test passed buying although it was measuring "sold out" answers.** It now warns when most answers in a step were expected refusals. Our own reference example had the same blind spot: in its load test 93–100% of buy answers were "sold out". The example now says buying under a rush is judged by the race test.
+- **Unclear instructions, now spelled out:**
+  - how to build the record when nothing was handed in (a review template lays out every field);
+  - when to treat a project as AI-built;
+  - which results are "doesn't meet" and which "can't verify";
+  - that quoting measurements is fine;
+  - scanner rules with mixed hits;
+  - what checks on a local copy prove;
+  - settings for a slow partner when the app has no time limit;
+  - a command to watch the load generator.
+
 ## Takeaways
 - **Each layer catches what the others can't.** Scanners catch secrets and patterns. The review catches logic, failure modes and operations. The load test measures capacity. The oversell race tests concurrency. Acceptance tests check agreed behaviour, and their screenshots are evidence a reviewer can read.
 - **Fixes need re-review, not just re-testing.** Each round of fixes introduced at least one new problem that only a fresh, sceptical review found.

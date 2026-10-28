@@ -957,5 +957,337 @@
       "tier": 2,
       "source": "WCAG 2.1"
     }
+  ],
+  "performanceTests": [
+    {
+      "id": "load",
+      "name": "Load at the target and above it",
+      "proves": "It holds the expected traffic, and shows where it breaks.",
+      "tier": 2,
+      "criteria": [
+        "P-02"
+      ]
+    },
+    {
+      "id": "repeat",
+      "name": "Repeated runs, all kept",
+      "proves": "The same test run at least twice gives the same answer, and failed runs are kept too. Its result says whether the runs agreed.",
+      "tier": 2,
+      "criteria": [
+        "P-03"
+      ]
+    },
+    {
+      "id": "rush",
+      "name": "Rush on something limited",
+      "proves": "Many people buying or booking the last items at the same moment never oversell or pay twice.",
+      "tier": 1,
+      "when": [
+        "limitedStock",
+        "money"
+      ],
+      "criteria": [
+        "P-04"
+      ]
+    },
+    {
+      "id": "slow-partner",
+      "name": "Slow or failing partner",
+      "proves": "When payment, email or an AI service is slow or down, nobody is charged twice or left stuck.",
+      "tier": 2,
+      "when": [
+        "money",
+        "ai"
+      ],
+      "criteria": [
+        "P-05"
+      ]
+    },
+    {
+      "id": "overload",
+      "name": "Beyond capacity",
+      "proves": "Past its limit it turns people away politely and recovers, instead of crashing.",
+      "tier": 3,
+      "criteria": [
+        "P-08"
+      ]
+    },
+    {
+      "id": "long-run",
+      "name": "Long run",
+      "proves": "An hour or more at normal traffic without slowing down, filling up or running out of memory.",
+      "tier": 3,
+      "criteria": []
+    },
+    {
+      "id": "page-speed",
+      "name": "Page speed on phones",
+      "proves": "People on mid-range phones get the page quickly.",
+      "tier": 3,
+      "criteria": [
+        "P-09"
+      ]
+    },
+    {
+      "id": "production-like",
+      "name": "On a production-like setup",
+      "proves": "The numbers hold on the real hosting, with a realistic amount of data, not only on a laptop.",
+      "tier": 2,
+      "criteria": []
+    }
+  ],
+  "hiddenIssueAreas": [
+    {
+      "id": "at-once",
+      "name": "Two things at once",
+      "look": "Double clicks, two people taking the last item, a job running twice: anything that reads, decides and then writes.",
+      "criteria": [
+        "P-04",
+        "D-02",
+        "D-05",
+        "D-06"
+      ]
+    },
+    {
+      "id": "partners",
+      "name": "Slow, failing or repeated outside calls",
+      "look": "Every call to payment, email, AI or another service has a time limit and a repeat-safe key, and a time-out is treated as \"unknown\" and settled later, never as failed.",
+      "criteria": [
+        "A-04",
+        "A-12",
+        "D-07",
+        "P-05"
+      ]
+    },
+    {
+      "id": "restarts",
+      "name": "Restarts, deploys and rollbacks",
+      "look": "What a restart or a new release does in the middle of a purchase: data that must survive, work that must finish, and going back to the previous version.",
+      "criteria": [
+        "O-02",
+        "O-04",
+        "A-10"
+      ]
+    },
+    {
+      "id": "settings",
+      "name": "Settings and environments",
+      "look": "A setting missing or wrong in production, the same setting in two places, test switches left on, test and live sharing data or keys.",
+      "criteria": [
+        "A-07",
+        "A-08",
+        "A-09"
+      ]
+    },
+    {
+      "id": "bad-input",
+      "name": "Unexpected input",
+      "look": "Malformed requests, huge bodies, odd characters and addresses: one bad request must not crash the app or corrupt data.",
+      "criteria": [
+        "D-08",
+        "H-08"
+      ]
+    },
+    {
+      "id": "limits",
+      "name": "What runs out first",
+      "look": "Connection pools, queues, memory, rate limits, a single server: what runs out first under load, and what happens then.",
+      "criteria": [
+        "A-06",
+        "P-07",
+        "P-08"
+      ]
+    },
+    {
+      "id": "data-rules",
+      "name": "Data that can become wrong",
+      "look": "Rules the data must obey (stock, money, one per customer) enforced where they cannot be bypassed: in the database or one transaction, not only on the screen.",
+      "criteria": [
+        "D-01",
+        "D-02",
+        "D-03",
+        "D-04",
+        "D-12"
+      ]
+    },
+    {
+      "id": "time",
+      "name": "Time and dates",
+      "look": "Time zones, opening times, timers and schedules, dates typed by people, clocks that differ between machines.",
+      "criteria": [
+        "D-09",
+        "A-09"
+      ]
+    },
+    {
+      "id": "background",
+      "name": "Background jobs and queues",
+      "look": "Jobs that retry, run twice, get stuck or fail silently: emails, settlements and clean-ups that never finish. With no jobs at all, look at the work that should be one (sending email or settling payments inside the request).",
+      "criteria": []
+    }
+  ],
+  "testKinds": [
+    {
+      "id": "unit",
+      "name": "Unit tests",
+      "catches": "A rule or calculation that is wrong: prices, limits, reading input, dates."
+    },
+    {
+      "id": "integration",
+      "name": "Integration tests",
+      "catches": "Parts that work alone but not together: database rules and transactions, a stand-in payment provider that is slow or fails."
+    },
+    {
+      "id": "end-to-end",
+      "name": "End-to-end tests in a browser",
+      "catches": "A user journey that breaks: signing in, buying, seeing the order."
+    },
+    {
+      "id": "visual",
+      "name": "Visual tests",
+      "catches": "A screen that looks wrong although it works: something that should disappear stays, things overlap, a layout breaks on a phone."
+    },
+    {
+      "id": "self-check",
+      "name": "Self-checks",
+      "catches": "The app checking itself: refusing to start with missing or unsafe settings, a health check that tests what matters, a quick test after every deploy."
+    },
+    {
+      "id": "load",
+      "name": "Load and race tests",
+      "catches": "Slow pages, overselling and double charges when many people arrive at once."
+    },
+    {
+      "id": "scan",
+      "name": "Automatic scans",
+      "catches": "Leaked keys, risky code patterns, libraries with known security holes."
+    }
+  ],
+  "evidenceSources": [
+    {
+      "id": "code",
+      "name": "The code, at the version inspected",
+      "why": "What is actually there, not what anyone remembers."
+    },
+    {
+      "id": "history",
+      "name": "Change history",
+      "why": "Fixes, reverts and the files that keep changing show what keeps going wrong."
+    },
+    {
+      "id": "issues",
+      "name": "Issue tracker or tickets",
+      "why": "Bugs the team already knows about, and how often each kind came back."
+    },
+    {
+      "id": "user-reports",
+      "name": "Reports from users and support",
+      "why": "Problems real people met, which tests did not."
+    },
+    {
+      "id": "earlier-reviews",
+      "name": "Earlier reviews and incident notes",
+      "why": "What was found before, and whether it was really fixed."
+    },
+    {
+      "id": "project-tests",
+      "name": "The project's own tests, run again",
+      "why": "Whether they pass, and what they would never notice."
+    },
+    {
+      "id": "running-app",
+      "name": "The running app, used by the inspector",
+      "why": "What a user sees, including what tests skip."
+    },
+    {
+      "id": "measurements",
+      "name": "Load, race and speed measurements",
+      "why": "How it behaves under the expected traffic, measured rather than guessed."
+    },
+    {
+      "id": "scans",
+      "name": "Automatic scans",
+      "why": "Leaked keys, risky patterns and vulnerable libraries, found by tools."
+    },
+    {
+      "id": "people",
+      "name": "Answers from the owner and the team",
+      "why": "The agreed requirements and the decisions behind the design."
+    }
+  ],
+  "toolbox": [
+    {
+      "name": "acceptance-test",
+      "from": "this repository",
+      "link": ".claude/skills/acceptance-test/SKILL.md",
+      "kinds": [
+        "end-to-end",
+        "visual"
+      ],
+      "what": "Turns what the owner expects into numbered criteria and browser tests with screenshots, run three times each; add Playwright screenshot comparisons for visual checks."
+    },
+    {
+      "name": "peak-traffic-test",
+      "from": "this repository",
+      "link": ".claude/skills/peak-traffic-test/SKILL.md",
+      "kinds": [
+        "load"
+      ],
+      "what": "Turns the expected crowd into a load plan, runs staged load tests and the race test, and explains the result in plain words."
+    },
+    {
+      "name": "launch-review",
+      "from": "this repository",
+      "link": ".claude/skills/launch-review/SKILL.md",
+      "kinds": [
+        "scan"
+      ],
+      "what": "Runs the scanners and this inspection; its scanner script can run on every change in CI."
+    },
+    {
+      "name": "webapp-testing",
+      "from": "Anthropic skills",
+      "link": "https://github.com/anthropics/skills/tree/main/skills/webapp-testing",
+      "kinds": [
+        "end-to-end",
+        "visual"
+      ],
+      "what": "Lets an AI agent drive a local web app in a real browser with Playwright: check behaviour, take screenshots, read the browser log."
+    },
+    {
+      "name": "test-driven-development",
+      "from": "Superpowers (obra/superpowers)",
+      "link": "https://github.com/obra/superpowers",
+      "kinds": [
+        "unit",
+        "integration"
+      ],
+      "what": "Makes the AI agent write a failing test before each fix or feature, so every bug fixed gets the test that stops it coming back."
+    },
+    {
+      "name": "systematic-debugging",
+      "from": "Superpowers (obra/superpowers)",
+      "link": "https://github.com/obra/superpowers",
+      "kinds": [],
+      "what": "Makes the AI agent find the root cause of a bug before changing code, instead of patching the symptom."
+    },
+    {
+      "name": "verification-before-completion",
+      "from": "Superpowers (obra/superpowers)",
+      "link": "https://github.com/obra/superpowers",
+      "kinds": [
+        "self-check"
+      ],
+      "what": "Makes the AI agent prove a fix works (run the test, show the output) before it says the work is done."
+    },
+    {
+      "name": "Playwright screenshot comparison",
+      "from": "Playwright (toHaveScreenshot)",
+      "link": "https://playwright.dev/docs/test-snapshots",
+      "kinds": [
+        "visual"
+      ],
+      "what": "Compares each screen with an approved picture and fails when it changes; the usual way to add visual tests to browser tests."
+    }
   ]
 }

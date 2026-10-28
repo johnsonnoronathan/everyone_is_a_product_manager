@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import {
   loadCatalogue, applicability, validatePack, verdictCeiling, renderPage, templatePack, criteriaMarkdown,
   gate, worksheetStatus, mergeWorksheet, readmeItems, README_ITEMS, scannerHits, personalDataIn,
+  inspection, conclusions, reportMarkdown, SECTION_ORDER,
 } from '../.claude/skills/launch-review/scripts/review-pack.mjs';
 
 const catalogue = loadCatalogue();
@@ -23,6 +24,18 @@ test('catalogue: unique ids, known areas and features, valid tiers and grades', 
     assert.ok(c.title && c.standard && c.evidence, c.id);
     for (const f of c.when || []) assert.ok(catalogue.features[f], `${c.id}: ${f}`);
   }
+  // The lists behind the three questions point only at things that exist.
+  const kinds = new Set(catalogue.testKinds.map((k) => k.id));
+  for (const list of [catalogue.performanceTests, catalogue.hiddenIssueAreas, catalogue.testKinds, catalogue.evidenceSources]) {
+    assert.equal(new Set(list.map((x) => x.id)).size, list.length);
+  }
+  for (const k of catalogue.performanceTests) {
+    assert.ok([1, 2, 3].includes(k.tier), k.id);
+    for (const r of k.criteria) assert.ok(ids.includes(r), `${k.id}: ${r}`);
+    for (const f of k.when || []) assert.ok(catalogue.features[f], `${k.id}: ${f}`);
+  }
+  for (const a of catalogue.hiddenIssueAreas) for (const r of a.criteria) assert.ok(ids.includes(r), `${a.id}: ${r}`);
+  for (const t of catalogue.toolbox) for (const k of t.kinds) assert.ok(kinds.has(k), `${t.name}: ${k}`);
 });
 
 test('applicability: tier and feature conditions', () => {
@@ -49,6 +62,7 @@ function reviewedPack(rows, extra = {}) {
   pack.verdict = { decision: extra.decision ?? 'GO', reason: 'r', ifLaunchedNow: 'x', blockers: [], conditions: extra.conditions ?? [] };
   pack.findings = extra.findings ?? [];
   pack.scans = { output: '../sample-reports/fixed-round2/launch-review/scans', triage: [] };
+  pack.architecture = { ...pack.architecture, hiddenChecks: [] };
   return pack;
 }
 const allMeet = (pack) => catalogue.criteria
@@ -116,13 +130,86 @@ test('the worked example is a complete review, and its NO-GO is allowed', () => 
   assert.equal(verdictCeiling(pack, catalogue).ceiling, 'NO-GO');
 });
 
+test('the three questions are counted from the record, not written by hand', () => {
+  const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  const ins = inspection(pack, catalogue);
+  assert.equal(ins.harness.answer, 'No');
+  assert.equal(ins.harness.met, pack.worksheet.filter((r) => r.id.startsWith('H-') && r.result === 'meets').length);
+  assert.deepEqual(ins.harness.recommend.map((k) => k.id).sort(), ['integration', 'scan', 'self-check', 'unit', 'visual']);
+  assert.equal(ins.harness.recommend.find((k) => k.id === 'unit').verb, 'Add', 'no unit test suite in the project');
+  assert.equal(ins.harness.recommend.find((k) => k.id === 'integration').verb, 'Run in CI and extend', 'the review scripts exist but CI does not run them');
+  const weights = ins.harness.recommend.map((k) => k.weight);
+  assert.deepEqual(weights, [...weights].sort((a, b) => b - a), 'most needed first');
+  assert.equal(ins.harness.notMet + ins.harness.unverified + ins.harness.met, ins.harness.total);
+  assert.equal(ins.performance.answer, 'Partly');
+  assert.equal(ins.performance.run, pack.performance.coverage.filter((e) => e.result !== 'not-run').length);
+  assert.equal(ins.hidden.answer, 'Yes');
+  assert.equal(ins.hidden.found[0].severity, 'High', 'most serious first');
+  const said = conclusions(ins);
+  assert.match(said.performance, /not run \(beyond capacity, long run, page speed on phones, on a production-like setup\)/);
+
+  // Nothing required is said in words, never as "0 of 0".
+  const small = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  small.project.riskTier = 1;
+  small.project.features = [];
+  const none = inspection(small, catalogue);
+  assert.equal(none.performance.answer, 'Not applicable');
+  assert.match(conclusions(none).performance, /^No performance test is required for this product at its risk tier/);
+  const md = reportMarkdown({ ...small, stage: 'review' }, catalogue);
+  assert.ok(!/0 of 0|\(\)/.test(conclusions(none).performance) && !md.includes('0 of 0 kinds'), 'no empty counts');
+
+  // The answer follows the counts: drop places and kinds, and Yes becomes Partly or No.
+  pack.architecture.hiddenChecks = pack.architecture.hiddenChecks.slice(0, 4);
+  assert.equal(inspection(pack, catalogue).hidden.answer, 'No');
+  pack.performance.coverage = pack.performance.coverage.map((e) => ({ ...e, result: 'pass' }));
+  assert.equal(inspection(pack, catalogue).performance.answer, 'Yes');
+});
+
+test('the review gate counts the records behind the three questions', () => {
+  const base = 'demo/flash-sale/review';
+  const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  pack.architecture.hiddenChecks = pack.architecture.hiddenChecks.filter((h) => h.area !== 'time');
+  pack.performance.coverage = pack.performance.coverage.filter((e) => e.kind !== 'long-run');
+  pack.method.sources = pack.method.sources.filter((x) => x.source !== 'issues');
+  delete pack.history.classes[0].catchWith;
+  delete pack.harness.suites[0].type;
+  const g = gate('review', pack, catalogue, { baseDir: base });
+  const missing = (prefix) => g.checks.find((c) => c.name.startsWith(prefix)).missing;
+  assert.deepEqual(missing('Places hidden problems'), ['time: Time and dates']);
+  assert.deepEqual(missing('Kinds of performance test'), ['long-run: Long run']);
+  assert.deepEqual(missing('Sources of evidence'), ['issues: Issue tracker or tickets']);
+  assert.equal(missing('Recurring problems').length, 1);
+  assert.deepEqual(missing('Test suites with a type'), ['Acceptance tests']);
+  // The performance lens alone is held to its part.
+  const w = gate('worksheet', pack, catalogue, { baseDir: base, areas: ['P'] });
+  assert.ok(w.checks.some((c) => c.name.startsWith('Kinds of performance test') && !c.ok));
+  assert.ok(!w.checks.some((c) => c.name.startsWith('Places hidden problems')));
+
+  // A place recorded as "found" must point at real problems.
+  const bad = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  bad.architecture.hiddenChecks[1].refs = ['ARC-99'];
+  assert.ok(validatePack(bad, catalogue, { stage: 'review' }).some((e) => e.where.startsWith('architecture.hiddenChecks') && e.message.includes('ARC-99')));
+});
+
+test('the written report follows the inspection order: summary, method, results, recommendations, limits', () => {
+  const md = reportMarkdown(JSON.parse(readFileSync(EXAMPLE, 'utf8')), catalogue);
+  const at = (h) => { const i = md.indexOf(h); assert.ok(i >= 0, h); return i; };
+  const order = ['## 1. Summary: evidence and conclusions', '## 2. How the inspection was done', '## 3. Results', '### 3.1 Is the test harness properly set up? No', '### 3.2 Are the performance tests comprehensive? Partly', '### 3.3 Does the architecture review cover hidden problems? Yes', '## 4. Recommendations', '### Strengthen the test harness', '### Skills and tools the team can use', '## 5. Limits', '## Appendix A. Every open problem'];
+  order.reduce((prev, h) => { const i = at(h); assert.ok(i > prev, `${h} comes later`); return i; }, -1);
+  assert.match(md, /\*\*Add visual tests\.\*\* Would catch: Screen behaviour no test looked at closely\./);
+  assert.match(md, /\*These answers measure how complete the testing and the inspection are, not whether the app is ready/);
+  assert.match(md, /- \*\*Done when:\*\* /, 'the developer appendix says how to tell a fix is done');
+  assert.match(md, /\| Issue tracker or tickets \| No \| None exists/);
+});
+
 test('render: all sections, escaped text, embedded screenshots, fragment mode', () => {
   const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
   pack.project.summary = 'A <script>alert(1)</script> shop with `code`';
   const html = renderPage(pack, { baseDir: 'demo/flash-sale/review', catalogue });
-  for (const id of ['verdict', 'product', 'demo', 'run', 'requirements', 'architecture', 'rules', 'harness', 'performance', 'security', 'operations', 'history', 'acceptance', 'findings', 'limits', 'glossary']) {
-    assert.ok(html.includes(`<section id="${id}">`), id);
-  }
+  const positions = SECTION_ORDER.review.map((id) => html.indexOf(`<section id="${id}">`));
+  positions.forEach((pos, i) => assert.ok(pos > (positions[i - 1] ?? -1), `${SECTION_ORDER.review[i]} in its place`));
+  assert.ok(html.includes('Pre-delivery inspection'));
+  for (const id of ['q-harness', 'q-performance', 'q-hidden']) assert.ok(html.includes(`id="${id}"`), id);
   assert.ok(!html.includes('<script>alert(1)</script>'));
   assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'));
   assert.ok(html.includes('<code>code</code>'));

@@ -4,7 +4,8 @@
 //   node review-pack.mjs validate <pack.json> [--stage submission|review]
 //   node review-pack.mjs gate     <submission|worksheet|review> <pack.json> [--areas S,A] [--readme README.md] [--scans dir]   (counts; exit 1 if anything is missing)
 //   node review-pack.mjs render   <pack.json> <out.html> [--fragment]
-//   node review-pack.mjs template <out.json> [--tier 1|2|3] [--features money,accounts,...]
+//   node review-pack.mjs report   <pack.json> <REPORT.md>     (the written inspection report, generated from the same record)
+//   node review-pack.mjs template <out.json> [--tier 1|2|3] [--features money,accounts,...] [--stage review]
 //   node review-pack.mjs status   <pack.json>                  (per area: results so far, mandatory criteria still missing)
 //   node review-pack.mjs merge    <pack.json> <rows.json>...   (add worksheet rows written by each reviewer or lens)
 //   node review-pack.mjs criteria <out.md>
@@ -92,6 +93,114 @@ export function verdictCeiling(pack, catalogue) {
   return { ceiling, reasons };
 }
 
+// ---------- the inspection: three questions, answered by software ----------
+// The questions an owner asks before delivering a project. Each answer is counted from the record, so it can't drift
+// from the evidence: everything done is "Yes", at least half "Partly", less than half "No".
+export const QUESTIONS = {
+  harness: { title: 'Is the test harness properly set up?', short: 'Test harness', why: 'The tests, automatic checks and AI-agent instructions that stop the next change, by a person or an AI agent, from breaking something or bringing an old bug back.' },
+  performance: { title: 'Are the performance tests comprehensive?', short: 'Performance tests', why: 'Whether every kind of performance test this product needs was run. Whether the app passed each one is shown beside it.' },
+  hidden: { title: 'Does the architecture review cover hidden problems?', short: 'Hidden problems', why: 'The places where problems usually hide from tests: two things at once, restarts, settings, time and the rest. The review looks in each and says what it found there.' },
+};
+// The answers grade how thorough the testing and the inspection were. Whether the app is ready is the verdict's job.
+export const QUESTIONS_NOTE = 'These answers measure how complete the testing and the inspection are, not whether the app is ready: the verdict says that.';
+export const PERF_RESULTS = { pass: 'Passed', fail: 'Failed', 'not-run': 'Not run' };
+export const HIDDEN_RESULTS = { found: 'Problems found', 'none-found': 'Looked, none found', 'not-checked': 'Not checked' };
+const answerFor = (done, total) => (total === 0 ? 'Not applicable' : done === total ? 'Yes' : done * 2 >= total ? 'Partly' : 'No');
+const sevRank = (s) => { const i = SEVERITIES.indexOf(s); return i < 0 ? 9 : i; };
+
+export function inspection(pack, catalogue) {
+  const project = pack.project || {};
+  const rows = new Map((pack.worksheet || []).map((r) => [r.id, r]));
+  const findings = new Map((pack.findings || []).map((f) => [f.id, f]));
+
+  // 1. The harness checklist, and what the problems that came back say about the kinds of test that are missing.
+  const checks = catalogue.criteria.filter((c) => c.id.startsWith('H-') && applicability(c, project) === 'mandatory').map((c) => {
+    const r = rows.get(c.id) || {};
+    const result = r.result || 'missing';
+    const [label, text] = result === 'cannot-verify' || result === 'missing' ? ['Needed to verify', r.needed || ''] : r.fix ? ['Fix', r.fix] : ['Found', r.evidence || ''];
+    return { id: c.id, title: c.title, result, label, text };
+  });
+  const met = checks.filter((x) => x.result === 'meets').length;
+  const notMet = checks.filter((x) => x.result === 'does-not-meet').length;
+  const classes = pack.history?.classes || [];
+  const suites = pack.harness?.suites || [];
+  const testKinds = (catalogue.testKinds || []).map((k) => ({
+    ...k,
+    suites: suites.filter((s) => s.type === k.id).map((s) => s.name),
+    needed: classes.filter((c) => (c.catchWith || []).includes(k.id)).map((c) => ({ name: c.name, times: (c.occurrences || []).length, caught: c.status === 'controlled' })),
+    skills: (catalogue.toolbox || []).filter((t) => (t.kinds || []).includes(k.id)),
+  }));
+  // Most-needed first: the kind of test that would catch the most recurrences of problems not yet caught.
+  const weight = (k) => k.needed.filter((n) => !n.caught).reduce((sum, n) => sum + n.times, 0);
+  const recommend = testKinds.filter((k) => k.needed.some((n) => !n.caught)).map((k) => {
+    const inCI = suites.some((x) => x.type === k.id && x.inCI);
+    return { ...k, weight: weight(k), verb: !k.suites.length ? 'Add' : inCI ? 'Strengthen' : 'Run in CI and extend' };
+  }).sort((a, b) => b.weight - a.weight);
+
+  // 2. Every kind of performance test the product needs, run or not.
+  const coverage = new Map((pack.performance?.coverage || []).map((e) => [e.kind, e]));
+  const perfKinds = (catalogue.performanceTests || []).map((k) => {
+    const e = coverage.get(k.id) || {};
+    const app = applicability(k, project);
+    return { id: k.id, name: k.name, proves: k.proves, mandatory: app === 'mandatory', off: app === 'off', result: e.result || 'missing', by: e.by || '', note: e.note || '' };
+  }).filter((k) => !k.off);
+  const due = perfKinds.filter((k) => k.mandatory);
+  const ran = due.filter((k) => k.result === 'pass' || k.result === 'fail');
+
+  // 3. The places hidden problems usually sit, each examined or not, and the problems found there.
+  const looked = new Map((pack.architecture?.hiddenChecks || []).map((e) => [e.area, e]));
+  const areas = (catalogue.hiddenIssueAreas || []).map((a) => {
+    const e = looked.get(a.id) || {};
+    return { id: a.id, name: a.name, look: a.look, result: e.result || 'missing', how: e.how || '', refs: e.refs || [] };
+  });
+  const examined = areas.filter((a) => a.result === 'found' || a.result === 'none-found');
+  const found = [...new Set(areas.filter((a) => a.result === 'found').flatMap((a) => a.refs))]
+    .map((id) => findings.get(id) || { id }).sort((a, b) => sevRank(a.severity) - sevRank(b.severity));
+
+  return {
+    harness: { answer: answerFor(met, checks.length), met, notMet, unverified: checks.length - met - notMet, total: checks.length, checks, testKinds, recurring: classes.length, uncaught: classes.filter((c) => !['controlled', 'partly controlled'].includes(c.status)).length, partly: classes.filter((c) => c.status === 'partly controlled').length, recommend },
+    performance: { answer: answerFor(ran.length, due.length), run: ran.length, total: due.length, passed: ran.filter((k) => k.result === 'pass').length, failed: ran.filter((k) => k.result === 'fail').length, kinds: perfKinds },
+    hidden: { answer: answerFor(examined.length, areas.length), examined: examined.length, total: areas.length, areas, found },
+  };
+}
+
+// The sources of evidence the standard expects an inspection to draw on, each with what was used or why not.
+export function methodSources(pack, catalogue) {
+  const given = new Map((pack.method?.sources || []).map((s) => [s.source, s]));
+  return (catalogue.evidenceSources || []).map((s) => ({ ...s, entry: given.get(s.id) }));
+}
+
+// Plain-language conclusions, written by software from the counts so they always match them.
+// How well the problems that came back are caught now, e.g. "3 have no automatic test that would catch them and 3 are only partly caught".
+export function recurringText(h) {
+  if (!h.recurring) return '';
+  const parts = [h.uncaught ? `${h.uncaught} ha${h.uncaught === 1 ? 's' : 've'} no automatic test that would catch ${h.uncaught === 1 ? 'it' : 'them'}` : '', h.partly ? `${h.partly} ${h.partly === 1 ? 'is' : 'are'} only partly caught` : ''].filter(Boolean);
+  return parts.length ? `of the ${h.recurring} kinds of problem that came back, ${parts.join(' and ')}` : `all ${h.recurring} kinds of problem that came back are caught by automatic tests`;
+}
+
+// One harness recommendation in plain words: what to do, which problems it answers, and what that kind of test catches.
+export function recommendText(k) {
+  const what = { Add: `Add ${k.name.toLowerCase()}.`, Strengthen: `Strengthen the ${k.name.toLowerCase()}.`, 'Run in CI and extend': `Run the ${k.name.toLowerCase()} on every change (CI), and extend them.` }[k.verb];
+  return { what, forWhat: `Would catch: ${k.needed.filter((n) => !n.caught).map((n) => n.name).join('; ')}.`, catches: `${k.name} catch ${k.catches.charAt(0).toLowerCase()}${k.catches.slice(1)}` };
+}
+
+export function conclusions(ins) {
+  const h = ins.harness, p = ins.performance, x = ins.hidden;
+  const names = (list) => list.map((k) => k.name.toLowerCase()).join(', ');
+  const notRun = p.kinds.filter((k) => k.mandatory && !(k.result === 'pass' || k.result === 'fail'));
+  const notLooked = x.areas.filter((a) => !(a.result === 'found' || a.result === 'none-found'));
+  const optionalRun = p.kinds.filter((k) => !k.mandatory && (k.result === 'pass' || k.result === 'fail')).length;
+  return {
+    harness: h.answer === 'Not applicable' ? 'No harness check is required for this product at its risk tier.' : h.answer === 'Yes'
+      ? `The test harness is properly set up: all ${h.total} checks are met${h.uncaught + h.partly ? `, though ${recurringText(h)}` : ''}.`
+      : `The test harness is ${h.answer === 'No' ? 'not' : 'only partly'} set up: ${h.notMet} of ${h.total} checks are not met${h.unverified ? ` and ${h.unverified} could not be verified` : ''}${h.uncaught + h.partly ? `, and ${recurringText(h)}` : ''}. Expect the same bugs to return after the next change.`,
+    performance: p.answer === 'Not applicable' ? `No performance test is required for this product at its risk tier${p.kinds.length ? `; ${optionalRun} of the ${p.kinds.length} recommended kinds were run` : ''}.` : (p.answer === 'Yes' ? `Every kind of performance test this product needs was run.` : `The performance tests are ${p.answer === 'No' ? 'not' : 'not fully'} comprehensive: ${notRun.length} of ${p.total} kinds this product needs were not run (${names(notRun)}).`)
+      + (p.failed ? ` ${p.failed} of the ${p.run} that were run failed (see each).` : p.run ? ` All ${p.run} that were run passed.` : ''),
+    hidden: x.answer === 'Not applicable' ? 'No place for hidden problems is listed in the standard.' : (x.answer === 'Yes' ? `The review looked in all ${x.total} places where hidden problems usually sit.` : `The review did not look in ${notLooked.length} of ${x.total} places where hidden problems usually sit (${names(notLooked)}); problems may remain there.`)
+      + (x.found.length ? ` It found ${x.found.length} problem${x.found.length === 1 ? '' : 's'} there.` : ' It found none.'),
+  };
+}
+
 export function validatePack(pack, catalogue, { stage } = {}) {
   stage = stage || pack.stage || 'submission';
   const problems = [];
@@ -173,6 +282,38 @@ export function validatePack(pack, catalogue, { stage } = {}) {
         if (!findingIds.has(t.ref) && !known.has(t.ref)) err(at, `"reported" needs a ref to a finding or criterion in this pack (got "${t.ref || ''}").`);
       } else if (t.outcome === 'dismissed') need(t.reason, at, 'Say in one line why this hit is not a problem here.');
       else err(at, 'Set outcome to "reported" (with a ref) or "dismissed" (with a reason).');
+    });
+    const kindIds = (catalogue.testKinds || []).map((k) => k.id);
+    (pack.harness?.suites || []).forEach((s, i) => {
+      if (s.type && !kindIds.includes(s.type)) err(`harness.suites[${i}] ${s.name || ''}`.trim(), `Unknown test type "${s.type}". Use one of: ${kindIds.join(', ')}.`);
+    });
+    (pack.history?.classes || []).forEach((c, i) => (c.catchWith || []).forEach((k) => {
+      if (!kindIds.includes(k)) err(`history.classes[${i}] ${c.name || ''}`.trim(), `Unknown kind of test "${k}" in catchWith. Use: ${kindIds.join(', ')}.`);
+    }));
+    const perfIds = (catalogue.performanceTests || []).map((k) => k.id);
+    (pack.performance?.coverage || []).forEach((e, i) => {
+      const at = `performance.coverage[${i}] ${e.kind || ''}`.trim();
+      if (!perfIds.includes(e.kind)) err(at, `Unknown kind of performance test. Use one of: ${perfIds.join(', ')}.`);
+      if (!PERF_RESULTS[e.result]) err(at, 'Set result to "pass", "fail" or "not-run".');
+      need(e.note, at, e.result === 'not-run' ? 'Say why it was not run.' : 'Say in one line what the test showed.');
+    });
+    const areaIds = (catalogue.hiddenIssueAreas || []).map((a) => a.id);
+    (pack.architecture?.hiddenChecks || []).forEach((h, i) => {
+      const at = `architecture.hiddenChecks[${i}] ${h.area || ''}`.trim();
+      if (!areaIds.includes(h.area)) err(at, `Unknown place. Use one of: ${areaIds.join(', ')}.`);
+      if (!HIDDEN_RESULTS[h.result]) err(at, 'Set result to "found", "none-found" or "not-checked".');
+      need(h.how, at, h.result === 'not-checked' ? 'Say why it was not checked.' : 'Say how you looked.');
+      if (h.result === 'found') {
+        if (!filled(h.refs)) err(at, '"found" needs the codes of the problems found, in refs.');
+        else for (const r of h.refs) if (!findingIds.has(r)) err(at, `"${r}" is not a finding in this pack.`);
+      }
+    });
+    const sourceIds = (catalogue.evidenceSources || []).map((x) => x.id);
+    (pack.method?.sources || []).forEach((x, i) => {
+      const at = `method.sources[${i}] ${x.source || ''}`.trim();
+      if (!sourceIds.includes(x.source)) err(at, `Unknown source. Use one of: ${sourceIds.join(', ')}.`);
+      if (typeof x.used !== 'boolean') err(at, 'Set used to true or false.');
+      need(x.detail, at, x.used ? 'Say what was used: which version, how many, which period.' : 'Say why it was not used, for example "none exists".');
     });
     const seen = new Set();
     (pack.worksheet || []).forEach((r, i) => {
@@ -376,12 +517,22 @@ function withGlossary(html, glossary) {
   }).join('');
 }
 
-const SECTIONS = [
-  ['verdict', 'Verdict'], ['findings', 'What to fix'], ['product', 'Product'], ['demo', 'Demo'], ['run', 'How to run it'],
-  ['requirements', 'Requirements'], ['architecture', 'Architecture'], ['rules', 'Business rules'], ['harness', 'Harness'],
-  ['performance', 'Performance'], ['security', 'Security'], ['operations', 'Operations'], ['history', 'Quality history'],
-  ['acceptance', 'Acceptance'], ['limits', 'Not checked'], ['glossary', 'Glossary'],
-];
+const SECTION_LABELS = {
+  verdict: 'Summary', method: 'How it was done', questions: 'Results', recommendations: 'Recommendations', findings: 'What to fix',
+  product: 'Product', demo: 'Demo', run: 'How to run it', requirements: 'Requirements', architecture: 'Architecture', rules: 'Business rules',
+  harness: 'Harness', performance: 'Performance', security: 'Security', operations: 'Operations', history: 'Quality history',
+  acceptance: 'Acceptance', limits: 'Not checked', glossary: 'Glossary',
+};
+// A finished review reads like an inspection report: evidence and conclusions first, then how they were reached, the
+// results for the three questions, the recommendations, and the evidence behind them. A hand-in leads with the product.
+export const SECTION_ORDER = {
+  review: ['verdict', 'method', 'questions', 'recommendations', 'findings', 'harness', 'performance', 'architecture', 'rules', 'security', 'operations', 'history', 'product', 'demo', 'run', 'requirements', 'acceptance', 'limits', 'glossary'],
+  submission: ['verdict', 'findings', 'product', 'demo', 'run', 'requirements', 'architecture', 'rules', 'harness', 'performance', 'security', 'operations', 'history', 'acceptance', 'limits', 'glossary'],
+};
+const ansChip = (a) => `<span class="chip ans ${a === 'Yes' ? 'r-meets' : a === 'No' ? 'r-does-not-meet' : a === 'Partly' ? 'r-cannot-verify' : 'r-not-applicable'}">${esc(a)}</span>`;
+const perfChip = (r) => `<span class="chip ${r === 'pass' ? 'r-meets' : r === 'fail' ? 'r-does-not-meet' : 'r-cannot-verify'}">${esc(PERF_RESULTS[r] || 'No result')}</span>`;
+const hiddenChip = (r) => `<span class="chip ${r === 'none-found' ? 'r-meets' : r === 'found' ? 'r-does-not-meet' : 'r-cannot-verify'}">${esc(HIDDEN_RESULTS[r] || 'No result')}</span>`;
+const skillLink = (t) => (/^https?:/.test(t.link) ? `<a href="${esc(t.link)}">${esc(t.name)}</a>` : `<code>${esc(t.name)}</code>`);
 
 export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = loadCatalogue() } = {}) {
   const stage = pack.stage || 'submission';
@@ -419,7 +570,79 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
       <td>${t.blocker ? '<span class="pill pill-block">Blocker</span> ' : '<span class="pill">Condition</span> '}${fmt(t.text)}${t.why ? `<br><span class="dim">${fmt(t.why)}</span>` : ''}${refs(t.refs)}</td>
       <td data-label="Who">${fmt(t.who || 'not assigned')}</td><td data-label="How big">${fmt(t.effort || '—')}</td><td data-label="When">${fmt(t.when)}</td></tr>`).join('')}</tbody></table></div>` : '';
 
-  const verdictBody = `
+  const ins = reviewed ? inspection(pack, catalogue) : null;
+  const said = ins ? conclusions(ins) : null;
+  const probItem = (f) => `<li>${codeLink(f.id)} ${sevChip(f.severity)} ${fmt(f.title || '')}</li>`;
+  const qEvidence = ins ? {
+    harness: `${ins.harness.met} of ${ins.harness.total} harness checks met${ins.harness.recurring ? `; ${recurringText(ins.harness)}` : ''}.`,
+    performance: ins.performance.total ? `${ins.performance.run} of ${ins.performance.total} kinds of performance test run; ${ins.performance.passed} passed, ${ins.performance.failed} failed.` : 'None required at this risk tier.',
+    hidden: `${ins.hidden.examined} of ${ins.hidden.total} places examined; ${ins.hidden.found.length} hidden problem${ins.hidden.found.length === 1 ? '' : 's'} found.`,
+  } : {};
+  const qTable = ins ? `<div class="table-wrap q-table"><table><thead><tr><th>Question</th><th>Answer</th><th>Evidence</th></tr></thead><tbody>${Object.keys(QUESTIONS).map((k, i) => `<tr><td><a href="#q-${k}">${i + 1}. ${esc(QUESTIONS[k].title)}</a></td><td>${ansChip(ins[k].answer)}</td><td>${esc(qEvidence[k])}</td></tr>`).join('')}</tbody></table></div>` : '';
+
+  const summaryBody = `
+    ${errors.length ? `<div class="incomplete"><p><strong>This review is incomplete.</strong> ${errors.length} required item${errors.length > 1 ? 's are' : ' is'} missing or inconsistent:</p><ul>${errors.map((e) => `<li><code>${esc(e.where)}</code> ${esc(e.message)}</li>`).join('')}</ul></div>` : ''}
+    <div class="verdict-grid">
+      <div class="stamp ${dClass}"><span class="stamp-label">Verdict</span><span class="stamp-text">${esc(decision || 'Not given')}</span><span class="stamp-meta">Risk tier ${esc(p.riskTier)} of 3</span></div>
+      <div class="verdict-text">${v.reason ? `<p class="reason">${fmt(v.reason)}</p>` : ''}
+        ${v.ifLaunchedNow ? `<div class="anyway"><h3>If it were delivered or launched now</h3><p>${fmt(v.ifLaunchedNow)}</p></div>` : ''}
+      </div>
+    </div>
+    <h3>The three questions</h3><p class="dim">${esc(QUESTIONS_NOTE)}</p>${qTable}
+    ${ins ? `<ul class="said">${Object.keys(QUESTIONS).map((k) => `<li>${esc(said[k])}</li>`).join('')}</ul>` : ''}
+    ${(v.blockers || []).length ? `<h3>Before delivery: ${v.blockers.length} blocker${v.blockers.length === 1 ? '' : 's'}</h3><ol class="top">${v.blockers.map((b) => `<li>${fmt(b.text)}</li>`).join('')}</ol><p class="dim">Who does each, how big it is, and the conditions: <a href="#recommendations">Recommendations</a>.</p>` : ''}
+    ${v.estimate ? `<p class="estimate"><span class="lbl">When it could be delivered</span> ${fmt(v.estimate)}</p>` : ''}
+    <p class="signoff">${v.signedBy ? `Signed by <strong>${fmt(v.signedBy)}</strong> on ${fmt(v.signedOn)} for version <code>${esc(p.commit)}</code>.` : `Not signed yet. ${fmt(v.signer || 'The product owner')} signs here, with name, date and the version inspected (<code>${esc(p.commit || '…')}</code>).`}</p>`;
+
+  const sources = methodSources(pack, catalogue);
+  const usedN = sources.filter((x) => x.entry?.used).length;
+  const methodBody = `
+    <p class="lede">Version <code>${esc(p.commit || '—')}</code>${p.repository ? ` of ${fmt(p.repository)}` : ''}${p.versionNote ? ` (${fmt(p.versionNote)})` : ''}, inspected ${esc(p.reviewedOn || '—')} by ${fmt(p.reviewer || '—')}, at risk tier ${esc(p.riskTier)}: ${esc(TIER_TEXT[p.riskTier] || '')}</p>
+    <h3>Sources of evidence (${usedN} of ${sources.length} used)</h3>
+    ${table(['Source', 'Used', 'What was used, or why not', 'Why it matters'], sources.map((x) => [esc(x.name), x.entry ? `<span class="chip ${x.entry.used ? 'r-meets' : 'r-not-applicable'}">${x.entry.used ? 'Used' : 'Not used'}</span>` : '<span class="chip r-missing">No entry</span>', fmt(x.entry?.detail || ''), esc(x.why)]))}
+    ${filled(pack.method?.skills) ? `<h3>Skills and tools used</h3>${table(['Skill or tool', 'What it did'], pack.method.skills.map((x) => [fmt(x.name), fmt(x.how || '')]))}` : ''}
+    <div class="key"><h3>How to read the results</h3><dl>
+      <dt>Yes, Partly, No</dt><dd>Counted by software from the record: everything done is Yes, at least half is Partly, less than half is No.</dd>
+      <dt>Blocker</dt><dd>Delivery can't happen until it's done.</dd>
+      <dt>Condition</dt><dd>Also required, at the time shown, but not a reason to stop on its own.</dd>
+      <dt>Cannot verify</dt><dd>The inspector didn't have what was needed to check it. It is not a pass: each one says what's needed.</dd>
+      <dt>Codes</dt><dd>Codes like ARC-11 are problems found (see <a href="#findings">What to fix</a>). Codes like A-09 are checklist items, under "Full checklist" in each evidence section.</dd>
+      <dt>Evidence A, B, C</dt><dd>A: the inspector ran or measured it. B: the inspector read the code or settings. C: someone's statement, which never counts as proof.</dd>
+      <dt>Dotted underline</dt><dd>Hover over it, or tap it, for an explanation.</dd>
+    </dl></div>`;
+
+  const qCard = (n, key, evidence, recommendation, more) => `<article class="q" id="q-${key}">
+      <header><span class="q-num">${n}</span><h3>${esc(QUESTIONS[key].title)}</h3>${ansChip(ins[key].answer)}</header>
+      <p class="dim">${esc(QUESTIONS[key].why)}</p>
+      <h4>Evidence</h4>${evidence}
+      <h4>Conclusion</h4><p class="conclusion">${esc(said[key])}</p>
+      ${recommendation ? `<h4>Recommendation</h4>${recommendation}` : ''}
+      <p class="q-more"><a href="#${more}">All the evidence: ${esc(SECTION_LABELS[more])}</a></p>
+    </article>`;
+  const hz = ins?.harness, pf = ins?.performance, hd = ins?.hidden;
+  const questionsBody = ins ? `<p class="dim">${esc(QUESTIONS_NOTE)}</p><div class="qs">
+    ${qCard(1, 'harness', `<p>${hz.met} of ${hz.total} harness checks met.</p>
+      <div class="q-cols"><div><h5>In place</h5>${hz.met ? `<ul>${hz.checks.filter((x) => x.result === 'meets').map((x) => `<li>${codeLink(x.id)} ${esc(x.title)}</li>`).join('')}</ul>` : '<p class="dim">None.</p>'}</div>
+      <div><h5>Missing or unproven</h5>${hz.total - hz.met ? `<ul>${hz.checks.filter((x) => x.result !== 'meets').map((x) => `<li>${codeLink(x.id)} ${esc(x.title)} ${x.result === 'missing' ? '<span class="chip r-missing">No result</span>' : chip(x.result)}${x.text ? `<br><span class="dim">${esc(x.label)}: ${fmt(x.text)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="dim">Nothing.</p>'}</div></div>
+      ${hz.recurring ? `<p>${hz.recurring} kinds of problem came back during the project (see <a href="#history">Quality history</a>): ${esc(recurringText(hz).replace(/^of the \d+ kinds of problem that came back, /, ''))}. The kind of test that would catch each:</p>
+      ${table(['Kind of test', 'In the project', 'Would catch these problems that came back'], hz.testKinds.filter((k) => k.suites.length || k.needed.length).map((k) => [esc(k.name), k.suites.length ? `Yes: ${esc(k.suites.join(', '))}` : '<strong>No</strong>', k.needed.length ? k.needed.map((n) => `${esc(n.name)} <span class="dim">(${n.times} time${n.times === 1 ? '' : 's'}${n.caught ? ', caught now' : ''})</span>`).join('<br>') : '<span class="dim">none</span>']))}` : ''}`,
+      hz.recommend.length ? `<p>Most needed first:</p><ol class="recs">${hz.recommend.map((k) => { const t = recommendText(k); return `<li><strong>${esc(t.what)}</strong> ${esc(t.forWhat)}<br><span class="dim">${esc(t.catches)}${k.skills.length ? ` Skills and tools: ${k.skills.map(skillLink).join(', ')}.` : ''}</span></li>`; }).join('')}</ol>` : '', 'harness')}
+    ${qCard(2, 'performance', table(['Kind of test', 'Result', 'What it showed'], pf.kinds.map((k) => [`${esc(k.name)}${k.mandatory ? '' : ' <span class="tag">recommended</span>'}`, perfChip(k.result), `${fmt(k.note)}${k.by ? ` <span class="dim">(run by the ${esc(k.by)})</span>` : ''}`])),
+      pf.run < pf.total ? `<p>Run these tests:</p><ul class="recs">${pf.kinds.filter((k) => k.mandatory && !(k.result === 'pass' || k.result === 'fail')).map((k) => `<li><strong>${esc(k.name)}.</strong> ${esc(k.proves)}</li>`).join('')}</ul>${(catalogue.toolbox || []).some((t) => t.kinds.includes('load')) ? `<p class="dim">Skills: ${(catalogue.toolbox || []).filter((t) => t.kinds.includes('load')).map(skillLink).join(', ')} runs the load, beyond-capacity, rush and slow-partner tests; Lighthouse measures page speed on phones.</p>` : ''}` : '', 'performance')}
+    ${qCard(3, 'hidden', `${table(['Where hidden problems sit', 'Result', 'Problems'], hd.areas.map((a) => [esc(a.name), hiddenChip(a.result), a.refs.map(codeLink).join(' ')]))}
+      ${hd.found.length ? `<h5>The ${hd.found.length} hidden problem${hd.found.length === 1 ? '' : 's'}, most serious first</h5><ul class="probs">${hd.found.map(probItem).join('')}</ul>` : ''}`,
+      `${hd.examined < hd.total ? `<ul class="recs">${hd.areas.filter((a) => !(a.result === 'found' || a.result === 'none-found')).map((a) => `<li><strong>Examine ${esc(a.name.toLowerCase())}.</strong> ${esc(a.look)}</li>`).join('')}</ul>` : ''}${hd.found.length ? `<p>Fix the hidden problems (see <a href="#findings">What to fix</a>), and for each add the test that would have caught it, so it can't come back unnoticed.</p>` : ''}`, 'architecture')}
+    </div>
+    <h3>Results by area</h3>${scoreboard(pack, catalogue)}` : '';
+
+  const recommendationsBody = `
+    ${todo ? `<h3>What has to happen</h3>${todo}` : '<p class="dim">Nothing has to happen before delivery.</p>'}
+    ${hz && hz.recommend.length ? `<h3>Strengthen the test harness</h3><p>So the problems that came back can't come back again unnoticed. Most needed first:</p><ol class="recs">${hz.recommend.map((k) => { const t = recommendText(k); return `<li><strong>${esc(t.what)}</strong> ${esc(t.forWhat)}${k.skills.length ? ` <span class="dim">Skills and tools: ${k.skills.map(skillLink).join(', ')}.</span>` : ''}</li>`; }).join('')}</ol>` : ''}
+    ${filled(catalogue.toolbox) ? `<h3>Skills and tools the team can use</h3><p class="dim">Install them in Claude Code so the AI agents that write the code also write and run these tests.</p>${table(['Skill or tool', 'From', 'Helps build', 'What it does'], catalogue.toolbox.map((t) => [skillLink(t), esc(t.from), esc(t.kinds.map((k) => (catalogue.testKinds.find((x) => x.id === k) || { name: k }).name.toLowerCase()).join(', ') || '—'), esc(t.what)]))}` : ''}
+    ${filled(v.decisions) ? `<div class="decide"><h3>Decisions only the owner can make</h3><ul>${v.decisions.map((d) => `<li>${fmt(d.text)}${refs(d.refs)}</li>`).join('')}</ul></div>` : ''}
+    ${filled(v.noticeable) ? `<h3>What customers would notice today</h3>${list(v.noticeable)}` : ''}`;
+
+  const verdictBody = reviewed ? summaryBody : `
     ${errors.length ? `<div class="incomplete"><p><strong>${reviewed ? 'This review is incomplete' : 'This submission is not reviewable yet'}.</strong> ${errors.length} required item${errors.length > 1 ? 's are' : ' is'} missing or inconsistent:</p><ul>${errors.map((e) => `<li><code>${esc(e.where)}</code> ${esc(e.message)}</li>`).join('')}</ul></div>` : ''}
     <div class="verdict-grid">
       <div class="stamp ${dClass}"><span class="stamp-label">${reviewed ? 'Verdict' : 'Status'}</span><span class="stamp-text">${esc(decision || 'Awaiting review')}</span><span class="stamp-meta">Risk tier ${esc(p.riskTier)} of 3</span></div>
@@ -457,6 +680,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
         ${f.impact ? `<dt>Impact</dt><dd>${fmt(f.impact)}</dd>` : ''}
         ${f.who ? `<dt>Who</dt><dd>${fmt(f.who)}</dd>` : ''}
         ${f.where ? `<dt>Where</dt><dd>${fmt(f.where)}</dd>` : ''}
+        ${f.evidence ? `<dt>Evidence</dt><dd>${fmt(f.evidence)}</dd>` : ''}
         ${f.fix ? `<dt>Fix</dt><dd>${fmt(f.fix)}</dd>` : ''}
         ${f.doneWhen ? `<dt>Done when</dt><dd>${fmt(f.doneWhen)}</dd>` : ''}
         ${filled(f.dependsOn) ? `<dt>Depends on</dt><dd>${f.dependsOn.map((x) => (/^[A-Z]+-\d+$/.test(x) ? codeLink(x) : fmt(x))).join(' · ')}</dd>` : ''}
@@ -495,17 +719,19 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
     ${filled(arch.entryPoints) ? `<h3>Entry points (${arch.entryPoints.length})</h3>${table(['Entry point', 'Who may call it', 'What stops everyone else', 'What it touches'], arch.entryPoints.map((e) => [fmt(e.entry), fmt(e.caller), fmt(e.guard || ''), fmt(e.touches || '')]))}` : ''}
     ${filled(arch.dataStores) ? `<h3>Data stores</h3>${table(['Store', 'Holds', 'Sensitivity'], arch.dataStores.map((d) => [fmt(d.name), fmt(d.holds), fmt(d.sensitivity || '')]))}` : ''}
     ${filled(arch.services) ? `<h3>Outside services</h3>${table(['Service', 'Used for', 'Time limit', 'When it fails'], arch.services.map((s) => [fmt(s.name), fmt(s.purpose), fmt(s.timeout || '—'), fmt(s.onFailure || '—')]))}` : ''}
-    ${filled(arch.decisions) ? `<h3>Decisions</h3>${table(['Decision', 'Why', 'Alternatives', 'Downsides'], arch.decisions.map((d) => [fmt(d.title), fmt(d.why), fmt(d.alternatives || ''), fmt(d.downsides || '')]))}` : ''}`;
+    ${filled(arch.decisions) ? `<h3>Decisions</h3>${table(['Decision', 'Why', 'Alternatives', 'Downsides'], arch.decisions.map((d) => [fmt(d.title), fmt(d.why), fmt(d.alternatives || ''), fmt(d.downsides || '')]))}` : ''}
+    ${hd ? `<h3>Where the review looked for hidden problems</h3>${table(['Place', 'What to look for', 'How the review looked', 'Result', 'Problems'], hd.areas.map((a) => [esc(a.name), esc(a.look), fmt(a.how || '—'), hiddenChip(a.result), a.refs.map(codeLink).join(' ')]))}` : ''}`;
 
   const rulesBody = `${notes('D')}${filled(pack.rules) ? table(['ID', 'Rule', 'Enforced by', 'Proved by'], pack.rules.map((r) => [esc(r.id || ''), `<strong>${fmt(r.rule)}</strong>`, fmt(r.enforcedBy), fmt(r.provenBy || '—')])) : ''}`;
 
   const h = pack.harness || {};
   const harnessBody = `${notes('H')}
     <p><span class="lbl">Agent instructions</span> ${h.agentFile ? `<code>${esc(h.agentFile.path)}</code> ${fmt(h.agentFile.summary || '')}` : '<span class="dim">None: AI coding assistants get no project-specific instructions.</span>'}</p>
-    ${filled(h.suites) ? `<h3>Automated tests</h3>${table(['Suite', 'Kind', 'Covers', 'Command', 'Last run', 'Runs automatically on every change'], h.suites.map((s) => [fmt(s.name), fmt(s.kind), fmt(s.covers || ''), `<code>${esc(s.command || '')}</code>`, fmt(s.lastRun || '—'), s.inCI ? 'Yes' : 'No']))}` : ''}
+    ${filled(h.suites) ? `<h3>Automated tests</h3>${table(['Suite', 'Type', 'Covers', 'Command', 'Last run', 'Runs automatically on every change'], h.suites.map((s) => [fmt(s.name), `${esc((catalogue.testKinds || []).find((k) => k.id === s.type)?.name || s.type || '—')}${s.kind ? `<br><span class="dim">${fmt(s.kind)}</span>` : ''}`, fmt(s.covers || ''), `<code>${esc(s.command || '')}</code>`, fmt(s.lastRun || '—'), s.inCI ? 'Yes' : 'No']))}` : ''}
     ${filled(h.ci) ? `<h3>Automatic checks on every change (CI)</h3>${list(h.ci)}` : ''}${filled(h.checks) ? `<h3>Other checks</h3>${list(h.checks)}` : ''}`;
 
   const perfBody = `${notes('P')}
+    ${pf ? `<h3>Kinds of performance test</h3>${table(['Kind of test', 'What it proves', 'Run by', 'Result', 'What it showed'], pf.kinds.map((k) => [`${esc(k.name)}${k.mandatory ? '' : ' <span class="tag">recommended</span>'}`, esc(k.proves), esc(k.by || '—'), perfChip(k.result), fmt(k.note)]))}` : ''}
     ${perf.target ? `<p><span class="lbl">Target</span> ${fmt(perf.target)}</p>` : ''}${perf.environment ? `<p><span class="lbl">Tested on</span> ${fmt(perf.environment)}</p>` : ''}
     ${filled(perf.runs) ? `<h3>Load test runs</h3>${table(['Run', 'Result', 'Notes'], perf.runs.map((r) => [fmt(r.label), `<span class="chip ${r.pass ? 'r-meets' : 'r-does-not-meet'}">${esc(r.result)}</span>`, fmt(r.note || '')]))}` : ''}
     ${filled(perf.steps) ? `<h3>${fmt(perf.stepsTitle || 'Per step')}</h3>${table(['Step', 'Request', 'Target', 'Achieved', '95% faster than (budget)', 'Errors', 'Result'], perf.steps.map((s) => [fmt(s.step), fmt(s.endpoint), fmt(s.target), fmt(s.achieved), fmt(s.p95), fmt(s.errors), `<span class="chip ${s.pass ? 'r-meets' : 'r-does-not-meet'}">${s.pass ? 'Pass' : 'Fail'}</span>`]))}` : ''}
@@ -533,6 +759,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
         <ul class="occ">${(c.occurrences || []).map((o) => `<li><span class="oref">${fmt(o.ref)}</span> ${fmt(o.text)}${o.byFix ? ' <span class="pill">Introduced by a fix</span>' : ''}</li>`).join('')}</ul>
         <p><span class="lbl">Why it keeps happening</span> ${fmt(c.rootCause)}</p>
         <p><span class="lbl">What catches the next one</span> ${fmt(c.control)}</p>
+        ${filled(c.catchWith) ? `<p><span class="lbl">Kind of test</span> ${esc(c.catchWith.map((k) => (catalogue.testKinds || []).find((x) => x.id === k)?.name || k).join(', '))}</p>` : ''}
         ${c.controlCheck ? `<p><span class="lbl">Checked</span> ${fmt(c.controlCheck)}</p>` : ''}
         ${c.agentRule ? `<p><span class="lbl">Rule for AI agents</span> ${fmt(c.agentRule)}</p>` : ''}
       </article>`).join('')}</div>` : ''}
@@ -546,26 +773,33 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
         <span class="chip ${r.status === 'pass' ? 'r-meets' : r.status === 'fail' || r.status === 'flaky' ? 'r-does-not-meet' : r.status === 'external' ? 'r-not-applicable' : 'r-cannot-verify'}">${esc({ pass: 'Pass', fail: 'Fail', flaky: 'Flaky', external: 'Checked by another test (see note)', 'not-run': 'Not run' }[r.status] || r.status || 'Not run')}${r.runs ? ` ${esc(r.runs)}` : ''}</span></div>
         ${r.note ? `<p class="dim">${fmt(r.note)}</p>` : ''}${evidenceList(r.evidence, baseDir, { thumbs: true })}</li>`).join('')}</ul>` : ''}`;
 
-  const body = [
-    sec('verdict', 1, 'Verdict', verdictBody),
-    sec('findings', 2, 'What to fix', findingsBody),
-    sec('product', 3, 'Product', productBody),
-    sec('demo', 4, 'Demo: the main journeys', demoBody),
-    sec('run', 5, 'How to run it', runBody, 'R'),
-    sec('requirements', 6, 'Requirements: the agreed standard', reqBody),
-    sec('architecture', 7, 'Architecture', archBody, 'A'),
-    sec('rules', 8, 'Business rules', rulesBody, 'D'),
-    sec('harness', 9, 'Harness: tests, automatic checks and AI-agent instructions', harnessBody, 'H'),
-    sec('performance', 10, 'Performance', perfBody, 'P'),
-    sec('security', 11, 'Security', `${notes('S')}${filled(pack.scans?.triage) ? `<h3>Automated scans: what each hit became (${pack.scans.triage.length})</h3>${table(['Tool', 'Rule', 'Where', 'Outcome'], pack.scans.triage.map((t) => [fmt(t.tool), `<code>${esc(t.rule)}</code>`, fmt(t.where || ''), t.outcome === 'reported' ? `Reported as ${codeLink(t.ref)}` : `Not a problem here: ${fmt(t.reason || '')}`]))}` : ''}`, 'S'),
-    sec('operations', 12, 'Operations', notes('O'), 'O'),
-    sec('history', 13, 'Quality history: problems that keep coming back', histBody, 'Q'),
-    sec('acceptance', 14, 'Acceptance', accBody, 'U'),
-    sec('limits', 15, 'Not checked', filled(pack.notChecked) ? list(pack.notChecked) : '<p class="dim">Nothing listed.</p>'),
-    sec('glossary', 16, 'Glossary', filled(glossary) ? `<dl class="gloss">${glossary.map((g) => `<dt>${fmt(g.term)}</dt><dd>${fmt(g.meaning)}</dd>`).join('')}</dl>` : '<p class="dim">No terms listed.</p>'),
-  ].join('\n');
+  const parts = {
+    verdict: [reviewed ? 'Summary: evidence and conclusions' : 'Status', verdictBody],
+    method: ['How the inspection was done', methodBody],
+    questions: ['Results: the three questions', questionsBody],
+    recommendations: ['Recommendations', recommendationsBody],
+    findings: [reviewed ? 'What to fix: every open problem' : 'What to fix', findingsBody],
+    product: ['Product', productBody],
+    demo: ['Demo: the main journeys', demoBody],
+    run: ['How to run it', runBody, 'R'],
+    requirements: ['Requirements: the agreed standard', reqBody],
+    architecture: ['Architecture', archBody, 'A'],
+    rules: ['Business rules', rulesBody, 'D'],
+    harness: ['Harness: tests, automatic checks and AI-agent instructions', harnessBody, 'H'],
+    performance: ['Performance', perfBody, 'P'],
+    security: ['Security', `${notes('S')}${filled(pack.scans?.triage) ? `<h3>Automated scans: what each hit became (${pack.scans.triage.length})</h3>${table(['Tool', 'Rule', 'Where', 'Outcome'], pack.scans.triage.map((t) => [fmt(t.tool), `<code>${esc(t.rule)}</code>`, fmt(t.where || ''), t.outcome === 'reported' ? `Reported as ${codeLink(t.ref)}` : `Not a problem here: ${fmt(t.reason || '')}`]))}` : ''}`, 'S'],
+    operations: ['Operations', notes('O'), 'O'],
+    history: ['Quality history: problems that keep coming back', histBody, 'Q'],
+    acceptance: ['Acceptance', accBody, 'U'],
+    limits: ['Not checked', filled(pack.notChecked) ? list(pack.notChecked) : '<p class="dim">Nothing listed.</p>'],
+    glossary: ['Glossary', filled(glossary) ? `<dl class="gloss">${glossary.map((g) => `<dt>${fmt(g.term)}</dt><dd>${fmt(g.meaning)}</dd>`).join('')}</dl>` : '<p class="dim">No terms listed.</p>'],
+  };
+  const order = SECTION_ORDER[reviewed ? 'review' : 'submission'];
+  const body = order.map((id, i) => sec(id, i + 1, parts[id][0], parts[id][1], parts[id][2])).join('\n');
+  const num = (id) => order.indexOf(id) + 1;
 
-  const nav = `<nav class="toc" aria-label="Sections"><p class="toc-title">Contents</p><ol>${SECTIONS.map(([id, label]) => {
+  const nav = `<nav class="toc" aria-label="Sections"><p class="toc-title">Contents</p><ol>${order.map((id) => {
+    const label = SECTION_LABELS[id];
     const a = catalogue.areas.find((x) => x.section === id);
     let dot = '';
     if (a) {
@@ -584,10 +818,10 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
 <style>${CSS}</style>
 <div class="page">
   <header class="masthead">
-    <p class="kicker">Review page${reviewed ? '' : ' · submitted, awaiting review'}</p>
+    <p class="kicker">${reviewed ? 'Pre-delivery inspection' : 'Review page · submitted, awaiting review'}</p>
     <h1>${esc(p.name || 'Untitled project')}</h1>
     <p class="meta">${reviewed ? `Reviewed ${esc(p.reviewedOn || '—')} by ${fmt(p.reviewer || '—')}` : `Submitted ${esc(p.date || '—')} by ${fmt(p.author || '—')}`}</p>
-    <p class="guide">Owners: section 1 says whether you can launch and what has to happen first. Developers: section 2 lists what to fix; the rest is the evidence.</p>
+    <p class="guide">${reviewed ? `Section ${num('verdict')} gives the verdict and answers three questions: is the test harness properly set up, are the performance tests comprehensive, and does the architecture review cover hidden problems. Section ${num('method')} says how the inspection was done and which sources it used, section ${num('questions')} shows the evidence behind each answer, and section ${num('recommendations')} what to do. The rest is the evidence.` : 'Section 1 shows the status: the reviewer fills in the verdict. The author\'s sections start with Product.'}</p>
   </header>
   <div class="layout">${nav}<main>${body}</main></div>
   <footer class="foot">Generated from <code>review-pack.json</code> (review standard ${esc(pack.standard || catalogue.standard)}). The JSON file is the record; this page is a view of it.</footer>
@@ -788,6 +1022,21 @@ dialog .close { font: 500 13px var(--body); border: 1px solid var(--line); backg
 .attention li { display: grid; gap: 3px; }
 .att-head { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
 .att-what { color: var(--muted); font-size: 13.5px; padding-left: 2px; }
+.q-table td:first-child a { font-weight: 600; color: var(--ink); }
+.said { display: grid; gap: 6px; padding-left: 18px; }
+.top { display: grid; gap: 6px; padding-left: 22px; }
+.qs { display: grid; gap: 16px; }
+.q { border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 10px; background: var(--surface); }
+.q header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.q header h3 { flex: 1 1 260px; font-size: 19px; }
+.q-num { font: 700 15px/1 var(--display); color: var(--accent); border: 1.5px solid var(--accent); border-radius: 999px; width: 28px; height: 28px; display: inline-grid; place-items: center; }
+.chip.ans { font-size: 14px; padding: 7px 12px; }
+.q h4 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-top: 4px; }
+.q h5 { font-size: 14px; margin-bottom: 4px; }
+.q-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.q-cols ul, .recs, .probs { display: grid; gap: 4px; padding-left: 18px; }
+.conclusion { border-left: 3px solid var(--accent); padding: 6px 12px; background: var(--code-bg); border-radius: 0 5px 5px 0; }
+.q-more { font-size: 14px; }
 .decide { border: 1px solid var(--accent); border-radius: 6px; padding: 12px 14px; display: grid; gap: 6px; }
 .decide ul { gap: 6px; }
 .actual-diff { border-left: 3px solid var(--fails); padding-left: 8px; }
@@ -962,6 +1211,26 @@ export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme, sca
       const done = ids.filter((id) => RESULTS[rows.get(id)?.result]);
       add(`${code}: mandatory criteria with a result`, ids.length, done.length, ids.filter((id) => !done.includes(id)));
     }
+    // The records behind the three questions, counted with the lens that writes them.
+    const ins = inspection(pack, catalogue);
+    if (codes.includes('H')) {
+      const suites = pack.harness?.suites || [];
+      add('Test suites with a type', suites.length, suites.filter((x) => x.type).length, suites.filter((x) => !x.type).map((x) => x.name || '(unnamed)'));
+    }
+    if (codes.includes('P')) {
+      const due = ins.performance.kinds.filter((k) => k.mandatory);
+      const ok = due.filter((k) => PERF_RESULTS[k.result]);
+      add('Kinds of performance test with a result (run or not)', due.length, ok.length, due.filter((k) => !ok.includes(k)).map((k) => `${k.id}: ${k.name}`));
+    }
+    if (codes.includes('A')) {
+      const ok = ins.hidden.areas.filter((a) => HIDDEN_RESULTS[a.result]);
+      add('Places hidden problems sit, each with a result', ins.hidden.areas.length, ok.length, ins.hidden.areas.filter((a) => !ok.includes(a)).map((a) => `${a.id}: ${a.name}`));
+    }
+    if (codes.includes('Q')) {
+      const cls = pack.history?.classes || [];
+      const ok = cls.filter((c) => filled(c.catchWith));
+      add('Recurring problems with the kind of test that would catch them', cls.length, ok.length, cls.filter((c) => !ok.includes(c)).map((c) => c.name));
+    }
   }
   if (stage === 'review') {
     const blockers = new Set((pack.verdict?.blockers || []).flatMap((b) => b.refs || []));
@@ -974,6 +1243,9 @@ export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme, sca
     const must = (pack.acceptance?.rows || []).filter((r) => r.priority === 'Must');
     const judged = must.filter((r) => ['pass', 'fail', 'flaky', 'external'].includes(r.status));
     add('Must acceptance criteria with a result', must.length, judged.length, must.filter((r) => !judged.includes(r)).map((r) => r.id));
+    const src = methodSources(pack, catalogue);
+    const told = src.filter((x) => x.entry && typeof x.entry.used === 'boolean');
+    add('Sources of evidence, each used or explained', src.length, told.length, src.filter((x) => !told.includes(x)).map((x) => `${x.id}: ${x.name}`));
     const scanDir = scans || (pack.scans?.output ? resolve(baseDir, pack.scans.output) : resolve(baseDir, 'scans'));
     if (!existsSync(scanDir)) add('Scanner output found', 1, 0, [`no folder at ${scanDir}: run run-scanners.sh, record the folder in scans.output (or pass --scans)`]);
     else {
@@ -986,11 +1258,109 @@ export function gate(stage, pack, catalogue, { baseDir = '.', areas, readme, sca
   return { ok: checks.every((c) => c.ok), checks };
 }
 
+// ---------- the written report ----------
+// REPORT.md is generated from the same record as the page, so every inspection reads the same way: the evidence and the
+// conclusions first, then how they were reached, the results, the recommendations and the limits.
+const cell = (v) => String(v ?? '').replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ');
+const mdTable = (headers, rows) => [`| ${headers.join(' | ')} |`, `|${headers.map(() => '---').join('|')}|`, ...rows.map((r) => `| ${r.map(cell).join(' | ')} |`)];
+
+export function reportMarkdown(pack, catalogue) {
+  const p = pack.project || {};
+  const v = pack.verdict || {};
+  const ins = inspection(pack, catalogue);
+  const said = conclusions(ins);
+  const hz = ins.harness, pf = ins.performance, hd = ins.hidden;
+  const findings = pack.findings || [];
+  const open = findings.filter((f) => !/^fixed/i.test(f.status || '')).sort((a, b) => sevRank(a.severity) - sevRank(b.severity));
+  const keys = Object.keys(QUESTIONS);
+  const evidence = {
+    harness: `${hz.met} of ${hz.total} harness checks met${hz.recurring ? `; ${recurringText(hz)}` : ''}`,
+    performance: pf.total ? `${pf.run} of ${pf.total} kinds of performance test run; ${pf.passed} passed, ${pf.failed} failed` : 'none required at this risk tier',
+    hidden: `${hd.examined} of ${hd.total} places examined; ${hd.found.length} hidden problem${hd.found.length === 1 ? '' : 's'} found`,
+  };
+  const todo = [...(v.blockers || []).map((b) => ({ ...b, kind: 'Blocker', when: 'Before delivery' })), ...(v.conditions || []).map((c) => ({ ...c, kind: 'Condition', when: c.when || 'Before delivery' }))];
+  const L = [];
+  L.push(`# Pre-delivery inspection: ${p.name || 'Untitled'}`, '');
+  L.push(`Version \`${p.commit || '—'}\`${p.versionNote ? ` (${p.versionNote})` : ''} · inspected ${p.reviewedOn || '—'} by ${p.reviewer || '—'} · risk tier ${p.riskTier}. Generated from \`review-pack.json\`; the review page shows the same record with all the evidence.`, '');
+
+  L.push('## 1. Summary: evidence and conclusions', '');
+  L.push(`**Verdict: ${v.decision || 'not given'}.** ${v.reason || ''}`, '');
+  if (v.ifLaunchedNow) L.push(`**If it were delivered or launched now:** ${v.ifLaunchedNow}`, '');
+  L.push(`*${QUESTIONS_NOTE}*`, '');
+  L.push(...mdTable(['Question', 'Answer', 'Evidence'], keys.map((k, i) => [`${i + 1}. ${QUESTIONS[k].title}`, `**${ins[k].answer}**`, evidence[k]])), '');
+  for (const k of keys) L.push(`- ${said[k]}`);
+  L.push('');
+  if ((v.blockers || []).length) {
+    L.push(`**Before delivery (${v.blockers.length} blocker${v.blockers.length === 1 ? '' : 's'}):**`, '');
+    v.blockers.forEach((b, i) => L.push(`${i + 1}. ${b.text}`));
+    L.push('');
+  }
+  if (v.estimate) L.push(`**When it could be delivered:** ${v.estimate}`, '');
+
+  L.push('## 2. How the inspection was done', '');
+  L.push('### Sources of evidence', '');
+  L.push(...mdTable(['Source', 'Used', 'What was used, or why not'], methodSources(pack, catalogue).map((x) => [x.name, x.entry ? (x.entry.used ? 'Yes' : 'No') : 'not recorded', x.entry?.detail || ''])), '');
+  if (filled(pack.method?.skills)) L.push('### Skills and tools used', '', ...mdTable(['Skill or tool', 'What it did'], pack.method.skills.map((x) => [x.name, x.how || ''])), '');
+  L.push('**How the answers are worked out.** Software counts them from the record: everything done is Yes, at least half is Partly, less than half is No. Every checklist result carries its evidence grade: A, the inspector ran or measured it; B, the inspector read the code or settings; C, a statement only, which never counts as proof.', '');
+
+  L.push('## 3. Results', '');
+  L.push(`### 3.1 ${QUESTIONS.harness.title} ${hz.answer}`, '', `*${QUESTIONS.harness.why}*`, '');
+  L.push(`**Evidence.** ${hz.met} of ${hz.total} harness checks met.`, '');
+  const inPlace = hz.checks.filter((x) => x.result === 'meets');
+  const missing = hz.checks.filter((x) => x.result !== 'meets');
+  if (inPlace.length) L.push(`In place: ${inPlace.map((x) => `${x.id} ${x.title}`).join('; ')}.`, '');
+  if (missing.length) L.push('Missing or unproven:', '', ...missing.map((x) => `- ${x.id} ${x.title} (${x.result === 'missing' ? 'no result' : RESULTS[x.result].toLowerCase()})${x.text ? `. ${x.label}: ${x.text}` : ''}`), '');
+  if (hz.recurring) {
+    L.push(`${hz.recurring} kinds of problem came back during the project; ${recurringText(hz).replace(/^of the \d+ kinds of problem that came back, /, '')}. The kind of test that would catch each:`, '');
+    L.push(...mdTable(['Kind of test', 'In the project', 'Would catch these problems that came back'], hz.testKinds.filter((k) => k.suites.length || k.needed.length).map((k) => [k.name, k.suites.length ? `Yes: ${k.suites.join(', ')}` : '**No**', k.needed.map((n) => `${n.name} (${n.times} time${n.times === 1 ? '' : 's'}${n.caught ? ', caught now' : ''})`).join('; ') || '—'])), '');
+  }
+  L.push(`**Conclusion.** ${said.harness}`, '');
+  L.push(`### 3.2 ${QUESTIONS.performance.title} ${pf.answer}`, '', `*${QUESTIONS.performance.why}*`, '');
+  L.push(...mdTable(['Kind of test', 'Result', 'What it showed'], pf.kinds.map((k) => [`${k.name}${k.mandatory ? '' : ' (recommended)'}`, PERF_RESULTS[k.result] || 'No result', k.note])), '');
+  L.push(`**Conclusion.** ${said.performance}`, '');
+  L.push(`### 3.3 ${QUESTIONS.hidden.title} ${hd.answer}`, '', `*${QUESTIONS.hidden.why}*`, '');
+  L.push(...mdTable(['Where hidden problems sit', 'Result', 'How the review looked', 'Problems'], hd.areas.map((a) => [a.name, HIDDEN_RESULTS[a.result] || 'No result', a.how, a.refs.join(', ')])), '');
+  if (hd.found.length) L.push(`The ${hd.found.length} hidden problem${hd.found.length === 1 ? '' : 's'}, most serious first:`, '', ...hd.found.map((f) => `- ${f.id} (${f.severity || '?'}) ${f.title || ''}`), '');
+  L.push(`**Conclusion.** ${said.hidden}`, '');
+
+  L.push('## 4. Recommendations', '');
+  if (todo.length) L.push('### What has to happen', '', ...mdTable(['#', 'What has to happen', 'Who', 'How big', 'When'], todo.map((t, i) => [i + 1, `**${t.kind}:** ${t.text}${(t.refs || []).length ? ` (${t.refs.join(', ')})` : ''}`, t.who || 'not assigned', t.effort || '—', t.when])), '');
+  if (hz.recommend.length) {
+    L.push('### Strengthen the test harness', '', 'So the problems that came back can\'t come back again unnoticed. Most needed first:', '');
+    hz.recommend.forEach((k, i) => { const t = recommendText(k); L.push(`${i + 1}. **${t.what}** ${t.forWhat} ${t.catches}${k.skills.length ? ` Skills and tools: ${k.skills.map((x) => x.name).join(', ')}.` : ''}`); });
+    L.push('');
+  }
+  const notRun = pf.kinds.filter((k) => k.mandatory && !(k.result === 'pass' || k.result === 'fail'));
+  if (notRun.length) L.push('### Complete the performance tests', '', 'Run these tests:', '', ...notRun.map((k) => `- **${k.name}.** ${k.proves}`), '');
+  const notLooked = hd.areas.filter((a) => !(a.result === 'found' || a.result === 'none-found'));
+  if (notLooked.length) L.push('### Look where the review did not', '', ...notLooked.map((a) => `- **${a.name}.** ${a.look}`), '');
+  if (filled(catalogue.toolbox)) {
+    L.push('### Skills and tools the team can use', '', 'Install them in Claude Code so the AI agents that write the code also write and run these tests.', '');
+    L.push(...mdTable(['Skill or tool', 'From', 'Helps build', 'What it does'], catalogue.toolbox.map((t) => [/^https?:/.test(t.link) ? `[${t.name}](${t.link})` : `\`${t.name}\``, t.from, t.kinds.map((k) => (catalogue.testKinds.find((x) => x.id === k) || { name: k }).name.toLowerCase()).join(', ') || '—', t.what])), '');
+  }
+  if (filled(v.decisions)) L.push('### Decisions only the owner can make', '', ...v.decisions.map((d) => `- ${d.text}`), '');
+
+  L.push('## 5. Limits: what was not checked', '', ...(filled(pack.notChecked) ? pack.notChecked.map((x) => `- ${x}`) : ['Nothing listed.']), '');
+  L.push('An inspection lowers the risk; it does not prove there are no problems.', '');
+
+  L.push('## Appendix A. Every open problem', '');
+  if (!open.length) L.push('None.', '');
+  for (const f of open) {
+    L.push(`### ${f.id} · ${f.severity || '?'}${f.confidence ? ` · ${f.confidence}` : ''}: ${f.title || ''}`, '');
+    for (const [label, value] of [['Impact', f.impact], ['Where', f.where], ['Evidence', f.evidence], ['Fix', f.fix], ['Done when', f.doneWhen], ['Who', f.who], ['Status', f.status]]) if (value) L.push(`- **${label}:** ${value}`);
+    L.push('');
+  }
+  L.push('## Appendix B. Checklist results by area', '', 'Every criterion in the standard, including those that don\'t apply to this product (`review-pack.mjs status` counts only the mandatory ones).', '');
+  L.push(...mdTable(['Area', 'Meet', "Don't meet", "Can't verify", "Don't apply"], catalogue.areas.map((a) => { const n = areaCounts(pack, catalogue, a.code); return [`${a.code} ${a.name}`, n.meets, n['does-not-meet'], n['cannot-verify'] + n.missing, n['not-applicable']]; })), '');
+  if (filled(pack.glossary)) L.push('## Appendix C. Glossary', '', ...pack.glossary.map((g) => `- **${g.term}:** ${g.meaning}`), '');
+  return L.join('\n');
+}
+
 // ---------- template and criteria list ----------
 
-export function templatePack(catalogue, { tier = 2, features = [] } = {}) {
+export function templatePack(catalogue, { tier = 2, features = [], stage = 'submission' } = {}) {
   const project = { name: 'TODO', summary: 'TODO: what it does and for whom, in plain words', repository: 'TODO', commit: 'TODO', date: 'TODO', author: 'TODO', riskTier: tier, riskReason: 'TODO', features, reviewer: '', reviewedOn: '' };
-  return {
+  const pack = {
     standard: catalogue.standard,
     stage: 'submission',
     project,
@@ -1005,7 +1375,7 @@ export function templatePack(catalogue, { tier = 2, features = [] } = {}) {
     architecture: { summary: 'TODO', diagram: '', components: [{ name: 'TODO', job: 'TODO', tech: '' }], entryPoints: [{ entry: 'TODO', caller: 'TODO', guard: '', touches: '' }], dataStores: [], services: [], decisions: [] },
     rules: [],
     harness: { agentFile: null, suites: [], ci: [], checks: [] },
-    performance: {},
+    performance: { coverage: [] },
     history: { period: '', sources: [], stats: [], classes: [], hotspots: [], known: [] },
     acceptance: { criteriaVersion: 'TODO', agreedBy: 'TODO', run: '', rows: [{ id: 'AC-01', priority: 'Must', criterion: 'TODO', status: 'not-run', evidence: [] }] },
     areaNotes: {},
@@ -1015,6 +1385,20 @@ export function templatePack(catalogue, { tier = 2, features = [] } = {}) {
       .map((c) => ({ id: c.id, result: '', grade: '', evidence: '', note: '', needed: '' })),
     notChecked: [],
     glossary: [],
+  };
+  if (stage !== 'review') return pack;
+  // A reviewer starting without a hand-in gets every reviewer field laid out, including one empty entry per item the
+  // gates count, so what is left to fill in is visible and counted.
+  return {
+    ...pack,
+    stage: 'review',
+    project: { ...project, author: 'No hand-in: built by the reviewer from the code', reviewer: 'TODO', reviewedOn: 'TODO' },
+    verdict: { decision: '', reason: '', ifLaunchedNow: '', blockers: [], conditions: [], decisions: [], estimate: '', noticeable: [], signer: '', signedBy: '', signedOn: '' },
+    method: { sources: catalogue.evidenceSources.map((x) => ({ source: x.id, used: null, detail: '' })), skills: [] },
+    architecture: { ...pack.architecture, hiddenChecks: catalogue.hiddenIssueAreas.map((a) => ({ area: a.id, result: '', how: '', refs: [] })) },
+    performance: { target: '', environment: '', runs: [], steps: [], race: null, slowPartner: '', conclusion: '', coverage: catalogue.performanceTests.filter((k) => applicability(k, project) !== 'off').map((k) => ({ kind: k.id, result: '', by: 'reviewer', note: '' })) },
+    scans: { output: 'scans', triage: [] },
+    history: { ...pack.history, classes: [] },
   };
 }
 
@@ -1037,6 +1421,19 @@ export function criteriaMarkdown(catalogue) {
     }
     lines.push('');
   }
+  const when = (k) => (k.when ? ` Only if the product ${k.when.map((w) => catalogue.features[w]).join(' or ')}.` : '');
+  lines.push('## The three questions: what the inspection counts', '', 'An inspection answers three questions before delivery. Besides the criteria, it records these, and the software counts them (`review-pack.mjs gate`).', '');
+  lines.push(`### Kinds of performance test (${catalogue.performanceTests.length})`, '', '*Are the performance tests comprehensive?* Each kind is recorded as passed, failed or not run, in `performance.coverage`.', '', '| ID | Kind of test | What it proves | Needed from |', '|---|---|---|---|');
+  for (const k of catalogue.performanceTests) lines.push(`| \`${k.id}\` | **${k.name}** | ${k.proves}${when(k)} | Tier ${k.tier} |`);
+  lines.push('', `### Where hidden problems sit (${catalogue.hiddenIssueAreas.length})`, '', '*Does the architecture review cover hidden problems?* Each place is recorded as problems found, none found or not checked, with how the review looked, in `architecture.hiddenChecks`.', '', '| ID | Place | What to look for | Related criteria |', '|---|---|---|---|');
+  for (const a of catalogue.hiddenIssueAreas) lines.push(`| \`${a.id}\` | **${a.name}** | ${a.look} | ${a.criteria.join(', ') || '—'} |`);
+  lines.push('', `### Kinds of automatic test (${catalogue.testKinds.length})`, '', '*Is the test harness properly set up?* Each test suite has one of these types (`harness.suites[].type`), and each problem that came back names the kinds that would catch it (`history.classes[].catchWith`).', '', '| ID | Kind of test | Catches |', '|---|---|---|');
+  for (const k of catalogue.testKinds) lines.push(`| \`${k.id}\` | **${k.name}** | ${k.catches} |`);
+  lines.push('', `### Sources of evidence (${catalogue.evidenceSources.length})`, '', 'Each is recorded as used (with what) or not (with why), in `method.sources`.', '', '| ID | Source | Why it matters |', '|---|---|---|');
+  for (const x of catalogue.evidenceSources) lines.push(`| \`${x.id}\` | **${x.name}** | ${x.why} |`);
+  lines.push('', `### Skills and tools the report recommends (${catalogue.toolbox.length})`, '', '| Skill or tool | From | Helps build | What it does |', '|---|---|---|---|');
+  for (const t of catalogue.toolbox) lines.push(`| ${/^https?:/.test(t.link) ? `[${t.name}](${t.link})` : `\`${t.name}\``} | ${t.from} | ${t.kinds.join(', ') || '—'} | ${t.what} |`);
+  lines.push('');
   return lines.join('\n');
 }
 
@@ -1069,7 +1466,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   } else if (cmd === 'template' && args[0]) {
     const tier = Number(arg(args, '--tier', '2'));
     const features = (arg(args, '--features', '') || '').split(',').filter(Boolean);
-    writeFileSync(args[0], JSON.stringify(templatePack(catalogue, { tier, features }), null, 2) + '\n');
+    writeFileSync(args[0], JSON.stringify(templatePack(catalogue, { tier, features, stage: arg(args, '--stage', 'submission') }), null, 2) + '\n');
     console.log(`Wrote ${args[0]}`);
   } else if (cmd === 'gate' && ['submission', 'worksheet', 'review'].includes(args[0]) && args[1]) {
     const pack = JSON.parse(readFileSync(args[1], 'utf8'));
@@ -1093,14 +1490,25 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     console.log(missing ? `${missing} mandatory criteria have no result yet.` : 'Every mandatory criterion has a result.');
   } else if (cmd === 'merge' && args.length >= 2) {
     const pack = JSON.parse(readFileSync(args[0], 'utf8'));
-    const lists = args.slice(1).map((f) => { const d = JSON.parse(readFileSync(f, 'utf8')); return Array.isArray(d) ? d : d.worksheet || []; });
+    const docs = args.slice(1).map((f) => JSON.parse(readFileSync(f, 'utf8')));
+    const lists = docs.map((d) => (Array.isArray(d) ? d : d.worksheet || []));
+    // A lens file may also carry its part of the inspection record: the performance lens its kinds of test, the
+    // architecture lens where it looked for hidden problems.
+    for (const d of docs.filter((x) => !Array.isArray(x))) {
+      if (d.coverage) pack.performance = { ...(pack.performance || {}), coverage: d.coverage };
+      if (d.hiddenChecks) pack.architecture = { ...(pack.architecture || {}), hiddenChecks: d.hiddenChecks };
+    }
     writeFileSync(args[0], JSON.stringify(mergeWorksheet(pack, lists), null, 2) + '\n');
     console.log(`Merged ${lists.reduce((n, l) => n + l.length, 0)} rows into ${args[0]}`);
+  } else if (cmd === 'report' && args[0] && args[1]) {
+    const pack = JSON.parse(readFileSync(args[0], 'utf8'));
+    writeFileSync(args[1], reportMarkdown(pack, catalogue));
+    console.log(`Wrote ${args[1]}`);
   } else if (cmd === 'criteria' && args[0]) {
     writeFileSync(args[0], criteriaMarkdown(catalogue) + '\n');
     console.log(`Wrote ${args[0]}`);
   } else {
-    console.error('Usage:\n  review-pack.mjs validate <pack.json> [--stage submission|review]\n  review-pack.mjs gate <submission|worksheet|review> <pack.json> [--areas S,A] [--readme README.md] [--scans dir]\n  review-pack.mjs render <pack.json> <out.html> [--fragment]\n  review-pack.mjs template <out.json> [--tier 1|2|3] [--features a,b]\n  review-pack.mjs status <pack.json>\n  review-pack.mjs merge <pack.json> <rows.json>...\n  review-pack.mjs criteria <out.md>');
+    console.error('Usage:\n  review-pack.mjs validate <pack.json> [--stage submission|review]\n  review-pack.mjs gate <submission|worksheet|review> <pack.json> [--areas S,A] [--readme README.md] [--scans dir]\n  review-pack.mjs render <pack.json> <out.html> [--fragment]\n  review-pack.mjs report <pack.json> <REPORT.md>\n  review-pack.mjs template <out.json> [--tier 1|2|3] [--features a,b] [--stage review]\n  review-pack.mjs status <pack.json>\n  review-pack.mjs merge <pack.json> <rows.json>...\n  review-pack.mjs criteria <out.md>');
     process.exit(2);
   }
 }
