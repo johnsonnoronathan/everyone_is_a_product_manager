@@ -16,3 +16,5 @@ It always has this order, like an audit or a release-gate report: the evidence a
 6. **Appendices.** Every open problem, checklist results by area, glossary.
 
 The review page (`review.html`) shows the same record in the same order, with all the evidence. To change what the report says, change the record: the worksheet, the findings, `method`, `performance.coverage`, `architecture.hiddenChecks`, `history.classes[].catchWith` and `harness.suites[].type`. The fields are described in `standard/review-standard.md` §2.
+
+If the owner wants a formal report to sign off or keep on file, write it from the same record, following [formal-report.md](formal-report.md): their own page first, a document control table, one chain per problem class, three checks on each control, a roadmap, and a hostile read before it is published.

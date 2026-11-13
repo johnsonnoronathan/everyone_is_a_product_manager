@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `launch-review`: `references/formal-report.md`, a guide for when the owner wants a formal report on top of the generated one. It covers an owner's page first, a document control table and revisions, one chain per problem class ending in a root cause, three checks on each control (the example fails, gets through without the control, correct code passes), a roadmap that sets the dates, a hostile read before publishing, and what to check before a report goes beyond the team. Linked from `report-template.md`; the generated report and the gates are unchanged.
+
 ## 0.3.0 (2026-10-28): the inspection report
 
 ### The inspection report
