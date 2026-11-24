@@ -418,6 +418,7 @@ test('numbers in the documents match the catalogue (software counts, not prose)'
 });
 
 test('the generated criteria list is up to date', () => {
-  const md = readFileSync(join('.claude/skills/launch-review/standard/criteria.md'), 'utf8');
+  // Line endings don't count: a Windows checkout may carry CRLF (#15).
+  const md = readFileSync(join('.claude/skills/launch-review/standard/criteria.md'), 'utf8').replace(/\r\n/g, '\n');
   assert.equal(md, criteriaMarkdown(catalogue) + '\n', 'run: node .claude/skills/launch-review/scripts/review-pack.mjs criteria .claude/skills/launch-review/standard/criteria.md');
 });

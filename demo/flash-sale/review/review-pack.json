@@ -274,7 +274,7 @@
         "expected": "\"Order #… confirmed — $49.99 charged.\" One order, one charge, at the listed price.",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-02-signed-in-915a4-buy-and-gets-a-confirmation-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-02/test-finished-1.png",
             "caption": "After pressing Buy now. The sign-in box above \"Signed in as…\" should have disappeared (ARC-15)."
           }
         ],
@@ -295,7 +295,7 @@
         "expected": "The page says when the sale opens and the button reads \"Not open yet\". A purchase sent directly to the server is refused.",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-12-nobody-can-buy-before-the-sale-opens-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-12/test-finished-1.png",
             "caption": "Before opening: the time is shown and Buy is disabled."
           }
         ],
@@ -314,7 +314,7 @@
         "expected": "Exactly one order and one charge. The second click is told the shopper already has an order.",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-04-one-pair-per-customer-even-on-double-click-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-04/test-finished-1.png",
             "caption": "After a double click: one order."
           }
         ],
@@ -334,7 +334,7 @@
         "expected": "Within 5 seconds: \"confirming your payment, please don't pay again\". When the provider recovers: exactly one paid order and one charge.",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-08-slow-or-f-b662e-arge-twice-or-lose-the-pair-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-08/test-finished-1.png",
             "caption": "Provider down: the order shows as confirming, not failed."
           }
         ],
@@ -352,7 +352,7 @@
         "expected": "\"Sold out\" is shown and the button can't be pressed.",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-05-sold-out-state-is-clear-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-05/test-finished-1.png",
             "caption": "Sold out."
           }
         ],
@@ -1566,7 +1566,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-01-shopper-sees-the-product-price-and-stock-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-01/test-finished-1.png",
             "caption": "Sale page"
           }
         ]
@@ -1579,7 +1579,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-02-signed-in-915a4-buy-and-gets-a-confirmation-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-02/test-finished-1.png",
             "caption": "Order confirmed"
           }
         ]
@@ -1592,7 +1592,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-03-customers-always-pay-the-listed-price-desktop-chrome/attachments/evidence-54a05eec9a9517e702b92eef06b60d3aea743fcf.json",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-03/attachments/evidence.json",
             "caption": "Request saying $0.01 and the charge of $49.99"
           }
         ]
@@ -1605,7 +1605,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-04-one-pair-per-customer-even-on-double-click-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-04/test-finished-1.png",
             "caption": "After a double click"
           }
         ]
@@ -1618,7 +1618,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-05-sold-out-state-is-clear-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-05/test-finished-1.png",
             "caption": "Sold out"
           }
         ]
@@ -1631,7 +1631,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-06-orders-are-private-desktop-chrome/attachments/evidence-3aa38463a21fa682df471b034a8acbfc4dd0697a.json",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-06/attachments/evidence.json",
             "caption": "Another shopper and a signed-out visitor both get \"not found\""
           }
         ]
@@ -1653,7 +1653,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-08-slow-or-f-b662e-arge-twice-or-lose-the-pair-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-08/test-finished-1.png",
             "caption": "Confirming, not failed"
           }
         ]
@@ -1666,7 +1666,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-09-sale-page-is-accessible-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-09/test-finished-1.png",
             "caption": "axe: no serious or critical issues"
           }
         ]
@@ -1679,7 +1679,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-on-a-phone-AC-10-works-on-a-phone-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-10/test-finished-1.png",
             "caption": "Pixel 7 size"
           }
         ]
@@ -1692,7 +1692,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-11-every-order-has-a-shipping-address-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-11/test-finished-1.png",
             "caption": "Asked for the address; no order created"
           }
         ]
@@ -1705,7 +1705,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-12-nobody-can-buy-before-the-sale-opens-desktop-chrome/test-finished-1.png",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-12/test-finished-1.png",
             "caption": "Not open yet"
           }
         ]
@@ -1718,7 +1718,7 @@
         "runs": "3/3",
         "evidence": [
           {
-            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/flash-sale-AC-13-the-sale--ef3db-aused-without-losing-orders-desktop-chrome/attachments/evidence-69d532cf47f4cc9a84990e062136848c18dcbb34.json",
+            "path": "../sample-reports/fixed-round2/launch-review/acceptance/artifacts/AC-13/attachments/evidence.json",
             "caption": "Paused, existing order kept, resumed"
           }
         ]

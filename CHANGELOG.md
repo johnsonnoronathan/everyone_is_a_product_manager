@@ -7,6 +7,12 @@
 - `check-data-access-rules.mjs` runs on Windows and in paths with spaces, instead of doing nothing and exiting 0. (#16)
 - `npm test` runs the Node tests on Windows. (#17)
 
+### Windows (#15)
+- **The repository clones on Windows with Git's defaults.** The demo's sample-report evidence folders are named after their acceptance criterion (`AC-13/`) instead of the full test title, so the longest path fell from 221 to 110 characters. Contents are unchanged; links were updated.
+- **`.gitattributes` keeps LF line endings**, and the criteria-list test ignores line-ending differences.
+- **CI runs the unit tests on Windows** as well as Linux.
+- The README says what to do if an older clone reports "Filename too long".
+
 ### Scoring by yes/no questions
 - **Every checklist item is now a few yes/no questions** (208 in all), each about one fact the inspector can see or run, and each saying what a "no" means (Critical, High, Medium or Low). They are listed in `criteria.md`.
 - **The software works out the rest from the answers:**

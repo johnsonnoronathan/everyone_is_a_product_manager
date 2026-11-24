@@ -32,6 +32,19 @@ jobs:
         env:
           SEMGREP_ENABLE_VERSION_CHECK: "0"
 
+  windows:
+    name: Node tests on Windows
+    # Many of the people this project is for use Windows (#15). The Semgrep fixtures stay on Linux.
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit tests
+        run: node --test "tests/*.test.mjs"
+
   demo:
     name: Demo checks (fixed variant)
     # Pinned: on Ubuntu 26.04 (ubuntu-latest since 2026-10-28) Playwright 1.56 can't install Chromium.

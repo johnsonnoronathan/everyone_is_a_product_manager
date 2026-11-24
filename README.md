@@ -22,6 +22,8 @@ They work for any web app: a shop, a booking system for classes or appointments,
    ```
    /plugin install launch-readiness --marketplace johnsonnoronathan/everyone_is_a_product_manager
    ```
+   On Windows, if Git reports "Filename too long", run `git config --global core.longpaths true` in a terminal and try again (versions before 0.4.0 had long file names in the demo's sample reports).
+
    If that fails, your Claude Code is older than 2.1.275 (check with `claude --version` in a terminal). Use two steps instead: `/plugin marketplace add johnsonnoronathan/everyone_is_a_product_manager`, then `/plugin install launch-readiness@everyone-is-a-product-manager`. Engineers can also copy the folders in `.claude/skills/` into a project's `.claude/skills/`.
 2. **Open Claude Code in your app's folder and ask, in plain words:**
    - *"Review this app before launch."* This is the one to start with. It runs the other checks itself where they apply.

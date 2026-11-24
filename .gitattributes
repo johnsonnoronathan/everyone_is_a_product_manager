@@ -1,0 +1,5 @@
+# Keep LF line endings on every platform: tests compare generated files with the ones on disk.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.zip binary

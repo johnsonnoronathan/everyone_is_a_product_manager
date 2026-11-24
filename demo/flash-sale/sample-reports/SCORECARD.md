@@ -1,6 +1,8 @@
 # Scorecard: what the skills caught on the demo
 
 ## How this was measured
+
+*On 24 November 2026 the evidence folders under `*/launch-review/acceptance/artifacts/` were renamed to the acceptance criterion they belong to (for example `AC-13/`, with `attachments/evidence.json`), so the repository can be cloned on Windows with Git's default path limit. Their contents and the reports' text are unchanged; only the links to them were updated.*
 - **Launch review**: for every version, a fresh Claude Code agent ran the `launch-review` skill. It wasn't allowed to read the answer key, the other variant or the acceptance test code, and had to write its findings *before* seeing the test results. Every Critical was reproduced against a local instance. The most surprising claims were re-run independently afterwards (marked ✔︎).
 - **Peak traffic**: `peak-traffic-test` with the brief in `demo/flash-sale/peak-brief.json`: a 600 req/s target, steps from 50% to 200%, plus 1,000 double-clicking buyers racing for 100 pairs.
 - **Acceptance**: `acceptance-test`, each test run 3× without retries. Criteria v1.0 had 10 criteria; v1.1 (round 2) rewords one and adds three.

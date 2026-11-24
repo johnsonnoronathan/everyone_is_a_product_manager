@@ -7,16 +7,16 @@
 
 | ID | Priority | Criterion | Runs passed | Status | Evidence |
 |---|---|---|---|---|---|
-| AC-01 | Must | Shopper sees the product, price and stock | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-01-shopper-sees-the-product-price-and-stock-desktop-chrome/test-finished-1.png) |
-| AC-02 | Must | Signed-in shopper can buy and gets a confirmation | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-02-signed-in-915a4-buy-and-gets-a-confirmation-desktop-chrome/test-finished-1.png) |
-| AC-03 | Must | Customers always pay the listed price | 0/3 | ❌ FAIL | [evidence](artifacts/flash-sale-AC-03-customers-always-pay-the-listed-price-desktop-chrome/attachments/evidence-7bc9ed98023c882f416ae621d2e4b4d5dd4225d0.json) · [trace](artifacts/flash-sale-AC-03-customers-always-pay-the-listed-price-desktop-chrome/trace.zip) |
-| AC-04 | Must | One pair per customer, even on double-click | 0/3 | ❌ FAIL | [screenshot](artifacts/flash-sale-AC-04-one-pair-per-customer-even-on-double-click-desktop-chrome/test-failed-1.png) · [trace](artifacts/flash-sale-AC-04-one-pair-per-customer-even-on-double-click-desktop-chrome/trace.zip) |
-| AC-05 | Must | Sold-out state is clear | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-05-sold-out-state-is-clear-desktop-chrome/test-finished-1.png) |
-| AC-06 | Must | Orders are private | 0/3 | ❌ FAIL | [evidence](artifacts/flash-sale-AC-06-orders-are-private-desktop-chrome/attachments/evidence-d84285bed8fea658ed72a823b3317671094721a7.json) · [trace](artifacts/flash-sale-AC-06-orders-are-private-desktop-chrome/trace.zip) |
+| AC-01 | Must | Shopper sees the product, price and stock | 3/3 | ✅ PASS | [screenshot](artifacts/AC-01/test-finished-1.png) |
+| AC-02 | Must | Signed-in shopper can buy and gets a confirmation | 3/3 | ✅ PASS | [screenshot](artifacts/AC-02/test-finished-1.png) |
+| AC-03 | Must | Customers always pay the listed price | 0/3 | ❌ FAIL | [evidence](artifacts/AC-03/attachments/evidence.json) · [trace](artifacts/AC-03/trace.zip) |
+| AC-04 | Must | One pair per customer, even on double-click | 0/3 | ❌ FAIL | [screenshot](artifacts/AC-04/test-failed-1.png) · [trace](artifacts/AC-04/trace.zip) |
+| AC-05 | Must | Sold-out state is clear | 3/3 | ✅ PASS | [screenshot](artifacts/AC-05/test-finished-1.png) |
+| AC-06 | Must | Orders are private | 0/3 | ❌ FAIL | [evidence](artifacts/AC-06/attachments/evidence.json) · [trace](artifacts/AC-06/trace.zip) |
 | AC-07 | Must | Never sell more than the stock, even in a rush | — | 🔗 EXTERNAL | `peak-traffic-test` oversell check (`k6/oversell.js`), see [`../peak-traffic/oversell-summary.md`](../peak-traffic/oversell-summary.md) |
-| AC-08 | Should | Payment problems are explained, and the pair goes back on sale | 0/3 | ❌ FAIL | [screenshot](artifacts/flash-sale-AC-08-payment-p-1642f--the-pair-goes-back-on-sale-desktop-chrome/test-failed-1.png) · [trace](artifacts/flash-sale-AC-08-payment-p-1642f--the-pair-goes-back-on-sale-desktop-chrome/trace.zip) |
-| AC-09 | Should | Sale page is accessible | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-09-sale-page-is-accessible-desktop-chrome/test-finished-1.png) |
-| AC-10 | Should | Works on a phone | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-on-a-phone-AC-10-works-on-a-phone-desktop-chrome/test-finished-1.png) |
+| AC-08 | Should | Payment problems are explained, and the pair goes back on sale | 0/3 | ❌ FAIL | [screenshot](artifacts/AC-08/test-failed-1.png) · [trace](artifacts/AC-08/trace.zip) |
+| AC-09 | Should | Sale page is accessible | 3/3 | ✅ PASS | [screenshot](artifacts/AC-09/test-finished-1.png) |
+| AC-10 | Should | Works on a phone | 3/3 | ✅ PASS | [screenshot](artifacts/AC-10/test-finished-1.png) |
 
 ## What needs attention
 

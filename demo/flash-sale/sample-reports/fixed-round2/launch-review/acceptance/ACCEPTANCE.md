@@ -7,19 +7,19 @@
 
 | ID | Priority | Criterion | Runs passed | Status | Evidence |
 |---|---|---|---|---|---|
-| AC-01 | Must | Shopper sees the product, price and stock | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-01-shopper-sees-the-product-price-and-stock-desktop-chrome/test-finished-1.png) |
-| AC-02 | Must | Signed-in shopper can buy and gets a confirmation | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-02-signed-in-915a4-buy-and-gets-a-confirmation-desktop-chrome/test-finished-1.png) |
-| AC-03 | Must | Customers always pay the listed price | 3/3 | ✅ PASS | [evidence](artifacts/flash-sale-AC-03-customers-always-pay-the-listed-price-desktop-chrome/attachments/evidence-54a05eec9a9517e702b92eef06b60d3aea743fcf.json) |
-| AC-04 | Must | One pair per customer, even on double-click | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-04-one-pair-per-customer-even-on-double-click-desktop-chrome/test-finished-1.png) |
-| AC-05 | Must | Sold-out state is clear | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-05-sold-out-state-is-clear-desktop-chrome/test-finished-1.png) |
-| AC-06 | Must | Orders are private | 3/3 | ✅ PASS | [evidence](artifacts/flash-sale-AC-06-orders-are-private-desktop-chrome/attachments/evidence-3aa38463a21fa682df471b034a8acbfc4dd0697a.json) |
+| AC-01 | Must | Shopper sees the product, price and stock | 3/3 | ✅ PASS | [screenshot](artifacts/AC-01/test-finished-1.png) |
+| AC-02 | Must | Signed-in shopper can buy and gets a confirmation | 3/3 | ✅ PASS | [screenshot](artifacts/AC-02/test-finished-1.png) |
+| AC-03 | Must | Customers always pay the listed price | 3/3 | ✅ PASS | [evidence](artifacts/AC-03/attachments/evidence.json) |
+| AC-04 | Must | One pair per customer, even on double-click | 3/3 | ✅ PASS | [screenshot](artifacts/AC-04/test-finished-1.png) |
+| AC-05 | Must | Sold-out state is clear | 3/3 | ✅ PASS | [screenshot](artifacts/AC-05/test-finished-1.png) |
+| AC-06 | Must | Orders are private | 3/3 | ✅ PASS | [evidence](artifacts/AC-06/attachments/evidence.json) |
 | AC-07 | Must | Never sell more than the stock, even in a rush | — | 🔗 EXTERNAL | `peak-traffic-test` oversell check (`k6/oversell.js`), see [`../peak-traffic/oversell-summary.md`](../peak-traffic/oversell-summary.md) |
-| AC-08 | Must | Slow or failing payments never charge twice or lose the pair | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-08-slow-or-f-b662e-arge-twice-or-lose-the-pair-desktop-chrome/test-finished-1.png) · [evidence](artifacts/flash-sale-AC-08-slow-or-f-b662e-arge-twice-or-lose-the-pair-desktop-chrome/attachments/evidence-1133a5e2a1164b6dd66e9b463a06dec627cc87ce.json) |
-| AC-09 | Should | Sale page is accessible | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-09-sale-page-is-accessible-desktop-chrome/test-finished-1.png) |
-| AC-10 | Should | Works on a phone | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-on-a-phone-AC-10-works-on-a-phone-desktop-chrome/test-finished-1.png) |
-| AC-11 | Must | Every order has a shipping address | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-11-every-order-has-a-shipping-address-desktop-chrome/test-finished-1.png) · [evidence](artifacts/flash-sale-AC-11-every-order-has-a-shipping-address-desktop-chrome/attachments/evidence-081e0c2aa3e787c8bb6eecc5b80b000a9a7d9f4a.json) |
-| AC-12 | Must | Nobody can buy before the sale opens | 3/3 | ✅ PASS | [screenshot](artifacts/flash-sale-AC-12-nobody-can-buy-before-the-sale-opens-desktop-chrome/test-finished-1.png) · [evidence](artifacts/flash-sale-AC-12-nobody-can-buy-before-the-sale-opens-desktop-chrome/attachments/evidence-12581911db6e9181cc1da3e3fd42706fc1f0dade.json) |
-| AC-13 | Should | The sale can be paused without losing orders | 3/3 | ✅ PASS | [evidence](artifacts/flash-sale-AC-13-the-sale--ef3db-aused-without-losing-orders-desktop-chrome/attachments/evidence-69d532cf47f4cc9a84990e062136848c18dcbb34.json) |
+| AC-08 | Must | Slow or failing payments never charge twice or lose the pair | 3/3 | ✅ PASS | [screenshot](artifacts/AC-08/test-finished-1.png) · [evidence](artifacts/AC-08/attachments/evidence.json) |
+| AC-09 | Should | Sale page is accessible | 3/3 | ✅ PASS | [screenshot](artifacts/AC-09/test-finished-1.png) |
+| AC-10 | Should | Works on a phone | 3/3 | ✅ PASS | [screenshot](artifacts/AC-10/test-finished-1.png) |
+| AC-11 | Must | Every order has a shipping address | 3/3 | ✅ PASS | [screenshot](artifacts/AC-11/test-finished-1.png) · [evidence](artifacts/AC-11/attachments/evidence.json) |
+| AC-12 | Must | Nobody can buy before the sale opens | 3/3 | ✅ PASS | [screenshot](artifacts/AC-12/test-finished-1.png) · [evidence](artifacts/AC-12/attachments/evidence.json) |
+| AC-13 | Should | The sale can be paused without losing orders | 3/3 | ✅ PASS | [evidence](artifacts/AC-13/attachments/evidence.json) |
 
 ## Verified outside this test run
 
