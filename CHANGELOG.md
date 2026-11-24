@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### From contributors
+- `launch-review`: `references/formal-report.md`, a guide for when the owner wants a formal report on top of the generated one. It covers an owner's page first, a document control table and revisions, one chain per problem class ending in a root cause, three checks on each control (the example fails, gets through without the control, correct code passes), a roadmap that sets the dates, a hostile read before publishing, and what to check before a report goes beyond the team. Linked from `report-template.md`; the generated report and the gates are unchanged. (#18)
+- `check-data-access-rules.mjs` runs on Windows and in paths with spaces, instead of doing nothing and exiting 0. (#16)
+- `npm test` runs the Node tests on Windows. (#17)
+
 ### Scoring by yes/no questions
 - **Every checklist item is now a few yes/no questions** (208 in all), each about one fact the inspector can see or run, and each saying what a "no" means (Critical, High, Medium or Low). They are listed in `criteria.md`.
 - **The software works out the rest from the answers:**

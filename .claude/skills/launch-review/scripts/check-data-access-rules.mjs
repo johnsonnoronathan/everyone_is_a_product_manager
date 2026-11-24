@@ -10,6 +10,7 @@
 // directly (Supabase dashboard → Advisors → Security Advisor; Firebase console → Rules).
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', '.venv', 'venv', 'vendor', 'coverage', 'launch-review']);
 
@@ -118,7 +119,9 @@ export function checkFirebase(files, root) {
   return findings;
 }
 
-const isMain = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname);
+// fileURLToPath, not URL.pathname: the pathname is /C:/… on Windows and stays %-encoded for spaces,
+// so the comparison failed and the script silently did nothing.
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const root = path.resolve(process.argv[2] ?? '.');
   const outFile = process.argv[3];
