@@ -23,6 +23,17 @@
     "reviewedOn": "2026-10-17; extended 2026-10-27 with checks of the tests, the AI-coding instructions and past problems",
     "versionNote": "the app's code hasn't changed since; later commits touch only documentation and tests"
   },
+  "baseline": {
+    "ref": "origin/main",
+    "commit": "fa296a2",
+    "fetchedOn": "2026-10-27"
+  },
+  "report": {
+    "version": "4",
+    "updatedOn": "2026-11-24",
+    "changes": "Answered question by question under review standard 1.1, with the new harness item H-14 and the three-way check of controls (Q-04); added the main branch and these revision fields.",
+    "skill": "launch-review 0.4.0"
+  },
   "verdict": {
     "decision": "NO-GO",
     "reason": "Don't launch yet: four things block it. The most serious is that the opening time can silently be wrong, so the sale could open hours early or stay shut at midnight. And the shop has never taken a real card payment: the connections to the real payment provider, sign-in and database aren't built yet. The previous review found 23 problems; 16 are now fixed and verified, and 7 are still open in some form (partly fixed, accepted as a risk, or waiting on a condition). Together with the new problems this review found, the open ones are listed under What to fix.",
@@ -2356,6 +2367,18 @@
       }
     },
     {
+      "id": "H-14",
+      "answers": {
+        "H-14.1": "no",
+        "H-14.2": "n/a"
+      },
+      "grade": "B",
+      "finding": "INT-01",
+      "evidence": "Every test runs on the local SQLite stand-in for the hosted database the shop is meant to use. No test runs against the production kind of database, which isn't chosen or connected yet (INT-01).",
+      "note": "No test is switched off by default (searched for skip and only markers, environment variables and conditional set-up), so none is left never running.",
+      "fix": "Once the production database is chosen, run the acceptance suite and the race test in CI against the same kind of database, at least nightly."
+    },
+    {
       "id": "A-01",
       "grade": "B",
       "evidence": "The round-2 system map lists every web route, the start-up, the background jobs, the payment call and the shutdown signals; compared with the router, none is missing.",
@@ -2898,10 +2921,12 @@
     {
       "id": "Q-04",
       "finding": "HIS-01",
-      "evidence": "None of the recurring kinds is fully caught automatically yet. Concurrency and unknown payment outcomes have checks in CI (the race test and acceptance test AC-08) but open problems remain (SEC-03, ARC-10). Bad input is partly covered: code-scanning rules exist but aren't run against the app. Restarts and settings, screens, and operations have no automatic check.",
+      "evidence": "None of the recurring kinds is fully caught automatically yet. Concurrency and unknown payment outcomes have checks in CI (the race test and acceptance test AC-08) but open problems remain (SEC-03, ARC-10). Bad input is partly covered: code-scanning rules exist but aren't run against the app. Restarts and settings, screens, and operations have no automatic check. None of the existing controls was checked three ways: no run with the control removed, and no run on correct code (the Semgrep rules raised two false alarms on the fixed code, triaged under Security).",
       "answers": {
         "Q-04.1": "no",
-        "Q-04.2": "no"
+        "Q-04.2": "no",
+        "Q-04.3": "no",
+        "Q-04.4": "no"
       }
     },
     {

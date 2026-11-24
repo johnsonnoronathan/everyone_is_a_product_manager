@@ -336,6 +336,12 @@ export function validatePack(pack, catalogue, { stage } = {}) {
   if (stage === 'review') {
     need(p.reviewer, 'project.reviewer', 'Name the reviewer.');
     need(p.reviewedOn, 'project.reviewedOn', 'Date the review.');
+    // Which branch counted as "main", and at which commit: a stale local copy once made a review call two branches in sync (#11).
+    need(pack.baseline?.ref, 'baseline.ref', 'Record which branch counts as main, after fetching every remote (for example "origin/main").');
+    need(pack.baseline?.commit, 'baseline.commit', 'Record the commit that branch was at when the review started.');
+    // Reports are revised; readers need to know which revision they hold (#12).
+    need(pack.report?.version, 'report.version', 'Give the report a version (1 for the first, then 2, 3…).');
+    need(pack.report?.updatedOn, 'report.updatedOn', 'Date this version of the report.');
     const v = pack.verdict || {};
     if (!DECISIONS.includes(v.decision)) err('verdict.decision', `Give one of: ${DECISIONS.join(', ')}.`);
     need(v.reason, 'verdict.reason', 'Give the reason for the verdict in one or two plain sentences.');
@@ -702,8 +708,12 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
 
   const sources = methodSources(pack, catalogue);
   const usedN = sources.filter((x) => x.entry?.used).length;
+  const bl = pack.baseline || {};
+  const rv = pack.report || {};
   const methodBody = `
     <p class="lede">Version <code>${esc(p.commit || '—')}</code>${p.repository ? ` of ${fmt(p.repository)}` : ''}${p.versionNote ? ` (${fmt(p.versionNote)})` : ''}, inspected ${esc(p.reviewedOn || '—')} by ${fmt(p.reviewer || '—')}, at risk tier ${esc(p.riskTier)}: ${esc(TIER_TEXT[p.riskTier] || '')}</p>
+    <p><span class="lbl">Main branch</span> ${bl.ref ? `<code>${esc(bl.ref)}</code> at <code>${esc(bl.commit || '—')}</code>${bl.fetchedOn ? `, fetched ${esc(bl.fetchedOn)}` : ''}` : '<span class="dim">Not recorded.</span>'}</p>
+    <p><span class="lbl">This report</span> ${rv.version ? `version ${esc(rv.version)}, updated ${esc(rv.updatedOn || '—')}${rv.changes ? `: ${fmt(rv.changes)}` : ''}` : '<span class="dim">No version recorded.</span>'}${rv.skill ? ` Made with ${fmt(rv.skill)}, review standard ${esc(pack.standard || catalogue.standard)}.` : ''}</p>
     <h3>Sources of evidence (${usedN} of ${sources.length} used)</h3>
     ${table(['Source', 'Used', 'What was used, or why not', 'Why it matters'], sources.map((x) => [esc(x.name), x.entry ? `<span class="chip ${x.entry.used ? 'r-meets' : 'r-not-applicable'}">${x.entry.used ? 'Used' : 'Not used'}</span>` : '<span class="chip r-missing">No entry</span>', fmt(x.entry?.detail || ''), esc(x.why)]))}
     ${filled(pack.method?.skills) ? `<h3>Skills and tools used</h3>${table(['Skill or tool', 'What it did'], pack.method.skills.map((x) => [fmt(x.name), fmt(x.how || '')]))}` : ''}
@@ -927,7 +937,7 @@ export function renderPage(pack, { baseDir = '.', fragment = false, catalogue = 
   <header class="masthead">
     <p class="kicker">${reviewed ? 'Pre-delivery inspection' : 'Review page · submitted, awaiting review'}</p>
     <h1>${esc(p.name || 'Untitled project')}</h1>
-    <p class="meta">${reviewed ? `Reviewed ${esc(p.reviewedOn || '—')} by ${fmt(p.reviewer || '—')}` : `Submitted ${esc(p.date || '—')} by ${fmt(p.author || '—')}`}</p>
+    <p class="meta">${reviewed ? `Reviewed ${esc(p.reviewedOn || '—')} by ${fmt(p.reviewer || '—')}${pack.report?.version ? ` · report version ${esc(pack.report.version)}, updated ${esc(pack.report.updatedOn || '—')}` : ''}` : `Submitted ${esc(p.date || '—')} by ${fmt(p.author || '—')}`}</p>
     <p class="guide">${reviewed ? `Section ${num('verdict')} gives the verdict and answers three questions: is the test harness properly set up, are the performance tests comprehensive, and does the architecture review cover hidden problems. Section ${num('method')} says how the inspection was done and which sources it used, section ${num('questions')} shows the evidence behind each answer, and section ${num('recommendations')} what to do. The rest is the evidence.` : 'Section 1 shows the status: the reviewer fills in the verdict. The author\'s sections start with Product.'}</p>
   </header>
   <div class="layout">${nav}<main>${body}</main></div>
@@ -1402,6 +1412,8 @@ export function reportMarkdown(pack, catalogue) {
   const L = [];
   L.push(`# Pre-delivery inspection: ${p.name || 'Untitled'}`, '');
   L.push(`Version \`${p.commit || '—'}\`${p.versionNote ? ` (${p.versionNote})` : ''} · inspected ${p.reviewedOn || '—'} by ${p.reviewer || '—'} · risk tier ${p.riskTier}. Generated from \`review-pack.json\`; the review page shows the same record with all the evidence.`, '');
+  const bl = pack.baseline || {}, rv = pack.report || {};
+  L.push(`Main branch: ${bl.ref ? `\`${bl.ref}\` at \`${bl.commit || '—'}\`${bl.fetchedOn ? `, fetched ${bl.fetchedOn}` : ''}` : 'not recorded'} · this report: ${rv.version ? `version ${rv.version}, updated ${rv.updatedOn || '—'}${rv.changes ? ` (${rv.changes.replace(/\.$/, '')})` : ''}` : 'no version recorded'}${rv.skill ? ` · made with ${rv.skill}, review standard ${pack.standard || catalogue.standard}` : ''}.`, '');
 
   L.push('## 1. Summary: evidence and conclusions', '');
   L.push(`**Verdict: ${v.decision || 'not given'}.** ${v.reason || ''}`, '');
@@ -1565,6 +1577,8 @@ export function templatePack(catalogue, { tier = 2, features = [], stage = 'subm
     ...pack,
     stage: 'review',
     project: { ...project, author: 'No hand-in: built by the reviewer from the code', reviewer: 'TODO', reviewedOn: 'TODO' },
+    baseline: { ref: '', commit: '', fetchedOn: '' },
+    report: { version: '1', updatedOn: '', changes: 'First version.', skill: '' },
     verdict: { decision: '', reason: '', ifLaunchedNow: '', blockers: [], conditions: [], decisions: [], estimate: '', noticeable: [], signer: '', signedBy: '', signedOn: '' },
     method: { sources: catalogue.evidenceSources.map((x) => ({ source: x.id, used: null, detail: '' })), skills: [] },
     architecture: { ...pack.architecture, hiddenChecks: catalogue.hiddenIssueAreas.map((a) => ({ area: a.id, result: '', how: '', refs: [] })) },

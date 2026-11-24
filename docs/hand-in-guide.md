@@ -51,7 +51,7 @@ Make it easy to check: commands that work on a fresh copy, test accounts, and a 
 |---|---|
 | Review page / review pack | The page described above, and the data file it's made from. |
 | Risk tier | How careful the review must be. **1** low: an internal tool or prototype, no personal data, no money. **2** standard: real users with accounts or personal data, or payments through a hosted checkout. **3** high: the app takes payments itself, holds health, financial or children's data, or launches with a big rush. The higher the tier, the more criteria are mandatory and the fewer problems are allowed at launch. |
-| Criteria | The checklist the reviewer works through: 99 in all, of which only those that fit your app apply (an app without payments skips the payment ones). |
+| Criteria | The checklist the reviewer works through: 100 in all, of which only those that fit your app apply (an app without payments skips the payment ones). |
 | Meets / does not meet / cannot verify / not applicable | The four possible results per criterion. *Cannot verify* means the reviewer didn't have what was needed to check it; it is not a pass, and it says what's needed. |
 | Staging | A test copy of the site with test data, separate from the live one. |
 | Agent instructions (`AGENTS.md`) | A file your AI coding assistant reads before changing code: how to run and test the app, and rules it must never break. If AI writes your code, you should have one; `prepare-review` can start it for you. |

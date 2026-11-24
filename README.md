@@ -91,11 +91,11 @@ The one-page version, with the seven questions every review must answer and the 
 When one person builds and another reviews (you and a consultant, your team and a client), both work from the same format, so a review never starts from a blank page and every result reads the same. You don't need it to review your own app.
 
 - **The author hands in** a README that lets a stranger run the app, and a review page: what the app does with screenshots of the main journeys, how to run it, the agreed requirements, how it's built and tested, and known problems. The `prepare-review` skill writes both; software checks the hand-in is complete and lists what's missing. Plain-language guide: **[Handing your project in](docs/hand-in-guide.md)**.
-- **The reviewer judges** up to 99 criteria in nine areas (only those that fit the app apply): reviewability, harness (tests, CI, the instructions AI agents follow), architecture, data and business rules, security, performance, operations, quality history, and acceptance. Each gets *meets*, *does not meet*, *cannot verify* or *not applicable*, with graded evidence: something the reviewer ran, something they inspected, or only someone's claim. A claim alone never counts as *meets*.
+- **The reviewer judges** up to 100 criteria in nine areas (only those that fit the app apply): reviewability, harness (tests, CI, the instructions AI agents follow), architecture, data and business rules, security, performance, operations, quality history, and acceptance. Each gets *meets*, *does not meet*, *cannot verify* or *not applicable*, with graded evidence: something the reviewer ran, something they inspected, or only someone's claim. A claim alone never counts as *meets*.
 - **Software does the counting.** After each stage a script counts what must be there ("expected 13, found 11, missing H-04 and H-09"), and the review can't move on until it matches. A summary written by an AI or a tired person is never trusted for numbers.
 - **What keeps coming back gets fixed for good.** The review reads the git history and issue tracker, groups past bugs into kinds of problem that recur, names the root cause of each, checks that something now catches the next one automatically, and adds a rule to the AI agents' instructions.
 
-[The standard](.claude/skills/launch-review/standard/review-standard.md) · [all 99 criteria](.claude/skills/launch-review/standard/criteria.md) · [example review page](demo/flash-sale/review/)
+[The standard](.claude/skills/launch-review/standard/review-standard.md) · [all 100 criteria](.claude/skills/launch-review/standard/criteria.md) · [example review page](demo/flash-sale/review/)
 
 ## Why the results can be trusted
 

@@ -572,6 +572,26 @@
       ]
     },
     {
+      "id": "H-14",
+      "title": "Tests run against what production runs",
+      "standard": "Code that depends on how the database behaves (its SQL dialect, migrations, constraints) is tested in CI at least once against the same kind of database as production, not only against an in-memory stand-in. Tests that are switched off by default run somewhere, at least in CI.",
+      "evidence": "The CI job and its log; the list of tests switched off by default, found by every way a test can be switched on (system properties, environment variables, conditional annotations), with how each is switched on.",
+      "minGrade": "A",
+      "tier": 2,
+      "checks": [
+        {
+          "id": "H-14.1",
+          "q": "Is code that depends on database behaviour (SQL dialect, migrations, constraints) tested in CI against the same kind of database as production?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "H-14.2",
+          "q": "Do the tests that are switched off by default (by a system property, an environment variable or a conditional annotation) run, at least in CI?",
+          "ifNo": "Medium"
+        }
+      ]
+    },
+    {
       "id": "A-01",
       "title": "The system map is complete",
       "standard": "Every entry point (pages, APIs, webhooks, scheduled jobs, admin and test routes, browser-to-database access) is listed with who may call it and what it touches. The reviewer found none missing.",
@@ -1946,8 +1966,8 @@
     {
       "id": "Q-04",
       "title": "Controls prevent a repeat",
-      "standard": "Each recurring class has a control that catches the next occurrence automatically: a test, a code-scanning rule, a database constraint, a type, a CI gate, or an agent rule backed by one of these.",
-      "evidence": "The control, run against a known example.",
+      "standard": "Each recurring class has a control that catches the next occurrence automatically: a test, a code-scanning rule, a database constraint, a type, a CI gate, or an agent rule backed by one of these. Each control is checked three ways: a past example fails with it, the same example gets through without it, and correct code, including near-misses that look similar, produces no finding.",
+      "evidence": "The control run three ways: on the past example, with the control removed (or on the commit before it was added), and on correct code including near-misses. A held-out example, not used while writing the control, is reported separately where there is one.",
       "minGrade": "A",
       "tier": 1,
       "checks": [
@@ -1958,7 +1978,17 @@
         },
         {
           "id": "Q-04.2",
-          "q": "Was each control run against a known example and shown to catch it?",
+          "q": "Does a past example of each problem fail with the control in place?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "Q-04.3",
+          "q": "Does the same example get through with the control removed, or on the commit before it was added?",
+          "ifNo": "Medium"
+        },
+        {
+          "id": "Q-04.4",
+          "q": "Does correct code, including near-misses that look similar, produce no finding from the control?",
           "ifNo": "Medium"
         }
       ]

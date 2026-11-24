@@ -7,6 +7,12 @@
 - `check-data-access-rules.mjs` runs on Windows and in paths with spaces, instead of doing nothing and exiting 0. (#16)
 - `npm test` runs the Node tests on Windows. (#17)
 
+### From the contributors' issues
+- **Controls are checked three ways (#9).** Q-04 asks four questions: is there a control; does a past example fail with it; does it get through without it; does correct code, near-misses included, produce no finding. The standard and the skill describe the same check, with a held-out example where possible.
+- **New harness item H-14, "Tests run against what production runs" (#10).** It asks whether database-dependent code is tested in CI against the same kind of database as production, and whether tests switched off by default ever run. The standard now has 100 criteria in nine areas.
+- **The main branch is recorded first (#11).** The skill fetches every remote and records which branch counted as main and its commit (`baseline`); the review is incomplete without it, and the report header shows it.
+- **Report revisions (#12).** `report` records the version, the date, what changed and the skill that made it; the page and the report header show them. Reports in other languages are still being decided.
+
 ### Windows (#15)
 - **The repository clones on Windows with Git's defaults.** The demo's sample-report evidence folders are named after their acceptance criterion (`AC-13/`) instead of the full test title, so the longest path fell from 221 to 110 characters. Contents are unchanged; links were updated.
 - **`.gitattributes` keeps LF line endings**, and the criteria-list test ignores line-ending differences.

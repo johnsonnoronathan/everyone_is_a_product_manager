@@ -2,6 +2,8 @@
 
 Version `fa296a2` (the app's code hasn't changed since; later commits touch only documentation and tests) · inspected 2026-10-17; extended 2026-10-27 with checks of the tests, the AI-coding instructions and past problems by Claude Code (launch-review skill), in sessions that hadn't written the code · risk tier 3. Generated from `review-pack.json`; the review page shows the same record with all the evidence.
 
+Main branch: `origin/main` at `fa296a2`, fetched 2026-10-27 · this report: version 4, updated 2026-11-24 (Answered question by question under review standard 1.1, with the new harness item H-14 and the three-way check of controls (Q-04); added the main branch and these revision fields) · made with launch-review 0.4.0, review standard 1.1.
+
 ## 1. Summary: evidence and conclusions
 
 **Verdict: NO-GO.** Don't launch yet: four things block it. The most serious is that the opening time can silently be wrong, so the sale could open hours early or stay shut at midnight. And the shop has never taken a real card payment: the connections to the real payment provider, sign-in and database aren't built yet. The previous review found 23 problems; 16 are now fixed and verified, and 7 are still open in some form (partly fixed, accepted as a risk, or waiting on a condition). Together with the new problems this review found, the open ones are listed under What to fix.
@@ -12,11 +14,11 @@ Version `fa296a2` (the app's code hasn't changed since; later commits touch only
 
 | Question | Answer | Evidence |
 |---|---|---|
-| 1. Is the test harness properly set up? | **No** | 8 of 27 harness questions answered yes; of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught |
+| 1. Is the test harness properly set up? | **No** | 8 of 28 harness questions answered yes; of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught |
 | 2. Are the performance tests comprehensive? | **Partly** | 4 of 8 kinds of performance test run; 4 passed, 0 failed |
 | 3. Does the architecture review cover hidden problems? | **Yes** | 9 of 9 places examined; 12 hidden problems found |
 
-- The test harness is not set up: 8 of 27 harness questions are answered yes (2 of 13 checks fully met), and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
+- The test harness is not set up: 8 of 28 harness questions are answered yes (2 of 14 checks fully met), and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
 - The performance tests are not fully comprehensive: 4 of 8 kinds this product needs were not run (beyond capacity, long run, page speed on phones, on a production-like setup). All 4 that were run passed.
 - The review looked in all 9 places where hidden problems usually sit. It found 12 problems there.
 
@@ -63,7 +65,7 @@ Version `fa296a2` (the app's code hasn't changed since; later commits touch only
 
 *The tests, automatic checks and AI-agent instructions that stop the next change, by a person or an AI agent, from breaking something or bringing an old bug back.*
 
-**Evidence.** 8 of 27 harness questions answered yes; 2 of 13 checks fully met.
+**Evidence.** 8 of 28 harness questions answered yes; 2 of 14 checks fully met.
 
 Answered no, or not known:
 
@@ -86,6 +88,7 @@ Answered no, or not known:
 - H-11 Where the language has one, is a type checker configured, and does it pass? **No**
 - H-12 Does secret scanning run in CI or before every commit? **No**
 - H-12 Does a vulnerable-dependency check run in CI or before every commit? **No**
+- H-14 Is code that depends on database behaviour (SQL dialect, migrations, constraints) tested in CI against the same kind of database as production? **No**
 
 In place: H-09 Tests are reliable; H-13 Changes get an independent review.
 
@@ -102,6 +105,7 @@ Missing or unproven:
 - H-10 Every change goes through CI (cannot verify). Needed to verify: The branch protection settings for `main` (repository settings, owner access).
 - H-11 Lint and type checks pass (does not meet). Found: No linter, formatter or type checker for the app code.
 - H-12 Security checks are automated (does not meet). Fix: Run Gitleaks, OSV-Scanner and Semgrep in CI on every change.
+- H-14 Tests run against what production runs (does not meet). Fix: Once the production database is chosen, run the acceptance suite and the race test in CI against the same kind of database, at least nightly.
 
 6 kinds of problem came back during the project; 3 have no automatic test that would catch them and 3 are only partly caught. The kind of test that would catch each:
 
@@ -115,7 +119,7 @@ Missing or unproven:
 | Load and race tests | Yes: Race test, Load test | — |
 | Automatic scans | **No** | Bad input crashes the app or is quietly accepted (6 times) |
 
-**Conclusion.** The test harness is not set up: 8 of 27 harness questions are answered yes (2 of 13 checks fully met), and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
+**Conclusion.** The test harness is not set up: 8 of 28 harness questions are answered yes (2 of 14 checks fully met), and of the 6 kinds of problem that came back, 3 have no automatic test that would catch them and 3 are only partly caught. Expect the same bugs to return after the next change.
 
 ### 3.2 Are the performance tests comprehensive? Partly
 
@@ -475,16 +479,16 @@ Every criterion in the standard, including those that don't apply to this produc
 | Area | Points (yes answers) | Meet | Don't meet | Can't verify | Don't apply |
 |---|---|---|---|---|---|
 | R Reviewability | 19 of 22 | 6 | 3 | 0 | 0 |
-| H Harness | 8 of 27 | 2 | 10 | 1 | 0 |
+| H Harness | 8 of 28 | 2 | 11 | 1 | 0 |
 | A Architecture | 17 of 25 | 8 | 2 | 2 | 0 |
 | D Data and business rules | 11 of 24 | 5 | 8 | 0 | 0 |
 | S Security | 16 of 24 | 5 | 3 | 3 | 4 |
 | P Performance | 16 of 22 | 6 | 2 | 2 | 0 |
 | O Operations | 9 of 22 | 2 | 3 | 5 | 0 |
-| Q Quality history | 9 of 14 | 5 | 4 | 0 | 0 |
+| Q Quality history | 9 of 16 | 5 | 4 | 0 | 0 |
 | U Acceptance and report | 10 of 13 | 6 | 2 | 0 | 0 |
 
-Checklist points in all: **115 of 193**.
+Checklist points in all: **115 of 196**.
 
 ## Appendix C. Glossary
 

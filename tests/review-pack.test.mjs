@@ -238,6 +238,28 @@ test('yes/no questions: the software works out result, severity and points', () 
   assert.deepEqual([p1.yes, p1.total], [p0.yes, p0.total], 'skipping a "no" does not raise the score');
 });
 
+test('contributors\' asks: baseline, report revision, database tests, the three-way control check', () => {
+  // #11: without the main branch and its commit the review is incomplete; the report header shows both.
+  const pack = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
+  const md = reportMarkdown(pack, catalogue);
+  assert.match(md, /Main branch: `origin\/main` at `fa296a2`/);
+  assert.match(md, /this report: version 4, updated 2026-11-24/, '#12: the revision is in the header');
+  delete pack.baseline;
+  assert.equal(gate('review', pack, catalogue, { baseDir: 'demo/flash-sale/review' }).ok, false);
+  assert.ok(validatePack(pack, catalogue, { stage: 'review' }).some((e) => e.where === 'baseline.ref'));
+
+  // #10: SQL that passes only on an in-memory stand-in makes H-14 "not met".
+  const h14 = catalogue.criteria.find((c) => c.id === 'H-14');
+  assert.deepEqual(
+    [rowOutcome({ answers: { 'H-14.1': 'no', 'H-14.2': 'yes' } }, h14).result, rowOutcome({ answers: { 'H-14.1': 'no', 'H-14.2': 'yes' } }, h14).severity],
+    ['does-not-meet', 'Medium'],
+  );
+
+  // #9: Q-04 asks for the three checks of a control, not only the known example.
+  const q4 = catalogue.criteria.find((c) => c.id === 'Q-04').checks.map((q) => q.q).join(' ');
+  for (const words of [/fail with the control/, /control removed/, /correct code, including near-misses/]) assert.match(q4, words);
+});
+
 test('compare: two inspections agree question by question', () => {
   const a = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
   const b = JSON.parse(readFileSync(EXAMPLE, 'utf8'));
@@ -410,7 +432,9 @@ test('numbers in the documents match the catalogue (software counts, not prose)'
   const patterns = [/(\d+) criteria in nine areas/g, /all (\d+) criteria\]/g, /(\d+)-criterion/g, /review standard \((\d+) criteria\)/g, /through: (\d+) in all/g, /up to (\d+) criteria/g];
   let checked = 0;
   for (const f of files) {
-    const text = readFileSync(f, 'utf8');
+    // Released changelog sections are history (0.2.0 had 99 criteria): only the unreleased part is checked.
+    const raw = readFileSync(f, 'utf8');
+    const text = f === 'CHANGELOG.md' ? raw.split(/\n## \d+\.\d+\.\d+/)[0] : raw;
     for (const re of patterns) for (const m of text.matchAll(re)) { checked++; assert.equal(Number(m[1]), total, `${f}: "${m[0]}" but the catalogue has ${total}`); }
     for (const m of text.matchAll(/All (\d+) criteria that apply/g)) { checked++; assert.equal(Number(m[1]), applicable, `${f}: "${m[0]}" but ${applicable} apply to the example`); }
   }
